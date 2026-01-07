@@ -1,16 +1,28 @@
 <header>
-  <img src="GogoBuy.Newpng.png" class="logo">
+  <!-- LOGO -->
+  <img routerLink="gogobuy" src="GogoBuy.Newpng.png" class="logo">
   <nav>
+    <!-- 右側功能列表 -->
     <ul>
-      <li><img [src]="userAvatar" class="avatar" (click)="menu.toggle($event)" alt="user avatar" />
-        <p-menu #menu [model]="items" [popup]="true"></p-menu>
-      </li>
+      <li><i class="pi pi-bell" style="color: rgb(255, 255, 255); font-size: 1.5rem"></i></li>
+      <li><i class="pi pi-cart-plus" style="color: rgb(255, 255, 255); font-size: 1.5rem"></i></li>
+      <!-- 未登入時 -->
+      <li><a href="#">登入</a></li>
+      <!-- 有登入時 -->
+      <li>
+      <img
+        [src]="userAvatar"
+        class="w-9 h-9 rounded-full cursor-pointer"
+        (click)="menu.toggle($event)"
+        alt="avatar">
+      <p-menu #menu [popup]="true" [model]="items" appendTo="body"></p-menu></li>
     </ul>
   </nav>
 
 
 </header>
 
+<!-- 顯示頁面 -->
 <main>
   <router-outlet></router-outlet>
 </main>
@@ -23,7 +35,11 @@
       <p>電話：(06) 303 2550</p>
     </div>
     <div class="footer-links">
-      <p>隱私政策 | 服務條款</p>
+      <a href="#">隱私政策</a>
+      <a> | </a>
+      <a href="#">服務條款</a>
+      <a> | </a>
+      <a href="#">常見問題</a>
     </div>
   </div>
   <div class="footer-bottom">
