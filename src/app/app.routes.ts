@@ -1,3 +1,4 @@
+import { LoginComponent } from './account/login/login.component';
 import { ProblemsComponent } from './terms/problems/problems.component';
 import { PrivacyPolicyComponent } from './terms/privacy-policy/privacy-policy.component';
 import { ConditionsComponent } from './terms/conditions/conditions.component';
@@ -7,8 +8,11 @@ import { AppComponent } from './app.component';
 import { PageNotFoundComponent } from './terms/page-not-found/page-not-found.component';
 
 export const routes: Routes = [
+  // 首頁
   { path: 'gogobuy', component: GogoBuyComponent },
   { path: '', redirectTo: '/gogobuy', pathMatch: 'full' },
+  // 登入/註冊
+  { path: 'login', component: LoginComponent },
 
   // 條款頁面 ------------------------------------------------------------------
   { path: 'problems', component: ProblemsComponent },
@@ -16,6 +20,6 @@ export const routes: Routes = [
   { path: 'conditions', component: ConditionsComponent },
   // --------------------------------------------------------------------------
 
-
+  // 錯誤/失效網址
   { path: '**', component: PageNotFoundComponent }
 ];
