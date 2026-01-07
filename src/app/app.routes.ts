@@ -5,11 +5,13 @@ import { Routes } from '@angular/router';
 import { GogoBuyComponent } from './gogo-buy/gogo-buy.component';
 import { AppComponent } from './app.component';
 import { PageNotFoundComponent } from './terms/page-not-found/page-not-found.component';
+import { OrdersComponent } from './orders/orders.component';
 
 export const routes: Routes = [
   { path: 'gogobuy', component: GogoBuyComponent },
   { path: '', redirectTo: '/gogobuy', pathMatch: 'full' },
   { path: '404', component: PageNotFoundComponent },
+  { path: 'orders', component: OrdersComponent },
   // 條款頁面 ------------------------------------------------------------------
   { path: 'problems', component: ProblemsComponent },
   { path: 'privacyPolicy', component: PrivacyPolicyComponent },

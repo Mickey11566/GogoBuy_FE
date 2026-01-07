@@ -1,9 +1,14 @@
+.topbar{
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
 /* --- HEADER --- */
 header {
   background-color: var(--brand-primary);
   border-bottom: 2px solid var(--brand-primary);
   padding: 0rem 2rem;
-  position: sticky;
+  position: static;
   top: 0;
   z-index: 1000;
   display: flex;
@@ -23,6 +28,17 @@ nav a {
   color: var(--footer-text);
   font-weight: 500;
   transition: color 0.3s;
+}
+
+nav i {
+  text-decoration: none;
+  color: var(--footer-text);
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+nav i:hover {
+  color: var(--accent-orange);
 }
 
 nav a:hover {
@@ -46,6 +62,49 @@ main {
   // min-height: 100vh;
   /* 自動撐開空間 */
 }
+
+.marquee {
+  width: 100%;
+  overflow: hidden;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  padding: 10px 0;
+  top: 64px;
+  /* ✅改成你的 header 實際高度 */
+  z-index: 999;
+  position: static;
+}
+
+.marquee__track {
+  display: flex;
+  width: max-content;
+  animation: marquee 15s linear infinite;
+}
+
+.marquee__group {
+  display: flex;
+}
+
+.marquee__item {
+  padding: 0 20px;
+  white-space: nowrap;
+}
+
+.marquee:hover .marquee__track {
+  animation-play-state: paused;
+}
+
+/* 移動半條（因為有兩份一樣的 group） */
+@keyframes marquee {
+  from {
+    transform: translateX(400%);
+  }
+
+  to {
+    transform: translateX(-100%);
+  }
+}
+
 
 /* --- FOOTER --- */
 footer {

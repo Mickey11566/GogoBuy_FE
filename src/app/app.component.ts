@@ -29,6 +29,7 @@ export class AppComponent {
   // 用戶頭向下拉選單
   items: MenuItem[] = [
     { label: '首頁', icon: 'pi pi-home', routerLink: '/' },
+    { label: '我的訂單', icon: 'pi pi-receipt', routerLink: '/orders' },
     { label: '產品說明', icon: 'pi pi-box', routerLink: '/404' },
     { label: '關於我們', icon: 'pi pi-info-circle', routerLink: '/about' }
   ];
