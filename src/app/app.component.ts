@@ -16,9 +16,10 @@ export class AppComponent {
     //Called after the constructor, initializing input properties, and the first call to ngOnChanges.
     //Add 'implements OnInit' to the class.
     // Swal.fire("SweetAlert2 is working!");
-
   }
+
   test() {
     Swal.fire("SweetAlert2 is working!");
   }
+
 }
