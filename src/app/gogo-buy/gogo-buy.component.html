@@ -3,7 +3,8 @@
 
   <!--輪播欄-->
   <section class="max-w-4xl mx-auto ">
-    <!--[numVisible]一次可顯示X個圖片，[numScroll]有幾個滾稐，[circular]是否重複，[autoplayInterval]自動撥放秒數-->
+    <!--[numVisible]一次可顯示X個圖片，[numScroll]有幾個滾輪，[circular]是否重複，[autoplayInterval]自動撥放秒數，
+    [showIndicators]是否顯示滾輪，[showNavigators]是否顯示左右翻閱鍵-->
     <p-carousel [value]="banners" [numVisible]="2" [numScroll]="2" [circular]="true" [autoplayInterval]="4000"
       [showIndicators]="true" [showNavigators]="true">
       <ng-template pTemplate="item" let-banner>
