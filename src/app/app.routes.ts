@@ -7,6 +7,7 @@ import { GogoBuyComponent } from './gogo-buy/gogo-buy.component';
 import { AppComponent } from './app.component';
 import { PageNotFoundComponent } from './terms/page-not-found/page-not-found.component';
 import { OrdersComponent } from './orders/orders.component';
+import { PersonInfoComponent } from './account/person-info/person-info.component';
 
 export const routes: Routes = [
   // 首頁
@@ -16,6 +17,8 @@ export const routes: Routes = [
   { path: 'orders', component: OrdersComponent },
   // 登入/註冊
   { path: 'login', component: LoginComponent },
+  // 用戶資料頁面
+  { path: 'personInfo', component: PersonInfoComponent },
 
   // 條款頁面 ------------------------------------------------------------------
   { path: 'problems', component: ProblemsComponent },
