@@ -7,6 +7,7 @@ import { GogoBuyComponent } from './gogo-buy/gogo-buy.component';
 import { AppComponent } from './app.component';
 import { PageNotFoundComponent } from './terms/page-not-found/page-not-found.component';
 import { OrdersComponent } from './orders/orders.component';
+import { StoreComponent } from './store/store.component';
 
 export const routes: Routes = [
   // 首頁
@@ -23,6 +24,8 @@ export const routes: Routes = [
   { path: 'conditions', component: ConditionsComponent },
   // --------------------------------------------------------------------------
 
+  //創立店家與品項
+  { path: 'store', component: StoreComponent },
   // 錯誤/失效網址
   { path: '**', component: PageNotFoundComponent }
 ];
