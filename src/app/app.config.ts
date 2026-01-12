@@ -5,9 +5,11 @@ import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeng/themes/aura';
 
 import { routes } from './app.routes';
+import { provideHttpClient } from '@angular/common/http';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    provideHttpClient(), // Api
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideAnimations(),
     provideRouter(routes),
@@ -16,10 +18,11 @@ export const appConfig: ApplicationConfig = {
         preset: Aura,
         options: {
           prefix: 'p',
-          darkModeSelector:  false || 'none',
+          darkModeSelector: false || 'none',
           cssLayer: false
         }
       }
-    })
+    }),
+    provideHttpClient(),
   ]
 };
