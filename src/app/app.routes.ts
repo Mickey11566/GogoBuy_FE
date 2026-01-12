@@ -4,21 +4,24 @@ import { PrivacyPolicyComponent } from './terms/privacy-policy/privacy-policy.co
 import { ConditionsComponent } from './terms/conditions/conditions.component';
 import { Routes } from '@angular/router';
 import { GogoBuyComponent } from './gogo-buy/gogo-buy.component';
-import { AppComponent } from './app.component';
 import { PageNotFoundComponent } from './terms/page-not-found/page-not-found.component';
 import { OrdersComponent } from './orders/orders.component';
 import { PersonInfoComponent } from './account/person-info/person-info.component';
+import { WishesComponent } from './wish/wishes/wishes.component';
 
 export const routes: Routes = [
   // 首頁
   { path: 'gogobuy', component: GogoBuyComponent },
   { path: '', redirectTo: '/gogobuy', pathMatch: 'full' },
-  { path: '404', component: PageNotFoundComponent },
   { path: 'orders', component: OrdersComponent },
+
   // 登入/註冊
   { path: 'login', component: LoginComponent },
+
   // 用戶資料頁面
   { path: 'personInfo', component: PersonInfoComponent },
+  // 願望清單
+  { path: 'wishes', component: WishesComponent },
 
   // 條款頁面 ------------------------------------------------------------------
   { path: 'problems', component: ProblemsComponent },
@@ -27,5 +30,6 @@ export const routes: Routes = [
   // --------------------------------------------------------------------------
 
   // 錯誤/失效網址
+  { path: '404', component: PageNotFoundComponent },
   { path: '**', component: PageNotFoundComponent }
 ];
