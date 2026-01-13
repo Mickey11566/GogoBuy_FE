@@ -7,6 +7,7 @@ import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { PanelMenuModule } from 'primeng/panelmenu';
 import { InputTextModule } from 'primeng/inputtext';
+import { NotificationBellComponent } from './account/notification-bell/notification-bell.component';
 
 
 @Component({
@@ -19,7 +20,8 @@ import { InputTextModule } from 'primeng/inputtext';
     RouterLinkActive,
     RouterLink,
     MenuModule,
-    CommonModule
+    CommonModule,
+    NotificationBellComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',

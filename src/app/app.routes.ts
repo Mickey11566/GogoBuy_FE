@@ -8,6 +8,8 @@ import { PageNotFoundComponent } from './terms/page-not-found/page-not-found.com
 import { OrdersComponent } from './orders/orders.component';
 import { PersonInfoComponent } from './account/person-info/person-info.component';
 import { WishesComponent } from './wish/wishes/wishes.component';
+import { StoreComponent } from './store/store.component';
+import { NotificationsComponent } from './account/notifications/notifications.component';
 
 export const routes: Routes = [
   // 首頁
@@ -22,6 +24,8 @@ export const routes: Routes = [
   { path: 'personInfo', component: PersonInfoComponent },
   // 願望清單
   { path: 'wishes', component: WishesComponent },
+  // 通知頁面
+  { path: 'notifications', component: NotificationsComponent },
 
   // 條款頁面 ------------------------------------------------------------------
   { path: 'problems', component: ProblemsComponent },
@@ -29,6 +33,8 @@ export const routes: Routes = [
   { path: 'conditions', component: ConditionsComponent },
   // --------------------------------------------------------------------------
 
+  //創立店家與品項
+  { path: 'store', component: StoreComponent },
   // 錯誤/失效網址
   { path: '404', component: PageNotFoundComponent },
   { path: '**', component: PageNotFoundComponent }
