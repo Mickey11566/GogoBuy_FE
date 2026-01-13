@@ -11,6 +11,7 @@ import { authGuard } from './auth.guard';
 import { StoreComponent } from './store/store.component';
 import { PersonInfoEditComponent } from './account/person-info-edit/person-info-edit.component';
 import { AuthCallbackComponent } from './auth-callback/auth-callback.component';
+import { WishesComponent } from './wish/wishes/wishes.component';
 
 export const routes: Routes = [
   // 首頁
@@ -26,6 +27,8 @@ export const routes: Routes = [
   { path: 'orders', component: OrdersComponent, canActivate: [authGuard]  },
   { path: 'personInfoEdit', component: PersonInfoEditComponent, canActivate: [authGuard] },
 
+  // 願望清單
+  { path: 'wishes', component: WishesComponent },
 
   // 條款頁面 ------------------------------------------------------------------
   { path: 'problems', component: ProblemsComponent },
