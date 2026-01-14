@@ -7,17 +7,13 @@ import { GogoBuyComponent } from './gogo-buy/gogo-buy.component';
 import { PageNotFoundComponent } from './terms/page-not-found/page-not-found.component';
 import { OrdersComponent } from './orders/orders.component';
 import { PersonInfoComponent } from './account/person-info/person-info.component';
-<<<<<<< HEAD
 import { authGuard } from './auth.guard';
-import { StoreComponent } from './store/store.component';
 import { PersonInfoEditComponent } from './account/person-info-edit/person-info-edit.component';
 import { AuthCallbackComponent } from './auth-callback/auth-callback.component';
 import { WishesComponent } from './wish/wishes/wishes.component';
-=======
-import { WishesComponent } from './wish/wishes/wishes.component';
-import { StoreComponent } from './store/store.component';
+import { StoreComponent } from './stores/store/store.component';
 import { NotificationsComponent } from './account/notifications/notifications.component';
->>>>>>> origin/Uguisain
+import { StoreUpsertComponent } from './stores/store-upsert/store-upsert.component';
 
 export const routes: Routes = [
   // 首頁
@@ -30,7 +26,7 @@ export const routes: Routes = [
 
   // 用戶資料頁面
   { path: 'personInfo', component: PersonInfoComponent, canActivate: [authGuard] },
-  { path: 'orders', component: OrdersComponent, canActivate: [authGuard]  },
+  { path: 'orders', component: OrdersComponent, canActivate: [authGuard] },
   { path: 'personInfoEdit', component: PersonInfoEditComponent },
 
   // 願望清單
@@ -46,6 +42,7 @@ export const routes: Routes = [
 
   //創立店家與品項
   { path: 'store', component: StoreComponent },
+  { path: 'store_upsert', component: StoreUpsertComponent },
   // 錯誤/失效網址
   { path: '404', component: PageNotFoundComponent },
   { path: '**', component: PageNotFoundComponent }
