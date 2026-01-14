@@ -15,6 +15,7 @@ import { WishesComponent } from './wish/wishes/wishes.component';
 import { NotificationsComponent } from './account/notifications/notifications.component';
 import { StoreUpsertComponent } from './stores/store-upsert/store-upsert.component';
 
+
 export const routes: Routes = [
   // 首頁
   { path: 'gogobuy', component: GogoBuyComponent },
