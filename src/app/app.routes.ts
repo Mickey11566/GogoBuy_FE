@@ -13,6 +13,7 @@ import { PersonInfoEditComponent } from './account/person-info-edit/person-info-
 import { AuthCallbackComponent } from './auth-callback/auth-callback.component';
 import { WishesComponent } from './wish/wishes/wishes.component';
 import { NotificationsComponent } from './account/notifications/notifications.component';
+import { StoreUpsertComponent } from './stores/store-upsert/store-upsert.component';
 
 export const routes: Routes = [
   // 首頁
@@ -41,6 +42,7 @@ export const routes: Routes = [
 
   //創立店家與品項
   { path: 'store', component: StoreComponent },
+  { path: 'store_upsert', component: StoreUpsertComponent },
   // 錯誤/失效網址
   { path: '404', component: PageNotFoundComponent },
   { path: '**', component: PageNotFoundComponent }
