@@ -1,0 +1,81 @@
+<!-- 這邊目前還只有在構思排版，可以改 -->
+<!-- <div class="card">
+    <p-tabs value="0">
+        <p-tablist>
+            <p-tab value="0">Header I</p-tab>
+            <p-tab value="1">Header II</p-tab>
+            <p-tab value="2">Header III</p-tab>
+        </p-tablist>
+        <p-tabpanels>
+            <p-tabpanel value="0">
+                <p class="m-0">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et
+                    dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex
+                    ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat
+                    nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit
+                    anim id est laborum.
+                </p>
+            </p-tabpanel>
+            <p-tabpanel value="1">
+                <p class="m-0">
+                    Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem
+                    aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                    Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni
+                    dolores eos qui ratione voluptatem sequi nesciunt. Consectetur, adipisci velit, sed quia non numquam eius
+                    modi.
+                </p>
+            </p-tabpanel>
+            <p-tabpanel value="2">
+                <p class="m-0">
+                    At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti
+                    atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique
+                    sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum
+                    facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil
+                    impedit quo minus.
+                </p>
+            </p-tabpanel>
+        </p-tabpanels>
+    </p-tabs>
+</div> -->
+
+
+
+<!-- 搜尋區 -->
+<div class="area">
+  <label class="w-2/3 flex-row">店家或品項名稱：
+    <input (keyup)="letterSearch()" [(ngModel)]="searchData"
+      class="searchInput"></label>
+</div>
+<div class="area">
+  <table class="w-4/5 table-fixed border-collapse">
+    <thead>
+      <tr>
+        <th class="w-1/10">品項</th>
+        <th class="w-1/10">類型</th>
+        <th class="w-1/5">取貨點</th>
+        <th class="w-1/9">許願者</th>
+        <th class="w-1/30">我要+1</th>
+      </tr>
+    </thead>
+    <tbody class="text-center">
+      @for (item of wishes; track $index) {
+        <tr class="itemTr">
+          <td>{{item?.title}}</td>
+          <td>{{item?.type}}</td>
+          <td>{{item?.location}}</td>
+          @if(item?.nickname==null){
+            <td>***</td>
+          }@else {
+            <td>{{item?.nickname}}</td>
+          }
+          <td>
+            <!-- @if(plusone==false){
+              <button class="plusBtn" (click)="plusOne()" [(ngModel)]="plusone">+1</button>
+            } -->
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+</div>

@@ -7,11 +7,8 @@ import { GogoBuyComponent } from './gogo-buy/gogo-buy.component';
 import { PageNotFoundComponent } from './terms/page-not-found/page-not-found.component';
 import { OrdersComponent } from './orders/orders.component';
 import { PersonInfoComponent } from './account/person-info/person-info.component';
-<<<<<<< HEAD
 import { StoreComponent } from './store/store.component';
-=======
 import { WishesComponent } from './wish/wishes/wishes.component';
->>>>>>> origin/Uguisain
 
 export const routes: Routes = [
   // 首頁
