@@ -11,10 +11,10 @@ export class StoreService {
     name: '',
     phone: '',
     address: '',
-    // category: null as Category | null,
+    category: null as Category | null,
     type: '',
     memo: '',
-    image: null as Blob | null,
+    image: null as Blob | string | null,
     is_public: false,
     created_by: 'A01',
     operatingHoursVoList: [
@@ -24,9 +24,7 @@ export class StoreService {
         closeTime: ''
       },
     ],
-    fee_description: [
-      { km: 1.0, fee: 20 },
-    ]
+    fee_description: [] as FeeDescription[]
   }
 
 }
@@ -88,4 +86,20 @@ export interface ProductOptionGroupsVoList {
 export interface Items {
   name: string;
   extraPrice: number;
+}
+
+export interface Category {
+  name: string;
+  code: number;
+}
+
+export interface TimeSlotUI {
+  selectedWeeks: number[]; // 例如 [1, 2, 3]
+  openTime: Date | null;
+  closeTime: Date | null;
+}
+
+export interface FeeDescription {
+  km: number;
+  fee: number;
 }

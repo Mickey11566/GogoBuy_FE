@@ -33,8 +33,7 @@
           <i class="pi pi-objects-column"></i>
         </p-inputgroup-addon>
         <p-floatlabel class="w-full md:w-56" variant="on">
-          <p-select [(ngModel)]="storeData.category" id="on_label" [options]="category" optionLabel="name"
-            styleClass="custom-select" />
+          <p-select [(ngModel)]="storeData.category" id="on_label" [options]="category" optionLabel="name"/>
           <label for="on_label" class="text-gray-500">經營類別</label>
         </p-floatlabel>
       </p-inputgroup>
@@ -42,11 +41,29 @@
 
     <div class="flex flex-col gap-2">
       <p-inputgroup>
-        <p-inputgroup-addon><i class="pi pi-tag"></i></p-inputgroup-addon>
-        <p-floatlabel variant="on">
-          <input pInputText id="type" [(ngModel)]="storeData.type" class="border border-gray-300 focus:!border-2
-          focus:!border-[#662222] focus:!shadow-none outline-none w-full p-2 pl-3 rounded-r-xl transition-all" />
-          <label for="type">類型日式便當手搖飲</label>
+        <p-inputgroup-addon class="bg-gray-50 text-[#662222] border-r-0">
+          <i class="pi pi-tag"></i>
+        </p-inputgroup-addon>
+        <p-floatlabel variant="on" class="w-full">
+          <p-select [(ngModel)]="storeData.type" id="type" [options]="groupedType" [group]="true"
+            optionLabel="label" optionValue="value" class="w-full" styleClass="w-full border border-gray-300
+            border-l-0 focus:!border-[#662222] focus:!ring-0 outline-none rounded-r-xl transition-all h-11
+            flex items-center">
+            <ng-template #group let-group>
+              <div class="flex items-center gap-2 py-1 bg-gray-50 -mx-2 px-3 border-b border-gray-100">
+                <div class="w-1 h-3 bg-[#662222]/60 rounded-full"></div>
+                <span class="font-bold text-[#662222] text-xs uppercase tracking-wider">{{ group.label }}</span>
+              </div>
+            </ng-template>
+
+            <ng-template #item let-item>
+              <div class="flex items-center pl-4 py-1">
+                <span class="text-gray-600 text-sm">{{ item.label }}</span>
+              </div>
+            </ng-template>
+          </p-select>
+
+          <label for="type" class="text-gray-500">店家類型</label>
         </p-floatlabel>
       </p-inputgroup>
     </div>
@@ -192,8 +209,8 @@
 
 
     <div class="w-full max-w-xs space-y-3">
-      <div class="relative group mx-auto border-2 border-dashed border-gray-300 rounded-2xl
-      overflow-hidden bg-gray-50 hover:border-[#662222]/50 transition-all">
+      <div class="relative group mx-auto border-2 border border-gray-300 rounded-2xl
+      overflow-hidden bg-gray-50 hover:border-[#662222] transition-all">
         @if (storeData.image) {
           <img [src]="storeData.image" class="w-full h-full" />
           <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -203,11 +220,12 @@
             </div>
           </div>
           <button (click)="removeImage($event)"
-            class="absolute top-2 right-2 p-1.5 bg-[#662222] text-white rounded-full shadow-lg hover:bg-red-600 transition-transform scale-0 group-hover:scale-100">
+            class="absolute top-2 right-2 p-1.5 bg-[#662222] text-white rounded-full shadow-lg hover:bg-[#662222]/70
+            transition-transform scale-0 group-hover:scale-100 z-10">
             <i class="pi pi-times text-[10px]"></i>
           </button>
         } @else {
-          <div class="flex flex-col items-center justify-center h-full space-y-2">
+          <div class="flex flex-col items-center justify-center h-full space-y-2 p-5">
             <div class="p-4 bg-[#662222]/10 rounded-full">
               <i class="pi pi-image text-[#662222] text-3xl"></i>
             </div>
@@ -241,7 +259,7 @@
     </button>
     <button (click)="onSubmit()"
       class="px-10 py-3 bg-[#662222] text-white font-bold rounded-xl hover:bg-[#882222] shadow-lg hover:shadow-blue-200 transition-all transform active:scale-95">
-      建立店家
+      下一步
     </button>
   </div>
 </div>
