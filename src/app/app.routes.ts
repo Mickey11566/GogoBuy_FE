@@ -31,6 +31,7 @@ export const routes: Routes = [
 
   // 願望清單
   { path: 'wishes', component: WishesComponent },
+
   // 通知頁面
   { path: 'notifications', component: NotificationsComponent },
 
