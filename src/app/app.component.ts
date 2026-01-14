@@ -9,6 +9,7 @@ import { PanelMenuModule } from 'primeng/panelmenu';
 import { InputTextModule } from 'primeng/inputtext';
 import { AuthService } from './@service/auth.service';
 import { HttpService } from './@service/http.service';
+import { NotificationBellComponent } from './account/notification-bell/notification-bell.component';
 
 export interface User {
   id: string;
@@ -26,7 +27,8 @@ export interface User {
     InputTextModule,
     RouterLink,
     MenuModule,
-    CommonModule
+    CommonModule,
+    NotificationBellComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
