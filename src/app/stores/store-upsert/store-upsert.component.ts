@@ -123,11 +123,11 @@ export class StoreUpsertComponent {
     name: '',
     phone: '',
     address: '',
-    category: null as Category | null,
     type: '',
     memo: '',
-    image: null as Blob | string | null,
     is_public: false,
+    category: null as Category | null,
+    image: '' as Blob | string | null,
     created_by: 'A01',
     operatingHoursVoList: [
       {

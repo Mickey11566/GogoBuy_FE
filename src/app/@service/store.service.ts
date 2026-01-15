@@ -35,11 +35,11 @@ export interface Stores {
   address: string;
   category: string;
   type: string;
-  memo: string;
-  image: string;
+  memo?: string;
+  image?: string;
   isPublic: boolean;
   createdBy: string;
-  feeDescription: FeeDescription[];
+  feeDescription?: FeeDescription[];
   operatingHoursVoList: OperatingHoursVoList[];
   menuVoList: MenuVoList[];
   menuCategoriesVoList: MenuCategoriesVoList[];
@@ -60,10 +60,11 @@ export interface OperatingHoursVoList {
 export interface MenuVoList {
   categoryId: number;
   name: string;
-  description: string;
+  description?: string;
   basePrice: number;
-  image: string;
-  unusual: string[];
+  isAvailable: boolean;
+  image?: string;
+  unusual?: string[];
 }
 
 export interface MenuCategoriesVoList {
