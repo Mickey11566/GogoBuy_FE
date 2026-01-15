@@ -30,7 +30,7 @@ nav a {
   color: var(--footer-text);
 }
 
-nav i:hover {
+nav li:hover {
   transform: scale(1.2);
   transition: all 0.5s;
 }
@@ -165,7 +165,7 @@ footer {
   border-radius: 999px;
   border: none;
   cursor: pointer;
-  background: #662222;
+  background: #E07A3F;
   color: #fff;
   font-size: 24px;
   font-weight: 700;
@@ -312,7 +312,7 @@ footer {
     border-radius: 999px;
     border: none;
     cursor: pointer;
-    background: #662222;
+    background: #E07A3F;
     color: #fff;
     font-size: 24px;
     font-weight: 700;
