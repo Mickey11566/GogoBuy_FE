@@ -22,7 +22,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   private sub?: Subscription;
 
-  constructor(public sse: SseService, private router: Router) {}
+  constructor(public sse: SseService, private router: Router) { }
 
   ngOnInit() {
     this.sse.connect();

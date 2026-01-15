@@ -17,9 +17,9 @@ import { StoreUpsertComponent } from './stores/store-upsert/store-upsert.compone
 
 export const routes: Routes = [
   // 首頁
-  { path: 'gogobuy', component: GogoBuyComponent },
+  { path: 'gogobuy', component: GogoBuyComponent, title: 'GoGoBuy | 首頁' },
   { path: '', redirectTo: '/gogobuy', pathMatch: 'full' },
-  { path: 'orders', component: OrdersComponent },
+  { path: 'orders', component: OrdersComponent, title: '我的訂單' },
 
   // 登入/註冊
   { path: 'login', component: LoginComponent },
@@ -44,3 +44,55 @@ export const routes: Routes = [
   { path: '404', component: PageNotFoundComponent },
   { path: '**', component: PageNotFoundComponent }
 ];
+
+
+// 待確認
+// export const routes: Routes = [
+//   // 1. 公開頁面與首頁
+//   {
+//     path: '',
+//     title: 'GoGoBuy | 首頁',
+//     children: [
+//       { path: '', redirectTo: 'home', pathMatch: 'full' },
+//       { path: 'home', component: GogoBuyComponent, data: { breadcrumb: '首頁' } },
+//       { path: 'login', component: LoginComponent, title: '登入', data: { breadcrumb: '登入' } },
+//     ]
+//   },
+
+//   // 2. 會員中心
+//   {
+//     path: 'user',
+//     data: { breadcrumb: '會員中心' },
+//     children: [
+//       { path: 'profile', component: PersonInfoComponent, title: '個人資料', data: { breadcrumb: '個人資料' } },
+//       { path: 'orders', component: OrdersComponent, title: '我的訂單', data: { breadcrumb: '訂單紀錄' } },
+//       { path: 'wishes', component: WishesComponent, title: '願望清單', data: { breadcrumb: '許願池' } },
+//       { path: 'notifications', component: NotificationsComponent, title: '通知中心', data: { breadcrumb: '通知' } },
+//     ]
+//   },
+
+//   // 3. 店家/管理頁面
+//   {
+//     path: 'management',
+//     data: { breadcrumb: '管理後台' },
+//     children: [
+//       { path: 'store', component: StoreComponent, title: '店家管理', data: { breadcrumb: '我的店家' } },
+//       // 未來可以擴充例如：{ path: 'menu-edit', component: MenuEditComponent }
+//     ]
+//   },
+
+//   // 4. 條款與幫助頁面
+//   {
+//     path: 'support',
+//     data: { breadcrumb: '幫助中心' },
+//     children: [
+//       { path: 'faq', component: ProblemsComponent, title: '常見問題', data: { breadcrumb: 'FAQ' } },
+//       { path: 'privacy', component: PrivacyPolicyComponent, title: '隱私權政策', data: { breadcrumb: '隱私權' } },
+//       { path: 'conditions', component: ConditionsComponent, title: '服務條款', data: { breadcrumb: '服務條款' } },
+//     ]
+//   },
+
+//   // 5. 錯誤處理
+//   { path: '404', component: PageNotFoundComponent, title: '頁面不存在' },
+//   { path: '**', redirectTo: '/404' }
+// ];
