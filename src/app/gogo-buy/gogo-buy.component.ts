@@ -168,6 +168,10 @@ export class GogoBuyComponent {
   //輪播圖片
   banners: Banner[] = [
     {
+      image: 'fastFood.png',
+      title: '速食限時優惠'
+    },
+    {
       //位置
       image: 'Bubble.png',
       //圖片無法顯示時文字
@@ -183,8 +187,10 @@ export class GogoBuyComponent {
     }
     ,
     {
-      image: 'fastFood.png',
-      title: '速食限時優惠'
+      //位置
+      image: 'Bubble.png',
+      //圖片無法顯示時文字
+      title: '揪團喝珍奶'
     }
   ];
 }
