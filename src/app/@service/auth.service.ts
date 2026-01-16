@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Subscription } from 'rxjs/internal/Subscription';
+import { Injectable, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { tap } from 'rxjs/internal/operators/tap';
 import Swal from 'sweetalert2';
@@ -14,6 +15,8 @@ export class AuthService {
     private https: HttpService,
     private router: Router,
     private route: ActivatedRoute,) { }
+
+  store = signal<{ id: number; name: string; type: string; address: string }[]>([]);
   // TODO 用戶資料 (正式連接時用這個!)
   user: any = null;
 
@@ -258,13 +261,24 @@ export class AuthService {
 
   // 更新手機號碼
   connectPhone(id: string, phone: string) {
-  const req = {
-    phone: phone
-  };
+    const req = {
+      phone: phone
+    };
 
-  const url = `http://localhost:8080/gogobuy/user/connect-phone?id=${id}`;
+    const url = `http://localhost:8080/gogobuy/user/connect-phone?id=${id}`;
 
-  return this.https.postApi(url, req.phone);
-}
+    return this.https.postApi(url, req.phone);
+  }
+
+  // 取得全部店家
+  getallstore() {
+    return this.https.getApi(`http://localhost:8080/gogobuy/store/all`);
+  }
+
+  // 搜尋店家
+  searchStores(name: string) {
+    const encodedName = encodeURIComponent(name);
+    return this.https.getApi(`http://localhost:8080/gogobuy/store/searchName?name=${encodedName}`);
+  }
 
 }
