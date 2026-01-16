@@ -17,6 +17,6 @@ export class PageNotFoundComponent {
 
   // 導向 FAQ 頁面
   goSupport() {
-    this.router.navigate(['/problems']);
+    this.router.navigate(['/support/faq']);
   }
 }

@@ -83,6 +83,7 @@ export const routes: Routes = [
     data: { breadcrumb: '管理後台' },
     children: [
       { path: 'store', component: StoreComponent, title: '店家管理', data: { breadcrumb: '我的店家' } },
+      { path: 'store_upsert', component: StoreUpsertComponent, title: '創建店家', data: { breadcrumb: '創建店家' } },
       // 未來可以擴充例如：{ path: 'menu-edit', component: MenuEditComponent }
     ]
   },
