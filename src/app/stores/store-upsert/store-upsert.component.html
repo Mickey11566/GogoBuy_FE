@@ -265,3 +265,32 @@
     </button>
   </div>
 </div>
+
+<!-------------- alert Dialog -------------->
+<p-dialog [(visible)]="displayAlertDialog" [modal]="true" [draggable]="false" [resizable]="false"
+          [style]="{ width: '400px', 'border-radius': '1.5rem' }" [showHeader]="false">
+
+  <div class="p-8 text-center">
+    <div class="flex justify-center mb-6">
+      <div class="bg-red-50 rounded-full p-4">
+        <i class="pi pi-exclamation-circle text-[#662222]" style="font-size: 3rem"></i>
+      </div>
+    </div>
+
+    <h2 class="text-2xl font-bold text-gray-800 mb-3">請填寫完整資訊</h2>
+
+    <p class="text-gray-600 leading-relaxed text-center inline-block w-full px-4"
+       style="white-space: pre-line;">
+      {{ alertMessage }}
+    </p>
+
+    <div class="mt-8">
+      <button
+        type="button"
+        (click)="displayAlertDialog = false"
+        class="w-full bg-[#662222] hover:bg-[#4d1a1a] text-white font-bold py-3 px-6 rounded-2xl shadow-lg transition duration-300 ease-in-out transform active:scale-95">
+          確認
+      </button>
+    </div>
+  </div>
+</p-dialog>
