@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, QueryList, ViewChildren } from '@angular/core';
+import { Component, ElementRef, QueryList, ViewChildren } from '@angular/core';
 import { StepperModule } from 'primeng/stepper';
 import { ButtonModule } from 'primeng/button';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
@@ -45,6 +45,7 @@ export class StoreComponent {
   // 開啟dialog
   displayEditDialog = false;
   displayAddDialog = false;
+  displayCategoriesDialog = false;
   displayStoreInfoDialog = false;
   displaySaveDialog = false;
   displaySpecsDialog = false;
@@ -61,17 +62,19 @@ export class StoreComponent {
 
   // 商品分類
   filteredProducts: MenuVoList[] = [];
-  newCategoryName = '';
-
-  searchKeyword: string = '';
+  newCategories = '';
   currentCategoryId: number = -1;
+  currentCategories: MenuCategoriesVoList = this.getNewCategories();
+
+  isEditMode = false;
+  searchKeyword: string = '';
 
   // 暫存新增的商品
   currentProduct: MenuVoList = this.getNewProduct();
   optionGroups: ProductOptionGroupsVoList = this.getNewGroups();
   currentGroupIndex: number | null = null;
   currentItemIndex: number | null = null;
-  currentItem: Items = {name: '', extraPrice: 0};
+  currentItem: Items = { name: '', extraPrice: 0 };
 
   getNewProduct(): MenuVoList {
     return {
@@ -95,11 +98,21 @@ export class StoreComponent {
   };
 
   getNewItem(): Items {
-    return{
+    return {
       name: '',
       extraPrice: 0
     }
   }
+
+  getNewCategories(): MenuCategoriesVoList {
+    return {
+        name: '',
+        priceLevel: [
+            { name: '中杯', price: 0 }, // 建議預設給一筆，使用者體驗較好
+            { name: '大杯', price: 0 }
+        ]
+    };
+}
 
   // 打包傳進資料庫
   storeData = {
@@ -136,20 +149,39 @@ export class StoreComponent {
   }
 
   // 商品分類
-  startAdding(event: Event) {
-    event.stopPropagation();
-    this.newCategoryName = '';
-    setTimeout(() => {
-      document.querySelector<HTMLInputElement>('#newCategoryInput')?.focus();
-    }, 0);
+  addCategories(event: Event) {
+    this.isEditMode = false;
+    this.currentCategories = this.getNewCategories();
+    this.displayCategoriesDialog = true;
   }
 
-  selectCategory(category: any, catId: number = -1) {
+  addPriceLevel() {
+    if (this.currentCategories.priceLevel) {
+      this.currentCategories.priceLevel.push({
+        name: '',
+        price: 0
+      });
+    }
+  }
+
+  removePriceLevel(index: number) {
+    if (this.currentCategories.priceLevel) {
+      this.currentCategories.priceLevel.splice(index, 1);
+    }
+  }
+
+  saveCategories() {
+    this.storeData.menuCategoriesVoList.push({ ...this.currentCategories })
+    this.displayCategoriesDialog = false;
+  }
+
+  selectCategory(catId: number = -1) {
     this.selectedIndex = catId;
     this.currentCategoryId = catId;
     this.applyFilters();
   }
 
+  // 圖片
   applyFilters() {
     let results = [...this.store.menuVoList];
     if (this.selectedIndex !== -1) {
@@ -195,7 +227,7 @@ export class StoreComponent {
   }
 
   // 店家規格
-  addSpecs(){
+  addSpecs() {
     this.storeData.productOptionGroupsVoList.push({
       isRequired: false,
       name: '',
@@ -203,7 +235,7 @@ export class StoreComponent {
       items: []
     });
   }
-  removeSpecs(index: number){
+  removeSpecs(index: number) {
 
   }
 

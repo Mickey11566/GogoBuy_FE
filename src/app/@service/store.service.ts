@@ -68,9 +68,9 @@ export interface MenuVoList {
 }
 
 export interface MenuCategoriesVoList {
-  id: number;
+  id?: number;
   name: string;
-  priceLevel: PriceLevel[];
+  priceLevel?: PriceLevel[];
 }
 
 export interface PriceLevel {

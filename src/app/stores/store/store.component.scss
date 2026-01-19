@@ -12,3 +12,8 @@ p{
 .custom-dialog .p-dialog-header-icon {
   color: #ffffff;
 }
+
+body.p-overflow-hidden {
+  overflow: hidden !important;
+  touch-action: none;
+}
