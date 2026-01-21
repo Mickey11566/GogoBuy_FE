@@ -525,6 +525,14 @@ export class GogoBuyComponent {
     this.router.navigate(['/management/store_upsert']);
   }
   goStoreInfo(storeId:number){
+    // 跳轉前手動銷毀 Tooltip，防止文字殘留
+    if (this.tooltip) {
+      this.tooltip.deactivate();
+      this.tooltip.hide();
+    }
+    clearTimeout(this.idleTimer);
+    this.visible = false;
+    this.enableScroll();
     this.router.navigate(['/management/store_info', storeId]);
   }
 }
