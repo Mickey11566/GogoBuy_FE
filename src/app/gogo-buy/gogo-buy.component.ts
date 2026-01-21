@@ -4,6 +4,11 @@ import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { AuthService } from '../@service/auth.service';
 import { HttpService } from '../@service/http.service';
+import { Router } from '@angular/router';
+import { PanelModule } from 'primeng/panel';
+
+
+
 
 export type Stores = {
   id: number;
@@ -45,12 +50,29 @@ export interface Banner {
     CarouselModule,
     CardModule,
     ButtonModule,
+    PanelModule,
   ],
   templateUrl: './gogo-buy.component.html',
   styleUrl: './gogo-buy.component.scss'
 })
 export class GogoBuyComponent {
-  constructor(private https: HttpService, public auths: AuthService) {
+  constructor(private https: HttpService, public auths: AuthService, private router: Router) {
+  }
+
+  readonly storeStage = signal<0 | 1>(0);
+  readonly storeInitial = 5;   // 初始顯示
+  readonly storeExpanded = 10;  // 第一次查看更多後顯示
+
+  visibleStores = computed(() => {
+    const limit = this.storeStage() === 0 ? this.storeInitial : this.storeExpanded;
+    return this.auths.store().slice(0, limit);
+  });
+
+  storeCtaLabel = computed(() => this.storeStage() === 0 ? '查看更多' : '查看全部');
+
+  onStoreCtaClick() {
+    if (this.storeStage() === 0) this.storeStage.set(1);
+    else this.router.navigate(['/gogobuy/storeslist']); // 店家列表頁
   }
 
   // 計算遮罩用

@@ -1,5 +1,5 @@
 import { Component, computed, HostListener, signal, ViewChild, inject, ElementRef } from '@angular/core';
-import { CommonModule, AsyncPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import { ButtonModule } from 'primeng/button';
@@ -11,6 +11,10 @@ import { AuthService } from './@service/auth.service';
 import { HttpService } from './@service/http.service';
 import { NotificationBellComponent } from './account/notification-bell/notification-bell.component';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+import { FloatLabelModule } from 'primeng/floatlabel';
+import { SelectModule } from 'primeng/select';
 
 
 // 選擇欄位
@@ -21,6 +25,11 @@ export interface User {
   email: string;
   avatar_url: string | null;
   role: 'ADMIN' | 'USER';
+}
+
+export interface Category {
+  name: string;
+  value: SearchMode;
 }
 @Component({
   selector: 'app-root',
@@ -33,6 +42,10 @@ export interface User {
     MenuModule,
     CommonModule,
     NotificationBellComponent,
+    InputGroupModule,
+    InputGroupAddonModule,
+    FloatLabelModule,
+    SelectModule,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
@@ -42,6 +55,14 @@ export class AppComponent {
   constructor(public router: Router, private http: HttpService, public auths: AuthService) {
   }
   title = 'gogobuy';
+
+
+
+  category: Category[] = [
+    { name: '店家', value: 'store' },
+    { name: '團長', value: 'host' },
+    { name: '團名', value: 'event' },
+  ];
 
   // 即時監測pmenu
   @ViewChild('menu') mainMenu!: Menu;
@@ -81,11 +102,12 @@ export class AppComponent {
 
   // 切換搜尋模式
   searchMode = signal<SearchMode>('store');
-  onSearchModeChange(event: Event) {
-    const select = event.target as HTMLSelectElement;
-    this.searchMode.set(select.value as SearchMode);
+  onSearchModeChangePrime(e: any) {
+    // e.value 會是你 optionValue 指定的 value（也就是 'store'|'host'|'event'）
+    this.searchMode.set(e.value as SearchMode);
     this.resetSearch();
   }
+
 
   // 切換搜尋類型時清空輸入(回到「全部店家 / 全部開團」狀態)，避免不同模式結果混在一起
   private resetSearch() {

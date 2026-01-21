@@ -12,26 +12,26 @@
     <div class="flex-1 flex justify-center disappear px-4">
       <div class="relative flex items-center w-full md:w-[560px] group">
 
-        <!-- 搜尋類型選單 -->
-        <select class="absolute left-3 h-10 px-3 pr-8 bg-white text-slate-700 text-sm rounded-xl shadow-sm
-        border border-slate-200 outline-none focus:ring-2 focus:ring-red-600/20 appearance-none cursor-pointer"
-          [value]="searchMode()" (change)="onSearchModeChange($event)">
+        <p-inputgroup class="w-full">
+          <p-inputgroup-addon class="!bg-white !text-slate-700 !border-r-0">
+            <i class="pi pi-objects-column"></i>
+          </p-inputgroup-addon>
 
-          <!-- 切換搜尋類型時會清空輸入並重置列表（onSearchModeChange 內處理） -->
-          <option value="store">店家</option>
-          <option value="host">團長</option>
-          <option value="event">團名</option>
-        </select>
-        <i class="pi pi-angle-down absolute left-[60px] text-slate-400 pointer-events-none text-sm"></i>
+          <p-floatlabel class="!w-32" variant="on">
+            <p-select inputId="search_mode" [options]="category" optionLabel="name" optionValue="value"
+              (onChange)="onSearchModeChangePrime($event)" styleClass="!w-full" />
+            <label for="search_mode" class="text-slate-700 font-bold">搜尋類型</label>
+          </p-floatlabel>
 
-        <!-- 輸入框-->
-        <input #searchInput type="text" [placeholder]="searchPlaceholder()" (keyup.enter)="onSearch(searchInput.value)"
-          class="w-full pl-[95px] pr-24 py-3 bg-white border-none rounded-2xl shadow-sm
+          <!-- 輸入框-->
+          <input #searchInput type="text" [placeholder]="searchPlaceholder()"
+            (keyup.enter)="onSearch(searchInput.value)" class="w-full pl-[95px] pr-24 py-3 bg-white border-none rounded-2xl shadow-sm
                focus:ring-2 focus:ring-red-600/20 outline-none transition-all placeholder:text-slate-400" />
-        <button (click)="onSearch(searchInput.value)" class="absolute right-2 bg-red-600 text-white px-5 py-1.5 rounded-xl text-sm font-bold
+          <button (click)="onSearch(searchInput.value)" class="absolute right-2 bg-red-600 text-white px-5 py-1.5 rounded-xl text-sm font-bold
                hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20">
-          搜尋
-        </button>
+            搜尋
+          </button>
+        </p-inputgroup>
       </div>
     </div>
     }
@@ -71,27 +71,26 @@
 <div class="search-mobile">
   <div class="relative flex items-center w-full md:w-[560px] group">
 
-    <!-- 搜尋類型選單 -->
-    <!-- select 絕對定位在 input 上方，所以 input 需要 pl-[95px] 預留左側空間 -->
-    <select class="absolute left-3 h-10 px-3 pr-8 bg-white text-slate-700 text-sm rounded-xl shadow-sm
-      border border-slate-200 outline-none focus:ring-2 focus:ring-red-600/20 appearance-none cursor-pointer"
-      [value]="searchMode()" (change)="onSearchModeChange($event)">
+    <p-inputgroup class="w-full">
+      <p-inputgroup-addon class="!bg-white !text-slate-700 !border-r-0">
+        <i class="pi pi-objects-column"></i>
+      </p-inputgroup-addon>
 
-      <!-- 切換搜尋類型時會清空輸入並重置列表（onSearchModeChange 內處理） -->
-      <option value="store">店家</option>
-      <option value="host">團長</option>
-      <option value="event">團名</option>
-    </select>
-    <i class="pi pi-angle-down absolute left-[60px] text-slate-400 pointer-events-none text-sm"></i>
+      <p-floatlabel class="!w-32" variant="on">
+        <p-select inputId="search_mode" [options]="category" optionLabel="name" optionValue="value"
+        (onChange)="onSearchModeChangePrime($event)" styleClass="!w-full" />
+        <label for="search_mode" class="text-slate-700 font-bold">搜尋類型</label>
+      </p-floatlabel>
 
-    <!-- 輸入框-->
-    <input #searchInput type="text" [placeholder]="searchPlaceholder()" (keyup.enter)="onSearch(searchInput.value)"
-      class="w-full pl-[95px] pr-24 py-3 bg-white border-none rounded-2xl shadow-sm
+      <!-- 輸入框-->
+      <input #searchInput type="text" [placeholder]="searchPlaceholder()" (keyup.enter)="onSearch(searchInput.value)"
+        class="w-full pl-[95px] pr-24 py-3 bg-white border-none rounded-2xl shadow-sm
              focus:ring-2 focus:ring-red-600/20 outline-none transition-all placeholder:text-slate-400" />
-    <button (click)="onSearch(searchInput.value)" class="absolute right-2 bg-red-600 text-white px-5 py-1.5 rounded-xl text-sm font-bold
+      <button (click)="onSearch(searchInput.value)" class="absolute right-2 bg-red-600 text-white px-5 py-1.5 rounded-xl text-sm font-bold
              hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20">
-      搜尋
-    </button>
+        搜尋
+      </button>
+    </p-inputgroup>
   </div>
 </div>
 }
