@@ -58,36 +58,39 @@ export interface OperatingHoursVoList {
 }
 
 export interface MenuVoList {
+  id?: number,
   categoryId: number;
   name: string;
   description?: string;
-  basePrice: number;
+  basePrice: number | null;
   isAvailable: boolean;
   image?: string;
   unusual?: string[];
 }
 
 export interface MenuCategoriesVoList {
-  id: number;
+  id?: number;
   name: string;
-  priceLevel: PriceLevel[];
+  priceLevel?: PriceLevel[];
 }
 
 export interface PriceLevel {
   name: string;
-  price: number;
+  price: number | null;
 }
 
 export interface ProductOptionGroupsVoList {
+  id?: number;
   name: string;
   isRequired: boolean;
-  maxSelection: number;
+  maxSelection: number | null;
   items: Items[];
+  applicableCategoryIds?: number[];
 }
 
 export interface Items {
   name: string;
-  extraPrice: number;
+  extraPrice: number | null;
 }
 
 // 以下是暫存資料的interface ----------------

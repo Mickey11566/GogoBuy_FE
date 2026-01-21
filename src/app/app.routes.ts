@@ -73,16 +73,17 @@ export const routes: Routes = [
       { path: 'profile/edit', component: PersonInfoEditComponent, title: '修改個人資料', data: { breadcrumb: '修改個人資料' } },
       { path: 'orders', component: OrdersComponent, title: '我的訂單', data: { breadcrumb: '訂單紀錄' }, canActivate: [authGuard] },
       { path: 'wishes', component: WishesComponent, title: '願望清單', data: { breadcrumb: '許願池' } },
-      { path: 'notifications', component: NotificationsComponent, title: '通知中心', data: { breadcrumb: '通知' } },
+      { path: 'notifications', component: NotificationsComponent, title: '通知中心', data: { breadcrumb: '通知' }, canActivate: [authGuard] },
     ]
   },
 
   // 3. 店家/管理頁面
   {
     path: 'management',
-    data: { breadcrumb: '管理後台' },
+    data: { breadcrumb: '後台管理' },
     children: [
       { path: 'store', component: StoreComponent, title: '店家管理', data: { breadcrumb: '我的店家' } },
+      { path: 'store_upsert', component: StoreUpsertComponent, title: '創建店家', data: { breadcrumb: '創建店家' } },
       // 未來可以擴充例如：{ path: 'menu-edit', component: MenuEditComponent }
     ]
   },

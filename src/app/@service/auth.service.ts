@@ -1,9 +1,11 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { tap } from 'rxjs/internal/operators/tap';
 import Swal from 'sweetalert2';
 import { HttpService } from './http.service';
 import { BehaviorSubject } from 'rxjs';
+
+
 
 @Injectable({
   providedIn: 'root',
@@ -14,11 +16,57 @@ export class AuthService {
     private https: HttpService,
     private router: Router,
     private route: ActivatedRoute,) { }
+
   // TODO 用戶資料 (正式連接時用這個!)
   user: any = null;
 
   private userSubject = new BehaviorSubject<any>(this.getUserFromStorage());
   user$ = this.userSubject.asObservable();
+
+  private eventDemoImages = [
+    'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800',
+    'https://images.unsplash.com/photo-1544148103-0773bf10d330?w=800',
+  ];
+
+  private normalizeEvents(res: any) {
+    const raw = Array.isArray(res)
+      ? res
+      : (res.groupsSearchViewList ??
+        res.groupbuyEvents ??
+        res.eventList ??
+        res.events ??
+        res.data?.groupbuyEvents ??
+        []);
+
+    return (raw || []).map((e: any, i: number) => ({
+      ...e,
+      id: e.id ?? e.eventId,
+      storeId: e.storesId ?? e.storeId,
+      status: e.status ?? e.eventStatus,
+      type: e.type ?? e.eventType,
+      eventName: e.eventName ?? '',
+      announcement: e.announcement ?? '',
+      recommendDescription: e.recommendDescription ?? '',
+      image: e.image || this.eventDemoImages[i % this.eventDemoImages.length],
+    }));
+  }
+
+  private fetchEvents(apiCall: any, saveAll = false) {
+    apiCall.subscribe({
+      next: (res: any) => {
+        const list = this.normalizeEvents(res);
+        this.events.set(list);
+        if (saveAll) this.eventsAll.set(list);
+        console.log('events 更新後:', this.events());
+      },
+      error: (err: any) => {
+        console.error('抓取開團失敗', err);
+        this.events.set([]);
+        if (saveAll) this.eventsAll.set([]);
+      }
+    });
+  }
+
 
   private getUserFromStorage() {
     const saved = localStorage.getItem('user_info');
@@ -29,11 +77,10 @@ export class AuthService {
   setUser(user: any) {
     const formattedUser = {
       ...user,
-      user_avatar_url: user.user_avatar_url || user.avatar_url || user.avatarUrl
+      user_avatar_url: user.avatar_url || user.avatarUrl
     };
-    console.log(user.user_avatar_url)
-    console.log(user.avatar_url)
-    console.log(user.avatarUrl)
+    console.log("user.avatar_url" + user.avatar_url);
+    console.log("user.avatarUrl" + user.avatarUrl);
     this.user = formattedUser;
     localStorage.setItem('user_info', JSON.stringify(formattedUser));
     this.userSubject.next(formattedUser);
@@ -127,6 +174,7 @@ export class AuthService {
           title: `已登出!`,
           showConfirmButton: false,
           timer: 2000,
+          timerProgressBar: true,
         });
         // 回到首頁
         this.router.navigate(['/gogobuy']);
@@ -135,25 +183,20 @@ export class AuthService {
 
   // 註冊API
   register(payload: any) {
-    // TEST =========================================
     this.https
       .postApi('http://localhost:8080/gogobuy/user/registration', payload)
       .subscribe({
         next: (res: any) => {
           if (res.code === 200) {
             localStorage.setItem('user_session', payload.email);
-            const returnUrl = '/gogobuy';
             Swal.fire({
-              title: '註冊成功，請返回登入頁面輸入註冊資訊登入',
+              title: '註冊成功!<br>請返回登入頁面登入',
               icon: 'success',
-              timer: 2000,
             });
-            setTimeout(() => {
-              this.router.navigateByUrl(returnUrl);
-            }, 500);
           }
         },
         error: (err: any) => {
+          console.log(err.message);
           Swal.fire({
             title: err.message || '註冊失敗',
             icon: 'error',
@@ -184,7 +227,7 @@ export class AuthService {
 
           // 更新個別欄位
           if (updateDto.nickname) localStorage.setItem('user_nickname', updateDto.nickname);
-          if (updateDto.avatar_url) localStorage.setItem('user_avatar_url', updateDto.avatarUrl);
+          if (updateDto.avatar_url) localStorage.setItem('user_avatar_url', updateDto.avatar_url);
           if (updateDto.carrier) localStorage.setItem('user_carrier', updateDto.carrier);
         }
       })
@@ -261,13 +304,119 @@ export class AuthService {
 
   // 更新手機號碼
   connectPhone(id: string, phone: string) {
-  const req = {
-    phone: phone
-  };
+    const req = {
+      phone: phone
+    };
 
-  const url = `http://localhost:8080/gogobuy/user/connect-phone?id=${id}`;
+    const url = `http://localhost:8080/gogobuy/user/connect-phone?id=${id}`;
 
-  return this.https.postApi(url, req.phone);
-}
+    return this.https.postApi(url, req.phone);
+  }
+
+  // 全域可用(因為要從AppComponent輸入，GogoBuyComponent更新資訊)
+  store = signal<{ id: number; name: string; type: string; address: string; image: string; }[]>([]);
+  eventsAll = signal<any[]>([]);
+  events = signal<any[]>([]);
+
+
+  performSearch(name: string) {
+    const searchName = name.trim();
+    const apiCall = searchName
+      ? this.searchStores(searchName)
+      : this.getallstore();
+    apiCall.subscribe({
+      next: (res: any) => {
+        const demoImages = [
+          'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800', // 餐廳內裝
+          'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800', // 牛排
+          'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800', // 披薩
+          'https://images.unsplash.com/photo-1544148103-0773bf10d330?w=800'  // 飲品
+        ];
+
+        const processedList = (res.storeList || []).map((store: any, i: number) => ({
+          ...store,
+          // 如果 API 回傳的 image 是 null，就從陣列輪流拿圖
+          image: store.image || demoImages[i % demoImages.length]
+        }));
+        // 更新 Service 裡的 Signal
+        this.store.set(processedList);
+        if (!searchName) {
+          this.events.set(this.eventsAll()); // 回到全部
+        } else {
+          this.filterEventsByStoreIds(processedList.map((s: { id: any; }) => s.id));
+        }
+        if (processedList.length == 0) {
+          this.events.set([]);
+          return;
+        }
+        this.filterEventsByStoreIds(processedList.map((s: { id: any; }) => s.id));
+        console.log('API 資料已成功存入 Signal:', this.store());
+      },
+      error: (err: any) => console.error('API 錯誤:', err)
+    });
+  }
+
+  performEventSearch(hostNickname: string) {
+    const q = hostNickname.trim();
+    const apiCall = q ? this.getGroupbuyEventByName(q) : this.getallevent();
+    this.fetchEvents(apiCall, !q);
+  }
+
+  // 依店家 id 篩開團
+  filterEventsByStoreIds(storeIds: number[]) {
+    const idSet = new Set(storeIds.map(Number));
+    const base = this.eventsAll();
+
+    this.events.set(
+      base.filter(e => idSet.has(Number(e.storeId ?? e.storesId ?? e.storeId)))
+    );
+  }
+
+  // 只需要在首頁一開始呼叫一次
+  loadAllEventsOnce() {
+    this.fetchEvents(this.getallevent(), true);
+  }
+
+  // 團名搜尋：只 filter
+  filterEventsByName(keyword: string) {
+    const q = keyword.trim().toLowerCase();
+    const base = this.eventsAll();
+
+    this.events.set(!q
+      ? base
+      : base.filter(e => (e.eventName || '').toLowerCase().includes(q))
+    );
+  }
+
+
+  // 取得全部店家
+  getallstore() {
+    return this.https.getApi(`http://localhost:8080/gogobuy/store/all`);
+  }
+
+  // 搜尋店家
+  searchStores(name: string) {
+    const encodedName = encodeURIComponent(name);
+    return this.https.getApi(`http://localhost:8080/gogobuy/store/searchName?name=${encodedName}`);
+  }
+
+  // 查詢開團者暱稱搜尋團
+  getGroupbuyEventByName(hostNickname: string) {
+    const encoded = encodeURIComponent(hostNickname);
+    return this.https.getApi(
+      `http://localhost:8080/gogobuy/getGroupbuyEventByStoresName?host_nickname=${encoded}`
+    );
+  }
+
+  // 查詢全部開團
+  getallevent() {
+    return this.https.getApi(`http://localhost:8080/gogobuy/getAll`);
+  }
+
+
+  // 上傳圖床
+  upAvatarIHS() {
+
+  }
 
 }

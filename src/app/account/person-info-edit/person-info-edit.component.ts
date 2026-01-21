@@ -5,25 +5,41 @@ import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { HttpService } from '../../@service/http.service';
 import { Router } from '@angular/router';
-import { AppComponent } from '../../app.component';
+import { ImageService, ImageType } from '../../@service/image.service';
+import { FileUploadModule } from 'primeng/fileupload';
 
 @Component({
   selector: 'app-person-info-edit',
   imports: [
     CommonModule,
     FormsModule,
+    FileUploadModule
   ],
   templateUrl: './person-info-edit.component.html',
   styleUrl: './person-info-edit.component.scss'
 })
 export class PersonInfoEditComponent {
-  constructor(private http: HttpService, private router: Router, public auth: AuthService) { }
+  constructor(
+    private http: HttpService,
+    private router: Router,
+    public auth: AuthService,
+    private imageService: ImageService
+  ) { }
   // 是否是最新資料 (為測試暫時調成true，預設為false)
   ready = true;
   user: any = {
     id: '',
     email: ''
   };
+
+  // 頭像用 avatars
+  type: ImageType = 'avatars';
+
+  // 後端回傳的字串
+  uploadedUrl: string = '';
+
+  // 限制頭像上傳大小
+  readonly MAX_AVATAR_SIZE = 2000000;
 
   // 修改用暫存資料 -----------------------------------------------------------------
   editInfo: any | null = null;
@@ -57,28 +73,112 @@ export class PersonInfoEditComponent {
   // 等級計算器
   calculateLevel(exp: number = 0) {
     const totalExp = exp || 0; // 取得總經驗值
-    this.level += Math.floor(totalExp / this.expToNextLevel); // 升等(無條件捨去)
+    this.level = Math.floor(totalExp / this.expToNextLevel) + 1; // 升等(無條件捨去)
     this.currentExp = totalExp % this.expToNextLevel; // 餘數
-    // ((餘數/多少經驗升等)*100)%
-    this.expPercentage = `${(this.currentExp / this.expToNextLevel) * 100}%`;
+    this.expPercentage = `${(this.currentExp / this.expToNextLevel) * 100}%`; // ((餘數/多少經驗升等)*100)%
+  }
+
+  onPrimeUpload(event: any) {
+    const file: File = event.files?.[0];
+    if (!file) return;
+
+    this.imageService.upload(this.type, file).subscribe({
+      next: (res) => (this.uploadedUrl = res),
+      error: (err) => console.error(err),
+    });
   }
 
 
   // 頭像上傳
   onAvatarUpload(event: any) {
+
+    // TypeScript 型別轉換，用來使用input.'...'屬性
+    const input = event.target as HTMLInputElement;
+
+    // 抓取第一張圖片
     const file = event.target.files[0];
-    if (file) {
-      // 上傳後的頭像暫時用 Base64 預覽
-      const reader = new FileReader();
-      reader.onload = (e: any) => (this.editInfo.avatar_url = e.target.result);
-      reader.readAsDataURL(file);
+
+    // 沒有圖片就返回
+    if (!file) return;
+
+    // 非圖片檔案，傳送提示給使用者
+    if (!file.type.startsWith('image/')) {
+      Swal.fire({
+        toast: true,
+        position: 'top',
+        icon: 'error',
+        title: `只能上傳圖片檔喔!`,
+        showConfirmButton: false,
+        timer: 2000,
+      });
+      input.value = '';
+      return;
     }
+
+    // 檔案大小超過 2MB 提示使用者更換圖片上傳
+    if (file.size > this.MAX_AVATAR_SIZE) {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+      Swal.fire({
+        toast: true,
+        position: 'top',
+        icon: 'error',
+        title: `圖片太大了(${sizeMB}MB)，請上傳 2MB 以下的圖片!`,
+        showConfirmButton: false,
+        timer: 2000,
+      });
+      input.value = '';
+      return;
+    }
+
+    // 本地預覽（上傳前就換圖）
+    const localPreview = URL.createObjectURL(file);
+    const oldAvatar = this.editInfo.avatar_url;
+    this.editInfo.avatar_url = localPreview;
+
+    Swal.fire({
+      title: '上傳中...',
+      text: '請稍候',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    this.imageService.upload('avatars', file).subscribe({
+      next: (res) => {
+        Swal.close();
+
+        this.editInfo.avatar_url = res;
+
+        Swal.fire({ icon: 'success', title: '頭像上傳成功' });
+        input.value = '';
+      },
+      error: (err) => {
+        console.error(err);
+        // 上傳失敗就還原
+        this.editInfo.avatar_url = oldAvatar;
+
+        Swal.fire({
+          icon: 'error',
+          title: '上傳失敗',
+          text: err?.error ?? '請稍後再試',
+        });
+        input.value = '';
+      },
+      complete: () => {
+        // 釋放本地 preview URL
+        if (localPreview?.startsWith('blob:')) URL.revokeObjectURL(localPreview);
+      },
+    });
   }
+
 
   // 修改用戶資料
   updateProfile() {
     console.log('當前頭像資料內容:', this.editInfo.avatar_url);
     console.log('資料長度:', this.editInfo.avatar_url?.length);
+
     // 檢查是否有變動
     if (JSON.stringify(this.editInfo) == JSON.stringify(this.auth.user)) {
       Swal.fire({
@@ -261,7 +361,7 @@ export class PersonInfoEditComponent {
 
   get isGoogleUser(): boolean {
     // 直接回傳判斷結果，若 provider 不存在則回傳 false
-    return this.editInfo?.provider === 'GOOGLE';
+    return this.editInfo?.provider == 'GOOGLE';
   }
 
   // 返回個人資訊

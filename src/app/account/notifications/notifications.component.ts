@@ -1,14 +1,12 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { SseService } from '../../@service/sse.service';
-import { Observable } from 'rxjs/internal/Observable';
-import { AsyncPipe } from '@angular/common';
 import { Paginator, PaginatorModule } from 'primeng/paginator';
 import { Subscription } from 'rxjs/internal/Subscription';
 import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-notifications',
-  imports: [AsyncPipe, Paginator, PaginatorModule],
+  imports: [Paginator, PaginatorModule],
   templateUrl: './notifications.component.html',
   styleUrl: './notifications.component.scss',
 })
@@ -63,10 +61,10 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     if (!link) return;
 
     // 外部連結：http/https 開新分頁（也可以改同分頁）
-    // if (typeof link === 'string' && /^https?:\/\//i.test(link)) {
-    //   window.open(link, '_blank');
-    //   return;
-    // }
+    if (typeof link === 'string' && /^https?:\/\//i.test(link)) {
+      window.open(link, '_blank');
+      return;
+    }
 
     // 站內路由：如果沒有/就補上
     const internal = link.startsWith('/') ? link : `/${link}`;

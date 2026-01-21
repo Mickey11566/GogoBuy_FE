@@ -10,6 +10,8 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { FluidModule } from 'primeng/fluid';
 import { CheckboxModule } from 'primeng/checkbox';
 import { StoreService } from '../../@service/store.service';
+import { DialogModule } from 'primeng/dialog';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-store-upsert',
@@ -20,17 +22,27 @@ import { StoreService } from '../../@service/store.service';
     SelectModule, FloatLabelModule,
     DatePickerModule, FormsModule, FluidModule,
     FormsModule, CheckboxModule, InputNumber,
+    DialogModule,
   ],
   templateUrl: './store-upsert.component.html',
   styleUrl: './store-upsert.component.scss'
 })
 export class StoreUpsertComponent {
 
-  constructor(private storeService: StoreService){}
+  constructor(
+    private storeService: StoreService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) { }
 
-  date2: Date | undefined;
-  date3: Date | undefined;
+  displayAlertDialog: boolean = false;
+  alertMessage!: string;
   selectCategory!: string;
+
+  // 暫存輸入時間
+  timeSlots: TimeSlotUI[] = [
+    { selectedWeeks: [], openTime: null, closeTime: null }
+  ];
 
   category: Category[] = [
     { name: '團購代購', code: 1 },
@@ -47,10 +59,7 @@ export class StoreUpsertComponent {
     { name: '星期日', key: 7 },
   ];
 
-  timeSlots: TimeSlotUI[] = [
-    { selectedWeeks: [], openTime: null, closeTime: null }
-  ];
-
+  // 店家的類型 type
   groupedType = [
     {
       label: '1. 熟食餐點',
@@ -110,7 +119,7 @@ export class StoreUpsertComponent {
       ]
     },
     {
-      label: '8. 運動與休閒娛樂', // 額外補充
+      label: '8. 運動與休閒娛樂',
       items: [
         { label: '運動器材', value: '運動器材' },
         { label: '戶外露營', value: '戶外露營' },
@@ -119,6 +128,7 @@ export class StoreUpsertComponent {
     }
   ];
 
+  // 從 store_upsert 來的店家資訊
   storeData = {
     name: '',
     phone: '',
@@ -139,6 +149,7 @@ export class StoreUpsertComponent {
     fee_description: [] as FeeDescription[]
   }
 
+  // 上傳照片
   onImageUpload(event: any) {
     const file = event.target.files[0];
     if (file) {
@@ -155,8 +166,6 @@ export class StoreUpsertComponent {
 
     if (file) {
       this.selectedFile = file;
-
-      // 使用 FileReader 產生預覽網址
       const reader = new FileReader();
       reader.onload = (e) => {
         this.storeData.image = e.target?.result as string;
@@ -172,6 +181,7 @@ export class StoreUpsertComponent {
     this.selectedFile = null;
   }
 
+  // 營業時間
   addTimeSlot() {
     this.timeSlots.push({
       selectedWeeks: [],
@@ -184,7 +194,17 @@ export class StoreUpsertComponent {
     this.timeSlots.splice(index, 1);
   }
 
-  addFeeRow(){
+  formatTime(date: Date | null): string {
+    if (!date) {
+      return '00:00';
+    }
+    const h = date.getHours().toString().padStart(2, '0');
+    const m = date.getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
+  }
+
+  // 運費級距
+  addFeeRow() {
     this.storeData.fee_description.push({ km: 0, fee: 0 });
   }
 
@@ -194,6 +214,11 @@ export class StoreUpsertComponent {
 
   onSubmit() {
     const finalVoList: any[] = [];
+    const missingFields: string[] = [];
+
+    if (!this.storeData.name) missingFields.push('商店名稱');
+    if (!this.storeData.address) missingFields.push('商店地址');
+    if (!this.storeData.phone) missingFields.push('聯絡電話');
 
     this.timeSlots.forEach(slot => {
       const openStr = this.formatTime(slot.openTime);
@@ -208,24 +233,22 @@ export class StoreUpsertComponent {
       });
     });
 
+    if (finalVoList.length === 0) {
+      missingFields.push('營業時間');
+    }
+
+    if (missingFields.length > 0) {
+      this.alertMessage = missingFields.map(field => ` ${field}`).join('\n');
+      this.displayAlertDialog = true;
+      return;
+    }
+
     this.storeData.operatingHoursVoList = finalVoList;
     this.storeService.storeData = this.storeData;
     console.log('storeData：', this.storeData);
 
-
+    this.router.navigate(['../store'], { relativeTo: this.route });
   }
-
-  formatTime(date: Date | null): string {
-    if (!date) {
-      return '00:00';
-    }
-    const h = date.getHours().toString().padStart(2, '0');
-    const m = date.getMinutes().toString().padStart(2, '0');
-    return `${h}:${m}`;
-  }
-
-
-
 }
 
 export interface Category {
