@@ -52,7 +52,8 @@
                     class="p-1.5 text-gray-400 hover:text-[#662222] transition-colors">
                     <i class="pi pi-pencil text-xs"></i>
                   </button>
-                  <button (click)="deleteCategory()" class="p-1.5 text-gray-400 hover:text-red-500 transition-colors">
+                  <button (click)="openCateDelete(category, $index)"
+                    class="p-1.5 text-gray-400 hover:text-red-500 transition-colors">
                     <i class="pi pi-trash text-xs"></i>
                   </button>
                 </div>
@@ -118,7 +119,8 @@
                   class="p-2 text-gray-400 hover:text-[#662222] transition-colors">
                   <i class="pi pi-pencil text-sm"></i>
                 </button>
-                <button (click)="deleteSpec($index)" class="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                <button (click)="openDeleteSpec(group, $index)"
+                  class="p-2 text-gray-400 hover:text-red-500 transition-colors">
                   <i class="pi pi-trash text-sm"></i>
                 </button>
               </div>
@@ -251,6 +253,10 @@
                       class="p-2 text-gray-400 hover:text-[#662222] hover:bg-[#662222]/10 rounded-full transition-all">
                       <i class="pi pi-pencil"></i>
                     </button>
+                    <button (click)="openDeleteProduct(product, $index)"
+                      class="p-2 text-gray-400 hover:text-[#662222] hover:bg-[#662222]/10 rounded-full transition-all">
+                      <i class="pi pi-pencil"></i>
+                    </button>
                   </td>
                 </tr>
                 }
@@ -263,14 +269,11 @@
             <div class="text-center space-y-2 max-w-xs">
               <h3 class="text-lg font-bold text-gray-700">還沒有建立商品</h3>
               <p class="text-sm text-gray-400 leading-relaxed">
-                這裡暫時空空如也，點擊下方的 <span class="font-semibold">新增商品</span> 按鈕，開始建立您的第一份菜單吧！
+                這裡暫時空空如也，點擊 <span class="font-semibold">新增商品</span> 按鈕，開始建立您的第一份菜單吧！
               </p>
             </div>
-
-            <button (click)="openNewProduct()"
-              class="mt-8 px-6 py-2.5 bg-[#662222] text-white rounded-full text-sm font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center gap-2">
-              <i class="pi pi-plus text-[10px]"></i>
-              立即新增商品
+            <button class="mt-3 text-xs text-[#662222] font-bold hover:underline" (click)="openNewProduct()">
+              + 立即新增第一個商品
             </button>
           </div>
           }
@@ -599,8 +602,9 @@
           <div class="flex items-center justify-between">
             <label class="text-xs font-bold text-[#662222]/80">基礎價格</label>
           </div>
-          <p-inputnumber [(ngModel)]="currentProduct.basePrice" mode="currency" currency="TWD" [min]="0" class="w-full"
-            inputStyleClass="w-full border-gray-200 focus:border-[#662222] rounded-xl text-sm" placeholder="$" />
+          <p-inputnumber [(ngModel)]="currentProduct.basePrice" currency="TWD" [min]="0" class="w-full"
+            inputStyleClass="w-full border-gray-200 focus:border-[#662222] rounded-xl text-sm text-right" prefix="$ "
+            placeholder="$ " [maxFractionDigits]="0" />
         </div>
       </div>
 
@@ -683,18 +687,7 @@
     </div>
   </div>
 
-  <div class="flex justify-between items-center px-4 mb-3">
-
-    @if (isEditMode) {
-    <button
-      class="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-bold hover:bg-red-50 transition-all active:scale-95"
-      (click)="deleteProduct(currentProduct.id!)">
-      <i class="pi pi-trash"></i>
-      <span>刪除此商品</span>
-    </button>
-    } @else {
-    <div></div> }
-
+  <div class="flex justify-end items-center px-4 mb-3 gap-10">
     <button
       class="flex items-center gap-2 bg-[#662222] px-6 py-2 rounded-lg hover:brightness-110 shadow-md transition-all active:scale-95"
       (click)="saveProduct()">
@@ -729,7 +722,7 @@
 
 <!---------------------------- 儲存成功Dialog ---------------------------->
 <p-dialog [(visible)]="displaySaveDialog" [modal]="true" [closable]="false" [showHeader]="false" [draggable]="false"
-  [resizable]="false" styleClass="rounded-xl overflow-hidden"
+  [resizable]="false" [closeOnEscape]="false" styleClass="rounded-xl overflow-hidden"
   [style]="{ width: '90vw', maxWidth: '24rem', border: 'none' }">
 
   <div class="bg-white px-4 pb-4 pt-5 sm:p-6">
@@ -750,7 +743,100 @@
 
     <div class="mt-5 sm:mt-6">
       <button type="button" (click)="displaySaveDialog = false" routerLink='../../gogobuy/home' class="inline-flex w-full justify-center rounded-md bg-[#662222] px-3 py-2 text-sm font-semibold
-        text-white shadow-sm hover:bg-[#662222]/90 transition-all cursor-pointer active:scale-95 outline-none">確認
+        text-white shadow-sm hover:bg-[#662222]/90 transition-all active:scale-95 outline-none">確認
+      </button>
+    </div>
+  </div>
+</p-dialog>
+
+<!---------------------------- 確定要刪除 分類 嗎 Dialog ---------------------------->
+<p-dialog [(visible)]="displayDeleteCategories" [modal]="true" [closable]="false" [showHeader]="false"
+  [draggable]="false" [resizable]="false" [closeOnEscape]="false" styleClass="rounded-xl overflow-hidden"
+  [style]="{ width: '90vw', maxWidth: '24rem', border: 'none' }">
+
+  <div class="bg-white px-4">
+    <div class="flex flex-col gap-3 mt-5">
+      <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+        <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+        </svg>
+      </div>
+
+      <div class="mt-3 text-center">
+        <h3 class="text-lg font-semibold leading-6 text-gray-900" id="modal-title">刪除分類</h3>
+        <p class="text-sm text-gray-700">是否確定刪除 <span class="font-bold">{{ tempCateTarget?.name }}</span> 分類</p>
+      </div>
+    </div>
+
+    <div class="flex gap-5 mt-5">
+      <button type="button" (click)="displayDeleteCategories = false" class="inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold
+        text-gray-500 shadow-sm hover:bg-gray-100 transition-all outline-none">取消
+      </button>
+      <button type="button" (click)="deleteCategories()" class="inline-flex w-full justify-center rounded-md bg-[#662222] px-3 py-2 text-sm font-semibold
+        text-white shadow-sm hover:bg-[#662222]/90 transition-all active:scale-95 outline-none">確認
+      </button>
+    </div>
+  </div>
+</p-dialog>
+
+<!---------------------------- 確定要刪除 規格 嗎 Dialog ---------------------------->
+<p-dialog [(visible)]="displayDeleteSpecs" [modal]="true" [closable]="false" [showHeader]="false" [draggable]="false"
+  [resizable]="false" [closeOnEscape]="false" styleClass="rounded-xl overflow-hidden"
+  [style]="{ width: '90vw', maxWidth: '24rem', border: 'none' }">
+
+  <div class="bg-white px-4">
+    <div class="flex flex-col gap-3 mt-5">
+      <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+        <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+        </svg>
+      </div>
+
+      <div class="mt-3 text-center">
+        <h3 class="text-lg font-semibold leading-6 text-gray-900" id="modal-title">刪除規格</h3>
+        <p class="text-sm text-gray-700">是否確定刪除<span class="font-bold">{{ tempSpecTarget?.name }}</span>規格</p>
+      </div>
+    </div>
+
+    <div class="flex gap-5 mt-5">
+      <button type="button" (click)="displayDeleteSpecs = false" class="inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold
+        text-gray-500 shadow-sm hover:bg-gray-100 transition-all outline-none">取消
+      </button>
+      <button type="button" (click)="deleteSpec()" class="inline-flex w-full justify-center rounded-md bg-[#662222] px-3 py-2 text-sm font-semibold
+        text-white shadow-sm hover:bg-[#662222]/90 transition-all active:scale-95 outline-none">確認
+      </button>
+    </div>
+  </div>
+</p-dialog>
+
+<!---------------------------- 確定要刪除 商品 嗎 Dialog ---------------------------->
+<p-dialog [(visible)]="displayDeleteProduct" [modal]="true" [closable]="false" [showHeader]="false" [draggable]="false"
+  [resizable]="false" [closeOnEscape]="false" styleClass="rounded-xl overflow-hidden"
+  [style]="{ width: '90vw', maxWidth: '24rem', border: 'none' }">
+
+  <div class="bg-white px-4">
+    <div class="flex flex-col gap-3 mt-5">
+      <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+        <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+        </svg>
+      </div>
+
+      <div class="mt-3 text-center">
+        <h3 class="text-lg font-semibold leading-6 text-gray-900" id="modal-title">刪除商品</h3>
+        <p class="text-sm text-gray-700">是否確定刪除<span class="font-bold">{{ tempProductTarget?.name }}</span>商品</p>
+      </div>
+    </div>
+
+    <div class="flex gap-5 mt-5">
+      <button type="button" (click)="displayDeleteProduct = false" class="inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold
+        text-gray-500 shadow-sm hover:bg-gray-100 transition-all outline-none">取消
+      </button>
+      <button type="button" (click)="deleteProduct()" class="inline-flex w-full justify-center rounded-md bg-[#662222] px-3 py-2 text-sm font-semibold
+        text-white shadow-sm hover:bg-[#662222]/90 transition-all active:scale-95 outline-none">確認
       </button>
     </div>
   </div>
