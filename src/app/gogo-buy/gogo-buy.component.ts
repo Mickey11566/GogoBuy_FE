@@ -1,4 +1,4 @@
-import { Component, HostListener, ViewChild } from '@angular/core';
+import { Component, HostListener, ViewChild, computed, signal } from '@angular/core';
 import { CarouselModule } from 'primeng/carousel';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
@@ -14,7 +14,10 @@ import { Subject, timer, Subscription } from 'rxjs';
 import { switchMap, takeUntil } from 'rxjs/operators';
 import { HttpService } from '../@service/http.service';
 import { Router } from '@angular/router';
+import { PanelModule } from 'primeng/panel';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { AuthService } from '../@service/auth.service';
+
 
 export type Stores = {
   id: number;
@@ -81,14 +84,34 @@ export interface Store {
     FloatLabelModule,
     TabsModule,
     TooltipModule,
+    PanelModule,
   ],
   templateUrl: './gogo-buy.component.html',
   styleUrl: './gogo-buy.component.scss'
 })
 export class GogoBuyComponent {
-  constructor(public router: Router, private http: HttpService,
-    private sanitizer: DomSanitizer
+  constructor(
+    public router: Router,
+    private http: HttpService,
+    private sanitizer: DomSanitizer,
+    public auths: AuthService
   ) { }
+
+  readonly storeStage = signal<0 | 1>(0);
+  readonly storeInitial = 5;   // 初始顯示
+  readonly storeExpanded = 10;  // 第一次查看更多後顯示
+
+  visibleStores = computed(() => {
+    const limit = this.storeStage() === 0 ? this.storeInitial : this.storeExpanded;
+    return this.auths.store().slice(0, limit);
+  });
+
+  storeCtaLabel = computed(() => this.storeStage() === 0 ? '查看更多' : '查看全部');
+
+  onStoreCtaClick() {
+    if (this.storeStage() === 0) this.storeStage.set(1);
+    else this.router.navigate(['/gogobuy/storeslist']); // 店家列表頁
+  }
 
   // 計算遮罩用
   numVisible = 3;
@@ -108,6 +131,16 @@ export class GogoBuyComponent {
 
 
   ngOnInit(): void {
+    // 全部開團
+    this.auths.loadAllEventsOnce();
+    // this.auths.performEventSearch('');
+
+    // 店家
+    if (this.auths.store().length == 0) {
+      this.auths.performSearch('');
+    }
+
+    // 假資料，待後端串接
     // this.http.getApi('http://localhost:8080/gogobuy/store/all').subscribe((res:any)=>{
     //   this.storeList=res.storeList;
     // });
@@ -232,6 +265,29 @@ export class GogoBuyComponent {
     }
   }
 
+  // 手機板輪播修改設定
+  responsiveOptions = [
+    {
+      breakpoint: '1024px',
+      numVisible: 3,
+      numScroll: 1
+    },
+    {
+      breakpoint: '560px',
+      numVisible: 1,
+      numScroll: 1
+    }
+  ];
+
+  isMobile = window.innerWidth <= 560;
+
+  @HostListener('window:resize')
+  onResize() {
+    this.isMobile = window.innerWidth <= 560;
+  }
+
+
+  // Carousel 初始後，設定中心卡片
   ngAfterViewInit() {
     this.updateCenterIndex(0);
   }
@@ -241,6 +297,7 @@ export class GogoBuyComponent {
     clearTimeout(this.idleTimer);
   }
 
+  // event.page 是頁數d
   onCarouselPage(event: any) {
     // event.page = 當前「第一張」的 index  :contentReference[oaicite:1]{index=1}
     this.updateCenterIndex(event.page);
@@ -484,8 +541,17 @@ export class GogoBuyComponent {
     clearTimeout(this.idleTimer);
     this.visible = false;
     this.enableScroll();
-    this.router.navigate(['/management/store']);
+    this.router.navigate(['/management/store_upsert']);
+  }
+  goStoreInfo(storeId: number) {
+    // 跳轉前手動銷毀 Tooltip，防止文字殘留
+    if (this.tooltip) {
+      this.tooltip.deactivate();
+      this.tooltip.hide();
+    }
+    clearTimeout(this.idleTimer);
+    this.visible = false;
+    this.enableScroll();
+    this.router.navigate(['/management/store_info', storeId]);
   }
 }
-
-
