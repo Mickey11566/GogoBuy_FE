@@ -522,7 +522,10 @@ export class GogoBuyComponent {
     clearTimeout(this.idleTimer);
     this.visible = false;
     this.enableScroll();
-    this.router.navigate(['/management/store']);
+    this.router.navigate(['/management/store_upsert']);
+  }
+  goStoreInfo(storeId:number){
+    this.router.navigate(['/management/store_info', storeId]);
   }
 }
 
