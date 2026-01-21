@@ -1,4 +1,3 @@
-import { PriceLevel } from './../../@service/store.service';
 import { Component, ElementRef, QueryList, ViewChildren } from '@angular/core';
 import { StepperModule } from 'primeng/stepper';
 import { ButtonModule } from 'primeng/button';
@@ -51,9 +50,12 @@ export class StoreComponent {
   displayProductDialog = false;
   displayItemDialog = false;
   displaySaveDialog = false;
+  displayDeleteCategories = false;
+  displayDeleteSpecs = false;
+  displayDeleteProduct = false;
 
   selectedProduct!: MenuVoList;
-  selectedCategoryId!: number;
+  selectedCategoryId: number | null = null;
   selectedIndex: number = -1;
 
   // 店家詳細資訊
@@ -61,26 +63,32 @@ export class StoreComponent {
   indicatorLeft = 0;
   indicatorWidth = 0;
 
-  // 商品分類
+  // 分類
   filteredProducts: MenuVoList[] = [];
   newCategories = '';
   currentCategoryId: number = -1;
   currentCategories: MenuCategoriesVoList = this.getNewCategories();
   editingCategory: any = null;
   editingIndex!: number;
+  tempCateTarget!: any;
+  tempCateIndex: number = -1;
 
   // 規格
   editingSpecIndex: number = -1;
-  currentGroup: ProductOptionGroupsVoList = this.getEmptyGroup();
+  currentGroup: ProductOptionGroupsVoList = this.getNewGroups();
   selectedSpecsCategories: any[] = [];
   filteredSpecsForProduct: any[] = [];
+  tempSpecTarget!: any;
+  tempSpecIndex: number = -1;
 
-  // 暫存新增的商品
+  // 商品
   currentProduct: MenuVoList = this.getNewProduct();
   optionGroups: ProductOptionGroupsVoList = this.getNewGroups();
   currentGroupIndex: number | null = null;
   currentItemIndex: number | null = null;
   currentItem: Items = { name: '', extraPrice: 0 };
+  tempProductTarget!: any;
+  tempProductIndex: number = -1;
 
   isEditMode = false;
   searchKeyword: string = '';
@@ -109,7 +117,7 @@ export class StoreComponent {
   getNewItem(): Items {
     return {
       name: '',
-      extraPrice: null
+      extraPrice: 0
     }
   }
 
@@ -122,14 +130,6 @@ export class StoreComponent {
     };
   }
 
-  getEmptyGroup(): ProductOptionGroupsVoList {
-    return {
-      name: '',
-      isRequired: false,
-      maxSelection: null,
-      items: []
-    };
-  }
 
   // 打包傳進資料庫
   storeData = {
@@ -181,9 +181,27 @@ export class StoreComponent {
     this.displayCategoriesDialog = true;
   }
 
-  deleteCategory() {
-    this.storeData.menuCategoriesVoList.splice(this.editingIndex, 1);
-    this.displayCategoriesDialog = false;
+  openCateDelete(target: MenuCategoriesVoList, index: number){
+    this.tempCateTarget = target;
+    this.tempCateIndex = index;
+    this.displayDeleteCategories = true;
+  }
+
+  deleteCategories() {
+    const target = this.tempCateTarget;
+    const index = this.tempCateIndex;
+
+    if(target.id){
+      this.storeData.menuCategoriesVoList= this.storeData.menuCategoriesVoList.filter(
+        item => item.id !== target.id
+      );
+    } else {
+      this.storeData.productOptionGroupsVoList.splice(index, 1);
+    }
+
+    this.displayDeleteCategories = false;
+    this.tempCateTarget = null;
+    this.tempCateIndex = -1;
   }
 
   addPriceLevel() {
@@ -219,9 +237,9 @@ export class StoreComponent {
   this.displayCategoriesDialog = false;
 }
 
-  selectedCategories(catId: number = -1) {
-    this.selectedIndex = catId;
-    this.currentCategoryId = catId;
+  selectedCategories(categoryId: number) {
+    this.selectedCategoryId = categoryId;
+    this.currentCategoryId = categoryId ;
     this.searchKeyword = '';
     this.applyFilters();
   }
@@ -242,7 +260,7 @@ export class StoreComponent {
   editSpec(spec: ProductOptionGroupsVoList, index: number) {
     this.isEditMode = true;
     this.editingSpecIndex = index;
-    this.currentGroup = { ...spec };
+    this.currentGroup = structuredClone(spec);
 
     if (spec.applicableCategoryIds) {
       this.selectedSpecsCategories = this.storeData.menuCategoriesVoList.filter(cate => {
@@ -265,17 +283,27 @@ export class StoreComponent {
     });
   }
 
-  deleteSpec(index: number) {
-    const target = this.storeData.productOptionGroupsVoList[index];
-    if (confirm(`確定要刪除「${target.name}」嗎？`)) {
-      if (target.id) {
-        this.storeData.productOptionGroupsVoList = this.storeData.productOptionGroupsVoList.filter(
-          item => item.id !== target.id
-        );
-      } else {
-        this.storeData.productOptionGroupsVoList.splice(index, 1);
-      }
+  openDeleteSpec(group: ProductOptionGroupsVoList, index: number){
+    this.tempSpecTarget = group;
+    this.tempSpecIndex = index;
+    this.displayDeleteSpecs = true;
+  }
+
+  deleteSpec() {
+    const target = this.tempSpecTarget;
+    const index = this.tempSpecIndex;
+
+    if(target.id){
+      this.storeData.productOptionGroupsVoList= this.storeData.productOptionGroupsVoList.filter(
+        item => item.id !== target.id
+      );
+    } else {
+      this.storeData.productOptionGroupsVoList.splice(index, 1);
     }
+
+    this.displayDeleteSpecs = false;
+    this.tempSpecTarget = null;
+    this.tempSpecIndex = -1;
   }
 
   isCateSelected(cate: any): boolean {
@@ -300,15 +328,15 @@ export class StoreComponent {
 
     this.storeData.productOptionGroupsVoList = [...this.storeData.productOptionGroupsVoList];
     this.displaySpecsDialog = false;
-    this.currentGroup = this.getEmptyGroup();
+    this.currentGroup = this.getNewGroups();
     this.selectedSpecsCategories = [];
   }
 
-  // 圖片 ---------------------------------------------------------
+  // search ---------------------------------------------------------
   applyFilters() {
     let results = [...this.storeData.menuVoList];
-    if (this.selectedIndex !== -1) {
-      results = results.filter(p => p.categoryId === this.storeData.menuCategoriesVoList[this.selectedIndex].id);
+    if (this.selectedCategoryId !== null) {
+      results = results.filter(p => p.categoryId === this.selectedCategoryId);
     }
 
     const keyword = this.searchKeyword.trim().toLowerCase();
@@ -329,6 +357,7 @@ export class StoreComponent {
     this.displayProductDialog = true;
   }
 
+  // 商品圖片
   selectedFile: File | null = null;
   onFileSelected(event: any) {
     const file = event.target.files[0];
@@ -350,6 +379,7 @@ export class StoreComponent {
     this.selectedFile = null;
   }
 
+  //
   onCategoryChange() {
     const selectedId = this.currentProduct.categoryId;
     if (!selectedId) {
@@ -446,12 +476,29 @@ export class StoreComponent {
   }
 
   // 刪除商品 ---------------------------------------------------------
-  deleteProduct(id: number){
-    if (!id) {
-      this.displayProductDialog = false;
-      return;
+  openDeleteProduct(traget: MenuVoList, index: number){
+    this.tempProductTarget = traget;
+    this.tempProductIndex = index;
+    this.displayDeleteProduct = true;
+  }
+
+  deleteProduct() {
+    const target = this.tempProductTarget;
+    const index = this.tempProductIndex;
+
+    if(target.id){
+      this.storeData.menuVoList= this.storeData.menuVoList.filter(
+        item => item.id !== target.id
+      );
+    } else {
+      this.storeData.menuVoList.splice(index, 1);
     }
-    this.storeData.menuVoList.splice(id, 1);
+
+    this.applyFilters();
+
+    this.displayDeleteProduct = false;
+    this.tempProductTarget = null;
+    this.tempProductIndex = -1;
   }
 
 
