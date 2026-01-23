@@ -44,7 +44,7 @@
             <div class="sub text-base text-slate-700">{{ o.createdAt | date:'yyyy/MM/dd HH:mm' }}</div>
 
             <!-- 狀態標籤：顏色由 getStatusSeverity() 控制 -->
-            <p-tag [value]="o.statusLabel" [severity]="getStatusSeverity(o.statusLabel)" />
+            <p-tag class="break-keep! mr-2" [value]="o.statusLabel" [severity]="getStatusSeverity(o.statusLabel)" />
           </div>
         </div>
       </p-accordion-header>
@@ -54,9 +54,9 @@
         <div class="order-body space-y-4">
 
           <!-- 收件資訊 -->
-          <div class="grid grid-cols-2 gap-4 border-b pb-2">
+          <div class="flex flex-row gap-2 place-content-between border-b pb-2 text-nowrap">
             <div class="font-bold text-base">收件人：{{ o.receiverName }}</div>
-            <div class="font-bold text-base">電話：{{ o.phone }}</div>
+            <div class="font-bold text-base ">電話：{{ o.phone }}</div>
           </div>
 
           <!-- 訂單品項 -->
