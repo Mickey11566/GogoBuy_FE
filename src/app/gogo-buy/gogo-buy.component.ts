@@ -112,8 +112,9 @@ export class GogoBuyComponent {
 
   onStoreCtaClick() {
     if (this.storeStage() === 0) this.storeStage.set(1);
-    else this.showDialog() // 店家列表頁
+    else this.router.navigate(['/gogobuy/list']); // 店家列表頁
   }
+
 
   // 計算遮罩用
   numVisible = 3;

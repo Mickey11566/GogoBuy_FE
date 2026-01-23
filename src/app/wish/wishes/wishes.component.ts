@@ -28,7 +28,7 @@ type FoFilter = 'all' | 'active' | 'finished' | 'expired';
     PaginatorModule,
     ToastModule,
     DialogModule,
-    TooltipModule
+    TooltipModule,
   ],
   templateUrl: './wishes.component.html',
   styleUrl: './wishes.component.scss',
@@ -99,7 +99,7 @@ export class WishesComponent implements OnInit {
 
   ngOnInit(): void {
     // 訂閱 User 狀態流
-    this.auth.user$.subscribe(user => {
+    this.auth.user$.subscribe((user) => {
       if (user) {
         console.log('接收到用戶資料:', user);
         this.userId = user.id;
@@ -109,8 +109,8 @@ export class WishesComponent implements OnInit {
     // 刷新資料
     this.auth.refreshUser();
 
-    console.log("用戶id : "+this.userId)
-    console.log("許願次數 : "+this.timesRemaining)
+    console.log('用戶id : ' + this.userId);
+    console.log('許願次數 : ' + this.timesRemaining);
 
     this.loadWishes();
   }
@@ -143,11 +143,13 @@ export class WishesComponent implements OnInit {
     // ========================================
 
     // 後端上線後使用：
-    this.http.getApi('http://localhost:8080/gogobuy/wish/all_wishes').subscribe((res: any) => {
-      this.wishes = res.allWish || [];
-      this.afterLoad();
-      this.applyScrollAndHighlight();
-    });
+    this.http
+      .getApi('http://localhost:8080/gogobuy/wish/all_wishes')
+      .subscribe((res: any) => {
+        this.wishes = res.allWish || [];
+        this.afterLoad();
+        this.applyScrollAndHighlight();
+      });
 
     // 假資料
     // this.wishes = [
@@ -281,13 +283,13 @@ export class WishesComponent implements OnInit {
   // =========================
   // 把英文轉成中文顯示
   typeforHtml(type: string) {
-    if(type === "beverage"){
-      return "手搖店";
+    if (type === 'beverage') {
+      return '手搖店';
     }
-    if(type === "restaurant"){
-      return "餐廳";
+    if (type === 'restaurant') {
+      return '餐廳';
     }
-    return "生鮮雜貨";
+    return '生鮮雜貨';
   }
 
   getCardClass(wish: any): string {
@@ -307,7 +309,8 @@ export class WishesComponent implements OnInit {
     // 進行中：依 type 三色淡底
     const type = wish.type;
     if (type === 'beverage') return 'bg-sky-100 border-sky-200 text-red-900';
-    if (type === 'restaurant') return 'bg-[#FFF1E6] border-[#FFD9C2] text-red-900';
+    if (type === 'restaurant')
+      return 'bg-[#FFF1E6] border-[#FFD9C2] text-red-900';
     return 'bg-[#EAF6EF] border-[#CFE9DA] text-red-900'; // 生鮮雜貨
   }
 
@@ -345,7 +348,7 @@ export class WishesComponent implements OnInit {
   // - 不顯示 finished=true
   getAllTabList(): any[] {
     return this.wishes.filter(
-      (w) => !this.isExpired(w.buildDate) && !this.isFinished(w)
+      (w) => !this.isExpired(w.buildDate) && !this.isFinished(w),
     );
   }
 
@@ -377,7 +380,7 @@ export class WishesComponent implements OnInit {
     if (this.myFilter === 'all') return list;
     if (this.myFilter === 'active') {
       return list.filter(
-        (w) => !this.isExpired(w.buildDate) && !this.isFinished(w)
+        (w) => !this.isExpired(w.buildDate) && !this.isFinished(w),
       );
     }
     if (this.myFilter === 'finished') {
@@ -539,7 +542,7 @@ export class WishesComponent implements OnInit {
   // 右上角「我要許願」
   // =========================
   onCreateWish(): void {
-    // 未登入防呆（目前測試會有假 userId，所以通常不會觸發）
+    // 未登入防呆
     if (!this.userId) {
       this.toastWarn('請先登入', '登入後才可以許願喔');
       return;
@@ -573,13 +576,13 @@ export class WishesComponent implements OnInit {
   }
 
   typeChange(type: string) {
-    if(type === "手搖店"){
-      return "beverage";
+    if (type === '手搖店') {
+      return 'beverage';
     }
-    if(type === "餐廳"){
-      return "restaurant";
+    if (type === '餐廳') {
+      return 'restaurant';
     }
-    return "groceries";
+    return 'groceries';
   }
 
   // 送出（dialog 的送出按鈕呼叫）
@@ -600,7 +603,6 @@ export class WishesComponent implements OnInit {
       return;
     }
 
-
     const payload = {
       userId: this.userId,
       title,
@@ -613,41 +615,19 @@ export class WishesComponent implements OnInit {
     console.log('送出新增資料：' + JSON.stringify(payload, null, 2));
 
     // 後端上線後使用（成功再刷新/更新畫面）
-    this.http.postApi('http://localhost:8080/gogobuy/wish/add_wishes', payload).subscribe((res: any) => {
-      this.isCreating = false;
-      if (res?.code === 200) {
-        this.toastSuccess('成功', '創建成功');
-        this.timesRemaining -= 1;
-        this.closeCreateDialog();
-        this.loadWishes(); // 重新抓一次
-      } else {
-        this.toastWarn('失敗', res?.message || '創建失敗');
-      }
-    });
-
-    // 測試：直接前端新增
-    // const newWish = {
-    //   id: Date.now(),
-    //   user_id: this.userId,
-    //   nickname:
-    //     payload.anonymous === 'true' ? null : this.auth.user?.nickname ?? null,
-    //   title: payload.title,
-    //   followers: [],
-    //   finished: false,
-    //   type: payload.type,
-    //   buildDate: new Date().toISOString().slice(0, 10),
-    //   location: payload.location,
-    // };
-
-    // this.wishes = [newWish, ...this.wishes];
-    // this.setRandomNicknamesOnce();
-    // this.timesRemaining -= 1;
-
-    // this.toastSuccess('成功', '創建成功');
-    // this.resetPages();
-
-    // this.isCreating = false;
-    // this.closeCreateDialog();
+    this.http
+      .postApi('http://localhost:8080/gogobuy/wish/add_wishes', payload)
+      .subscribe((res: any) => {
+        this.isCreating = false;
+        if (res?.code === 200) {
+          this.toastSuccess('成功', '創建成功');
+          this.timesRemaining -= 1;
+          this.closeCreateDialog();
+          this.loadWishes(); // 重新抓一次
+        } else {
+          this.toastWarn('失敗', res?.message || '創建失敗');
+        }
+      });
   }
 
   // =========================
@@ -664,7 +644,7 @@ export class WishesComponent implements OnInit {
       return;
     }
 
-    // 後端上線後使用：(if (idx > -1)那邊需要測試)
+    // 後端上線後使用：
     const url = `http://localhost:8080/gogobuy/wish/follow_wish?id=${wish.id}&userId=${this.userId}`;
     this.http.postApi(url, {}).subscribe((res: any) => {
       if (res?.code === 200) {
@@ -683,14 +663,6 @@ export class WishesComponent implements OnInit {
     // 測試：前端直接切換
     const followers: string[] = wish.followers || [];
     const idx = followers.indexOf(this.userId);
-
-    // if (idx > -1) {
-    //   followers.splice(idx, 1);
-    //   this.toastInfo('已取消', '已取消跟願');
-    // } else {
-    //   followers.push(this.userId);
-    //   this.toastSuccess('成功', '跟願成功！');
-    // }
   }
 
   // p-dialog用變數 ----------------------------
@@ -726,7 +698,7 @@ export class WishesComponent implements OnInit {
     this.detailFollowerCount = (wish.followers || []).length;
     this.detailDisplayName = this.getDisplayName(wish);
 
-    // 是否允許開團（依你原本邏輯）
+    // 是否允許開團
     const canStartGroup =
       !!this.userId &&
       !isReadOnlyInFollowed &&
@@ -783,7 +755,7 @@ export class WishesComponent implements OnInit {
       cancelButtonText: '取消',
       didOpen: () => {
         const container = document.querySelector(
-          '.swal2-container'
+          '.swal2-container',
         ) as HTMLElement | null;
         if (container) container.style.zIndex = '20000';
       },
@@ -801,14 +773,6 @@ export class WishesComponent implements OnInit {
           this.toastWarn('失敗', res?.message || '刪除失敗');
         }
       });
-
-      // 測試：直接刪
-      // this.wishes = this.wishes.filter((w) => w.id !== wish.id);
-      // this.toastSuccess('成功', '刪除成功');
-      // this.resetPages();
-      // // 關掉p-dialog
-      // this.closeDetail();
-      // Swal.close();
     });
   }
 
@@ -832,7 +796,7 @@ export class WishesComponent implements OnInit {
       cancelButtonText: '取消',
       didOpen: () => {
         const container = document.querySelector(
-          '.swal2-container'
+          '.swal2-container',
         ) as HTMLElement | null;
         if (container) container.style.zIndex = '20000';
       },
@@ -841,55 +805,32 @@ export class WishesComponent implements OnInit {
 
       // 後端上線後使用（先新增成功 -> 再刪除原本）
       // 新增願望
-      // const addPayload = {
-      //   userId: this.userId,
-      //   title: wish.title,
-      //   anonymous: 'false',
-      //   type: wish.type,
-      //   location: wish.location,
-      // };
-      // this.http
-      //   .postApi('http://localhost:8080/gogobuy/add_wishes', addPayload)
-      //   .subscribe((res: any) => {
-      //     if (res?.code === 200) {
-      //       // 刪除原願望
-      //       const delUrl = `http://localhost:8080/gogobuy/delete_wish?id=${wish.id}&userId=${this.userId}`;
-      //       this.http.postApi(delUrl, {}).subscribe((del: any) => {
-      //         if (res?.code === 200) {
-      //           this.toastSuccess('成功', '已刪除原願望');
-      //           this.closeDetail();
-      //           this.loadWishes();
-      //         } else {
-      //           this.toastWarn('失敗', res?.message || '原願望刪除失敗');
-      //         }
-      //       });
-      //     }
-      //   });
-
-      // 測試：前端直接模擬「新增 + 刪除」
-      const cloned = {
-        id: Date.now(),
-        user_id: this.userId,
-        nickname: wish.nickname,
+      const addPayload = {
+        userId: this.userId,
         title: wish.title,
-        followers: [],
-        finished: false,
+        anonymous: 'false',
         type: wish.type,
-        buildDate: new Date().toISOString().slice(0, 10),
         location: wish.location,
       };
-
-      // 新增
-      this.wishes = [cloned, ...this.wishes];
-      this.setRandomNicknamesOnce();
-
-      // 刪除舊的
-      this.wishes = this.wishes.filter((w) => w.id !== wish.id);
-
-      this.timesRemaining -= 1;
-      this.toastSuccess('成功', '已重新發起願望！');
-      this.resetPages();
-      this.closeDetail();
+      this.http
+        .postApi('http://localhost:8080/gogobuy/wish/add_wishes', addPayload)
+        .subscribe((res: any) => {
+          if (res?.code === 200) {
+            // 刪除原願望
+            const delUrl = `http://localhost:8080/gogobuy/wish/delete_wish?id=${wish.id}&userId=${this.userId}`;
+            this.http.postApi(delUrl, {}).subscribe((del: any) => {
+              if (res?.code === 200) {
+                this.toastSuccess('成功', '已刪除原願望');
+                this.closeDetail();
+                this.timesRemaining -= 1;
+                this.resetPages();
+                this.loadWishes();
+              } else {
+                this.toastWarn('失敗', res?.message || '原願望刪除失敗');
+              }
+            });
+          }
+        });
       Swal.close();
     });
   }
@@ -931,7 +872,7 @@ export class WishesComponent implements OnInit {
     // 設定 CSS variable
     document.documentElement.style.setProperty(
       '--scrollbar-offset',
-      `${scrollbarWidth}px`
+      `${scrollbarWidth}px`,
     );
 
     body.style.position = 'fixed';
