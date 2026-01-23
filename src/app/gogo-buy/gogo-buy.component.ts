@@ -18,6 +18,8 @@ import { PanelModule } from 'primeng/panel';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { AuthService } from '../@service/auth.service';
 import { SelectModule } from 'primeng/select';
+import { MultiSelect, MultiSelectModule } from 'primeng/multiselect';
+
 
 
 export type Stores = {
@@ -87,6 +89,7 @@ export interface Store {
     TooltipModule,
     PanelModule,
     SelectModule,
+    MultiSelectModule,
   ],
   templateUrl: './gogo-buy.component.html',
   styleUrl: './gogo-buy.component.scss'
@@ -112,7 +115,7 @@ export class GogoBuyComponent {
 
   onStoreCtaClick() {
     if (this.storeStage() === 0) this.storeStage.set(1);
-    else this.showDialog() // 店家列表頁
+    else this.router.navigate(['/gogobuy/list']); // 店家列表頁
   }
 
   // 計算遮罩用
@@ -596,10 +599,21 @@ export class GogoBuyComponent {
     this.router.navigate(['/management/store_info', storeId]);
   }
 
-  open = false;
-  toggle(event: MouseEvent) {
-    event.stopPropagation();
-    this.open = !this.open;
+  /* 開團 TYPE filtered */
+  // 在 p-select 改值，這個 signal 就會更新，進而觸發下面的 computed 重新計算(正在開團中的TYPE)
+  readonly selectedTypes = signal<string[]>([]);
+  readonly typeQuery = signal<string>('');
+
+  @ViewChild('typeMs') typeMs!: MultiSelect;
+
+  openTypePanel(e: MouseEvent) {
+    this.typeMs.show();     // 用漏斗打開面板
+    e.stopPropagation();    // 避免同一次 click 立刻觸發外部點擊而關掉
+  }
+
+  // 取 type 的工具(.trim()避免後端塞空白造成「看起來一樣、其實字串不同」)
+  private getEventType(e: any): string {
+    return String(e.type).trim();
   }
   choice!: string;
   choose(category: string) {
@@ -657,14 +671,71 @@ export class GogoBuyComponent {
         this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
       }
     }
+  }
 
-    this.close();
+  // p-select 的 options
+  readonly eventTypeOptions = computed(() => {
+
+    // 從 events 抽出每筆的 type
+    const types = this.auths.events().map(e => this.getEventType(e)).filter(Boolean);
+
+    // 統計各 type 出現次數
+    const count = new Map<string, number>();
+    for (const t of types) count.set(t, (count.get(t) ?? 0) + 1);
+
+    // 變成 p-select 要的 [{label, value}] 格式
+    const unique = Array.from(count.keys()).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+
+    // 格式
+    return unique.map(t => ({ label: `${t} (${count.get(t)})`, value: t }));
+  });
+
+
+  // 篩選開團
+  readonly filteredEventCards = computed(() => {
+
+    // 使用者選到的類別
+    const selected = this.selectedTypes();
+
+    // 你已經 join 店家後的卡片資料
+    const cards = this.eventCards();
+
+    // ✅ 沒選任何 -> 全部
+    if (!selected.length) return cards;
+
+    return cards.filter(c => selected.includes(this.getEventType(c)));
+  });
+
+  // 外部搜尋：只影響「面板顯示的選項」
+  readonly eventTypeOptionsFiltered = computed(() => {
+    const q = this.typeQuery().trim().toLowerCase();
+    const opts = this.eventTypeOptions();
+    if (!q) return opts;
+
+    return opts.filter(o =>
+      o.value.toLowerCase().includes(q) || o.label.toLowerCase().includes(q)
+    );
+  });
+
+  readonly typePanelOpen = signal(false);
+
+  toggleTypePanel(e: MouseEvent) {
+    e.stopPropagation();
+    this.typePanelOpen.update(v => !v);
   }
-  close() {
-    this.open = false;
-  }
-  @HostListener('document:click')
-  onDocumentClick() {
-    this.open = false;
+
+  /* 轉換ISO8601日期格式 */
+  formatDateTime(s: string) {
+    // 's' 如果是 ''、null、undefined ，就直接回傳空字串
+    if (!s) return '';
+    // 把後端給的字串'2026-01-15T21:20:30'轉成 JS 的 Date 物件
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return '';
+    // String(n)：把數字轉字串 .padStart(2, '0')：如果長度不到 2，就在前面補 0，2026/1/5 9:3 => 2026/01/05 09:03
+    const pad = (n: number) => String(n).padStart(2, '0');
+    // 顯示格式 Year()：年份、 Month：月份、 Date：日期、 Hours：小時、 Minutes：分鐘
+    // JS 的月份是 0~11，所以Month要+1才會變成1~12月
+    return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 }
+
