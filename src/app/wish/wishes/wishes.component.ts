@@ -40,7 +40,7 @@ export class WishesComponent implements OnInit {
     public auth: AuthService,
     private messageService: MessageService,
     private route: ActivatedRoute,
-    private router: Router,
+    private router: Router
   ) {}
 
   // =========================
@@ -132,9 +132,9 @@ export class WishesComponent implements OnInit {
 
       this.pendingFilter =
         filter === 'all' ||
-        filter === 'active' ||
-        filter === 'finished' ||
-        filter === 'expired'
+          filter === 'active' ||
+          filter === 'finished' ||
+          filter === 'expired'
           ? filter
           : null;
 

@@ -16,6 +16,7 @@ import { NotificationsComponent } from './account/notifications/notifications.co
 import { StoreUpsertComponent } from './stores/store-upsert/store-upsert.component';
 import { StoreInfoComponent } from './stores/store-info/store-info.component';
 import { CartPageComponent } from './account/cart-page/cart-page.component';
+import { StoreListComponent } from './stores/store-list/store-list.component';
 
 // export const routes: Routes = [
 //   // 首頁
@@ -63,6 +64,7 @@ export const routes: Routes = [
       { path: '', redirectTo: 'home', pathMatch: 'full' },
       { path: 'home', component: GogoBuyComponent, data: { breadcrumb: '首頁' } },
       { path: 'login', component: LoginComponent, title: '登入', data: { breadcrumb: '登入' } },
+      { path: 'list', component: StoreListComponent, title: '找附近', data: { breadcrumb: '找附近' } },
     ]
   },
 
@@ -86,9 +88,10 @@ export const routes: Routes = [
     data: { breadcrumb: '後台管理' },
     children: [
       { path: 'store', component: StoreComponent, title: '店家管理', data: { breadcrumb: '我的店家' } },
+      { path: 'store/:id', component: StoreComponent, title: '店家管理', data: { breadcrumb: '我的店家' } },
       { path: 'store_upsert', component: StoreUpsertComponent, title: '創建店家', data: { breadcrumb: '創建店家' } },
+      { path: 'store_upsert/:id', component: StoreUpsertComponent, title: '創建店家', data: { breadcrumb: '創建店家' } },
       { path: 'store_info/:id', component: StoreInfoComponent, title: '店家資訊', data: { breadcrumb: '店家資訊' } },
-      // 未來可以擴充例如：{ path: 'menu-edit', component: MenuEditComponent }
     ]
   },
 

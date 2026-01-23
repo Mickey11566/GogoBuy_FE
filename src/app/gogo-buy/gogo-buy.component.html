@@ -1,19 +1,22 @@
-<body class="bg-slate-50 min-h-svh">
+<body class="bg-[#F8FAFC] min-h-svh">
 
   <!--輪播欄-->
-  <section class="max-w-[1440px] mx-auto mt-6 px-4 md:px-8">
+  <section class="max-w-[1440px] mx-auto mt-6 ">
     <!--[numVisible]一次可顯示X個圖片，[numScroll]有幾個滾輪，[circular]圖片是否可重複，[autoplayInterval]自動撥放秒數，
     [showIndicators]是否顯示滾輪，[showNavigators]是否顯示左右翻閱鍵-->
-    <p-carousel [value]="banners" [numVisible]="3" [numScroll]="1" [circular]="true" [autoplayInterval]="4000"
-      (onPage)="onCarouselPage($event)">
+    <!-- 手機關閉 indicators / navigators：避免太擠 + 觸控誤觸 -->
+    <p-carousel styleClass="hero-carousel" [value]="banners" [numVisible]="3" [numScroll]="1" [circular]="true"
+      [autoplayInterval]="4000" [responsiveOptions]="responsiveOptions" [showNavigators]="false"
+      [showIndicators]="!isMobile" (onPage)="onCarouselPage($event)">
       <ng-template pTemplate="item" let-banner let-i="index">
-        <div class="carousel-item-wrapper px-1">
-          <div class="banner relative overflow-hidden rounded-2xl" [class.is-center]="i === centerIndex">
+        <div class="carousel-item-wrapper px-1" [class.is-center-item]="i === centerIndex">
+          <div class="banner relative overflow-hidden rounded-2xl h-[220px] md:h-[280px] lg:h-[320px]"
+            [class.is-center]="i === centerIndex">
 
             <img [src]="banner.image" [alt]="banner.title" class="w-full h-full object-cover" />
-
+            @if(!isMobile){
             <div class="banner-mask absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-none"></div>
-
+            }
             <div class="banner-title absolute bottom-4 left-4 z-10 text-white font-bold text-lg drop-shadow-md">
               {{ banner.title }}
             </div>
@@ -22,28 +25,75 @@
         </div>
       </ng-template>
     </p-carousel>
-
   </section>
 
   <!--開團中店家-->
+
   <section class="max-w-[1440px] mx-auto p-4 md:p-4">
-    <h2 class="text-3xl font-black text-slate-900 mb-8 flex items-center gap-3">
-      <span class="w-2 h-8 bg-red-600 rounded-full"></span>
-      正在開團中
-    </h2>
+    <div class="flex flex-col gap-3 md:flex-row md:items-left">
+      <span class="text-3xl font-black text-slate-900 mb-8 flex items-center gap-3">
+        <span class="w-2 h-8 bg-red-600 rounded-full"></span>
+        正在開團中
+      </span>
+
+      <!-- TYPE：外部搜尋 + 漏斗開啟多選面板 -->
+      <!-- 固定一個 50x50 的錨點區塊 -->
+      <div class="relative h-[50px] w-[50px] md:h-[45px] md:w-[45px]">
+
+        <!-- 漏斗 icon -->
+        <button type="button" class="h-full w-full rounded-xl border border-slate-200 bg-white
+           flex items-center justify-center hover:border-slate-300 active:scale-[0.98]"
+          (click)="toggleTypePanel($event)" aria-label="開啟類別篩選">
+          <i class="pi pi-filter text-slate-700"></i>
+        </button>
+
+        <!-- p-multiselect：疊在同一格，當定位錨點用（不吃點擊） -->
+        <p-multiselect [options]="eventTypeOptionsFiltered()" optionLabel="label" optionValue="value"
+          [ngModel]="selectedTypes()" (ngModelChange)="selectedTypes.set($event ?? [])" [filter]="true"
+          [showToggleAll]="true" [showClear]="false" display="chip" appendTo="body" [overlayVisible]="typePanelOpen()"
+          (onPanelHide)="typePanelOpen.set(false)" [panelStyle]="{ 'min-width': '240px', 'margin-top': '8px' }"
+          styleClass="type-ms-anchor"></p-multiselect>
+
+      </div>
+
+
+
+      <button (click)="showDialog()" title="開新團" class="
+      /* 1. 手機版基礎樣式 (Mobile First) */
+      bg-red-700 text-white font-bold ml-[5px]
+      w-full max-w-[100px] h-[50px] text-[16px] rounded mb-4
+      /* 2. 電腦版樣式 (md: 768px 以上) */
+      md:w-[120px] md:h-[45px] md:ml-[5vw] md:mb-0 md:text-[15px]
+      /* 3. 互動效果 */
+      hover:bg-white hover:text-red-700 hover:border hover:border-red-700 hover:scale-[1.05]
+      active:bg-red-100 active:scale-[0.95]">+ 開新團
+      </button>
+
+    </div>
   </section>
+
+  <!-- eventCards() = events + store 依 storeId 做連動(商家可查詢) -->
+  @if (filteredEventCards().length > 0) {
 
   <!-- 卡片RWD grid-cols-1(手機板一次顯示1個卡片) md:grid-cols-2(平板一次顯示2個卡片) lg:grid-cols-5(電腦版一次顯示5個卡片)
      gap-6(卡片之間相隔距離) -->
   <section class="max-w-[1440px] mx-auto p-4 md:p-4">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-      @for (event of events(); track event.id;) {
-      <!-- rounded-3xl  -->
-      <div class="group relative overflow-hidden rounded-3xl transition-all duration-300 ' +
-        'col-span-1 min-h-[200px]">
-        @if(event.image){
-        <img [src]="event.image"
+      @for (event of filteredEventCards(); track event.id;) {
+
+
+      <!-- group(放大) relative(讓內部圖片/遮罩以卡片為定位基準) overflow-hidden(圖片 hover 放大不會超出圓角)
+       rounded-3xl(圓角) overflow-hidden(放大時隱藏超出範圍部分、避免破圖) transition-all duration-300(動畫平滑化)
+       min-h-[200px](避免內容為 0 高導致圖片無法撐出卡片高度) cursor-pointer(滑鼠可點擊示意) -->
+      <div class="group relative overflow-hidden rounded-3xl transition-all duration-300
+        col-span-1 min-h-[200px] cursor-pointer">
+
+        <!-- 若 event 沒有圖片暫時用文字替代 -->
+        @if(event.displayImage){
+
+        <!-- 圖片滿版鋪底(absolute + inset-0 讓圖片貼齊四邊，object-cover 維持比例並裁切) -->
+        <img [src]="event.displayImage"
           class="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105" />
         } @else {
         <br>
@@ -51,15 +101,22 @@
         <br>
         {{ event.recommendDescription }}
         }
+
+        <!-- bg-gradient-to-t(遮罩底部最深，頂部最淺) from-black/90(底部從90%不透明開始) via-black/20(中間部分20%不透明)
+             to-transparent(頂部全透明) 漸層遮罩讓底部文字更清楚（底部更黑、往上透明） -->
         <div
           class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-6 flex flex-col justify-end">
           <h3 class="text-lg font-bold text-white">
+            {{ event.eventName }}
+            <br>
             <br>
             {{ event.announcement }}
+            <br>
+            {{ event.recommendDescription }}
           </h3>
-
           <div class="flex items-center justify-between mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <span class="text-white/80 text-xs">{{ event.recommendDescription }}</span>
+            <span class="text-white/80 text-xs">開團者：{{ event.nickname }} <br> 結束時間：{{ formatDateTime(event.endTime) }}
+            </span>
             <i class="pi pi-arrow-right text-white text-xs"></i>
           </div>
         </div>
@@ -67,6 +124,8 @@
       }
     </div>
   </section>
+  }
+
 
   <!-- 現有店家 -->
   <section class="max-w-[1440px] mx-auto p-4 md:p-4">
@@ -74,7 +133,7 @@
       <h2 class="text-3xl font-black text-slate-900 mb-8 flex items-center gap-3">
         <span class="w-2 h-8 bg-red-600 rounded-full"></span>
         目前店家
-        <span class="text-sm font-medium text-slate-400 bg-slate-200/50 px-3 py-1 rounded-full ml-2">
+        <span class="text-base font-semibold text-slate-700 bg-slate-200/50 px-3 py-1 rounded-full ml-2">
           {{ auths.store().length }} 間店
         </span>
       </h2>
@@ -83,22 +142,24 @@
 
   <!-- 卡片RWD grid-cols-1(手機板一次顯示1個卡片) md:grid-cols-2(平板一次顯示2個卡片) lg:grid-cols-5(電腦版一次顯示5個卡片)
      gap-6(卡片之間相隔距離) -->
-  <section class="max-w-[1440px] mx-auto p-4 md:p-4">
+  <section class="max-w-[1440px] mx-auto p-4 md:p-4 mb-16">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
 
-      @for (item of auths.store(); track item.id;) {
-      <!-- rounded-3xl  -->
-      <div class="group relative overflow-hidden rounded-3xl transition-all duration-300 ' +
-        'col-span-1 min-h-[200px]">
+      @for (item of visibleStores(); track item.id;) {
+      <div class="group relative overflow-hidden rounded-3xl bg-slate-200 min-h-[200px] w-full shadow-md
+      hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 cursor-pointer "
+        (click)="goStoreInfo(item.id)">
         <img [src]="item.image" (error)="item.image = 'https://picsum.photos/800/600?random=' + item.id"
           class="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105" />
         <div
-          class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-6 flex flex-col justify-end">
-          <h3 class="text-lg font-bold text-white">
+          class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-6 flex flex-col justify-end ">
+          <h3
+            class="text-xl font-bold text-white mb-2 translate-y-4 group-hover:translate-y-0 transition-transform duration-300 ">
             {{ item.name }}
           </h3>
 
-          <div class="flex items-center justify-between mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div class="flex items-center justify-between opacity-0 group-hover:opacity-100
+             translate-y-4 group-hover:translate-y-0 transition-all duration-300 delay-75">
             <span class="text-white/80 text-xs">{{ item.type }}</span>
             <i class="pi pi-arrow-right text-white text-xs"></i>
           </div>
@@ -106,6 +167,262 @@
       </div>
       }
     </div>
+    <!-- 展開/到全部商家頁面 -->
+    @if (auths.store().length > storeInitial) {
+    <div class="mt-6 flex justify-center">
+      <button class="px-5 py-2 rounded-xl bg-[#E07A3F] text-white font-bold hover:bg-[#c86d39]"
+        (click)="onStoreCtaClick()">
+        {{ storeCtaLabel() }}
+      </button>
+    </div>
+    }
   </section>
 
 </body>
+
+
+
+@if(open){  <!-- ================= 手機 Bottom Sheet ================= -->
+  <div class="sm:hidden fixed inset-0 z-[1102] bg-black/50 backdrop-blur-sm"></div>  <!-- 背景遮罩 -->
+  <div class="sm:hidden fixed inset-0 z-[1102] flex items-end" (click)="close()">
+    <div class="relative w-full max-h-[85vh] bg-white rounded-t-xl px-5 pt-4 pb-6
+            shadow-2xl animate-slide-up"
+        (click)="$event.stopPropagation()" >  <!-- 底部選單 -->
+      <!-- <div class="flex justify-center mb-5">  拖曳條
+        <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+      </div> -->
+      <h3 class="text-base font-semibold text-gray-900 mb-4">請選擇購買類型</h3>  <!-- 標題 -->
+      <button class="w-full flex items-center justify-between py-4 px-3 rounded-xl
+              transition hover:bg-gray-100 active:bg-gray-200"
+               (click)="choose('fast')">  <!-- 選項 -->
+        <span>外送</span>
+      </button>
+      <button class="w-full flex items-center justify-between py-4 px-3 rounded-xl
+              transition hover:bg-gray-100 active:bg-gray-200"
+               (click)="choose('slow')">
+        <span>團購</span>
+      </button>
+      <button class="w-full flex items-center justify-between py-4 px-3 rounded-xl
+              transition hover:bg-gray-100 active:bg-gray-200"
+               (click)="choose('all')">
+        <span>不限類型(外送+團購)</span>
+      </button>
+      <button class="mt-6 w-full py-3 rounded-xl text-gray-600 bg-gray-100 active:bg-gray-200"
+              (click)="close()">取消</button>
+    </div>
+  </div>
+}
+<p-dialog header="選擇開團店家" [modal]="true" [(visible)]="visible" [style]="{ width: '900px', height:'700px' }"
+  [breakpoints]="{ '960px': '90vw', '640px': '95vw' }" [draggable]="false" [resizable]="false" [blockScroll]="true"
+  appendTo="body" (onShow)="disableScroll()" (onHide)="enableScroll()"
+  contentStyleClass="flex flex-col overflow-hidden">
+  <div class="flex-none flex flex-col gap-2 mt-[1vh] pb-2">
+    <p-inputgroup>
+      <p-inputgroup-addon>
+        <i class="pi pi-search"></i>
+      </p-inputgroup-addon>
+      <p-floatlabel variant="on" autocomplete="off">
+        <input type="search" [(ngModel)]="storeSearch" (keyup)="letterSearch()" (search)="letterSearch()"
+          [class.p-filled]="!!storeSearch"
+          class="border border-gray-300 focus:!border-2 focus:!border-[#662222] focus:!shadow-none outline-none w-full p-2 pl-3 rounded-r-xl transition-all" />
+        <label>店家名稱</label>
+      </p-floatlabel>
+    </p-inputgroup>
+  </div>
+  <p-tabs [(value)]="activeTab" #storeTabs class="flex flex-col flex-1 overflow-hidden">
+    <div class="flex bg-white z-10">
+      <div class="relative flex-1 overflow-hidden">
+        <!-- TabList -->
+        <p-tablist class="flex h-full items-center overflow-x-auto whitespace-nowrap
+                pr-20 custom-scrollbar hide-scrollbar">
+          <p-tab value="allstores">全部店家</p-tab>
+          @for (type of uniqueTabs; track $index) {
+            <p-tab [value]="type">{{ type }}</p-tab>
+          }
+        </p-tablist>
+        <!-- 右側漸層遮罩（提示還有內容） -->
+        <div class="pointer-events-none absolute top-0 right-0 h-full w-16
+                bg-gradient-to-l from-white via-white/80 to-transparent"></div>
+      </div>
+
+      <div class="relative inline-block mr-[30px] pt-2 w-24 sm:w-64">  <!-- 下拉選單 -->
+        <button (click)="toggle($event)"
+          class="w-full px-4 py-2 bg-rose-50 text-[#662222] rounded-md flex justify-between items-center">  <!-- 觸發按鈕 -->
+          {{choice || "類型"}}
+          <span class="transition-transform duration-200" [class.rotate-180]="open">▼</span>
+        </button>
+        @if(open){
+          <!-- ================= 桌機下拉 ================= -->
+          <div class="hidden sm:block absolute mt-2 w-full bg-white rounded-md shadow-lg z-50 animate-fade-in" (click)="$event.stopPropagation()">
+            <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer" (click)="choose('fast')">外送</div>
+            <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer" (click)="choose('slow')">團購</div>
+            <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer" (click)="choose('all')">不限類型(外送+團購)</div>
+          </div>
+        }
+      </div>
+
+    </div>
+
+    <div class="flex-1 overflow-y-auto pt-2 pb-4 px-4 custom-scrollbar">
+      <p-tabpanel [value]="activeTab">
+        @if(storeList.length<=0){
+          <p class="mt-[20px] text-2xl text-center font-bold">目前尚無相關店家資料</p>
+        }@else {
+          @if(choice=="不限" || !choice){
+            <div class="flex items-center my-4">
+              <div class="flex-1 border-t border-gray-400"></div>   <!-- 左邊線 -->
+              <span class="mx-4 text-gray-700 whitespace-nowrap text-sm sm:text-base">
+                外送
+              </span>
+              <div class="flex-1 border-t border-gray-400"></div>   <!-- 右邊線 -->
+            </div>
+          }
+          @if(filteredFastStoreList.length==0 && (choice=="不限" || !choice)){
+            <p class="text-center">無外送店家資料</p>
+          }@else{
+            @for (store of fastStoreList; track $index) {
+              @if(activeTab=="allstores" || activeTab==store.type){
+                <div class="w-full bg-rose-50 rounded-xl border border-gray-100 overflow-hidden mt-4
+                            hover:border-2 hover:border-[#662222] hover:scale-[1.01] transition duration-200
+                            active:scale-[0.98]" (click)="goStoreInfo(store.id)">
+                  <div class="flex flex-col sm:flex-row items-stretch sm:items-center">
+                    <div class="shrink-0 w-full aspect-[4/3] sm:w-[200px] sm:h-[150px] bg-gray-100 relative overflow-hidden sm:m-4 sm:rounded-lg">
+                      <img [src]="store.image" class="absolute inset-0 w-full h-full object-cover" />
+                    </div>
+                    <div class="flex-1 min-w-0 p-4 sm:pr-6 sm:py-4">
+                      <div class="flex items-center justify-between mb-2">
+                        <p class="text-2xl font-bold text-gray-800 truncate m-0" [innerHTML]="highlight(store.name)">
+                          {{store.name }}</p>
+                        <div class="text-right">
+                          <span class="shrink-0 ml-2 px-2 py-0.5 rounded text-base bg-red-100 text-red-700">
+                            {{store.type}}
+                          </span>
+                          <span class="shrink-0 ml-2 px-2 py-0.5 rounded text-base bg-red-100 text-red-700 flex mt-[5px] min-w-[77px]">
+                            <div class="motocycle-icon -scale-x-100" style="background-color: oklch(50.5% 0.213 27.518);"></div>
+                            &nbsp;{{store.category}}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="text-sm sm:text-base text-gray-600 space-y-1.5">
+                        <p class="m-0 truncate">📞電話：{{store.phone}}</p>
+                        <p class="m-0 truncate">📍地址：{{store.address}}</p>
+                        <p class="m-0 font-bold text-[#662222]">🚚外送費：{{store.feeDescription}}</p>
+                        @if(store.memo){
+                        <p class="m-0 text-sm text-gray-400 italic truncate">備註：{{store.memo}}</p>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+          }
+          @if(choice=="不限" || !choice){
+            <div class="flex items-center my-4">
+              <div class="flex-1 border-t border-gray-400"></div>   <!-- 左邊線 -->
+              <span class="mx-4 text-gray-700 whitespace-nowrap text-sm sm:text-base">
+                團購
+              </span>
+              <div class="flex-1 border-t border-gray-400"></div>   <!-- 右邊線 -->
+            </div>
+          }
+          @if(filteredSlowStoreList.length==0 && (choice=="不限" || !choice)){
+            <p class="text-center">無團購店家資料</p>
+          }@else {
+            @for (store of openStoreList; track $index) {
+              @if(activeTab === 'allstores' || activeTab === store.type) {
+                <div class="w-full bg-rose-50 rounded-xl border border-gray-100 overflow-hidden mt-4
+                            hover:border-2 hover:border-[#662222] hover:scale-[1.01] transition duration-200
+                            active:scale-[0.98]" (click)="goStoreInfo(store.id)">
+                  <div class="flex flex-col sm:flex-row items-stretch sm:items-center">
+                    <div class="shrink-0 w-full aspect-[4/3] sm:w-[200px] sm:h-[150px] bg-gray-100 relative overflow-hidden sm:m-4 sm:rounded-lg">
+                      <img [src]="store.image" class="absolute inset-0 w-full h-full object-cover" />
+                    </div>
+                    <div class="flex-1 min-w-0 p-4 sm:pr-6 sm:py-4">
+                      <div class="flex items-center justify-between mb-2">
+                        <p class="text-2xl font-bold text-gray-800 truncate m-0" [innerHTML]="highlight(store.name)">
+                          {{store.name }}</p>
+                        <div class="text-right">
+                          <span class="shrink-0 ml-2 px-2 py-0.5 rounded text-base bg-red-100 text-red-700">
+                            {{store.type}}
+                          </span>
+                          <span class="shrink-0 ml-2 px-2 py-0.5 rounded text-base bg-red-100 text-red-700 flex mt-[5px] min-w-[77px]">
+                            <div class="delivery-icon -scale-x-100" style="background-color: oklch(50.5% 0.213 27.518);"></div>
+                            &nbsp;{{store.category}}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="text-sm sm:text-base text-gray-600 space-y-1.5">
+                        <p class="m-0 truncate">📞電話：{{store.phone}}</p>
+                        <p class="m-0 truncate">📍地址：{{store.address}}</p>
+                        <p class="m-0 font-bold text-[#662222]">🚚外送費：{{store.feeDescription}}</p>
+                        @if(store.memo){
+                        <p class="m-0 text-sm text-gray-400 italic truncate">備註：{{store.memo}}</p>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+            @for (store of closeStoreList; track $index) {
+              @if(activeTab === 'allstores' || activeTab === store.type) {
+              <div class="relative w-full rounded-xl overflow-hidden bg-amber-50 border border-gray-200 mt-4
+                          hover:border-2 hover:border-[#4F4F4F] hover:scale-[1.01] transition duration-200
+                          active:scale-[0.98]" (click)="goStoreInfo(store.id)">
+                <div class="w-full rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div class="flex flex-col sm:flex-row items-stretch sm:items-center">
+                    <div
+                      class="shrink-0 w-full aspect-[4/3] sm:w-[200px] sm:h-[150px] bg-gray-100 relative overflow-hidden sm:m-4 sm:rounded-lg">
+                      <img [src]="store.image" class="absolute inset-0 w-full h-full object-cover" />
+                      <div class="absolute inset-0 z-10 flex items-center justify-center bg-amber-100/90">
+                        <div class="text-2xl sm:text-xl font-bold tracking-[4px] sm:tracking-[2px]
+                                    px-4 py-1 border-2 whitespace-nowrap">
+                          未營業
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex-1 min-w-0 p-4 sm:pr-6 sm:py-4">
+                      <div class="flex items-center justify-between mb-2">
+                        <p class="text-2xl font-bold text-gray-800 truncate m-0" [innerHTML]="highlight(store.name)">
+                          {{store.name }}</p>
+                        <div class="text-right">
+                          <span class="shrink-0 ml-2 px-2 py-0.5 rounded text-base bg-amber-100 text-amber-700">
+                            {{store.type}}
+                          </span>
+                          <span class="shrink-0 ml-2 px-2 py-0.5 rounded text-base bg-amber-100 text-amber-700 flex mt-[5px] min-w-[77px]">
+                            <div class="delivery-icon -scale-x-100" style="background-color: oklch(55.5% 0.163 48.998);"></div>
+                            &nbsp;{{store.category}}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="text-sm sm:text-base text-gray-600 space-y-1.5">
+                        <p class="m-0 truncate">📞電話：{{store.phone}}</p>
+                        <p class="m-0 truncate">📍地址：{{store.address}}</p>
+                        <p class="m-0 font-bold text-[#662222]">🚚外送費：{{store.feeDescription}}</p>
+                        @if(store.memo){
+                        <p class="m-0 text-sm text-gray-400 italic truncate">備註：{{store.memo}}</p>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+            }
+          }
+        }
+      </p-tabpanel>
+    </div>
+  </p-tabs>
+
+  <button pTooltip="找不到店家嗎?" severity="secondary" tooltipPosition="top" (click)="addStore()"
+          [tooltipDisabled]=open
+          class="fixed md:absolute right-4 bottom-4 md:right-[2rem] md:bottom-[2rem]
+                 px-4 py-2 md:w-[150px] md:h-[50px]
+                 bg-[#E07A3F] z-30 rounded-full md:rounded-sm shadow-lg
+                 hover:bg-red-700 text-white font-bold transition-all">
+    <span class="hidden md:inline">新增店家 ➜</span>
+    <span class="md:hidden">＋ 新增</span>
+  </button>
+</p-dialog>
