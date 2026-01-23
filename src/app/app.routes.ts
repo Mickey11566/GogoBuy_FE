@@ -15,6 +15,7 @@ import { WishesComponent } from './wish/wishes/wishes.component';
 import { NotificationsComponent } from './account/notifications/notifications.component';
 import { StoreUpsertComponent } from './stores/store-upsert/store-upsert.component';
 import { StoreInfoComponent } from './stores/store-info/store-info.component';
+import { CartPageComponent } from './account/cart-page/cart-page.component';
 
 // export const routes: Routes = [
 //   // 首頁
@@ -74,7 +75,8 @@ export const routes: Routes = [
       { path: 'profile/edit', component: PersonInfoEditComponent, title: '修改個人資料', data: { breadcrumb: '修改個人資料' } },
       { path: 'orders', component: OrdersComponent, title: '我的訂單', data: { breadcrumb: '訂單紀錄' }, canActivate: [authGuard] },
       { path: 'wishes', component: WishesComponent, title: '願望清單', data: { breadcrumb: '許願池' } },
-      { path: 'notifications', component: NotificationsComponent, title: '通知中心', data: { breadcrumb: '通知' }, canActivate: [authGuard] },
+      { path: 'notifications', component: NotificationsComponent, title: '通知中心', data: { breadcrumb: '通知' } },
+      { path: 'cart', component: CartPageComponent, title: '購物車', data: { breadcrumb: '購物車' } },
     ]
   },
 

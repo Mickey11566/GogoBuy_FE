@@ -52,7 +52,8 @@
                     class="p-1.5 text-gray-400 hover:text-[#662222] transition-colors">
                     <i class="pi pi-pencil text-xs"></i>
                   </button>
-                  <button (click)="openCateDelete(category, $index)" class="p-1.5 text-gray-400 hover:text-red-500 transition-colors">
+                  <button (click)="openCateDelete(category, $index)"
+                    class="p-1.5 text-gray-400 hover:text-red-500 transition-colors">
                     <i class="pi pi-trash text-xs"></i>
                   </button>
                 </div>
@@ -749,8 +750,8 @@
 </p-dialog>
 
 <!---------------------------- 確定要刪除 分類 嗎 Dialog ---------------------------->
-<p-dialog [(visible)]="displayDeleteCategories" [modal]="true" [closable]="false" [showHeader]="false" [draggable]="false"
-  [resizable]="false" [closeOnEscape]="false" styleClass="rounded-xl overflow-hidden"
+<p-dialog [(visible)]="displayDeleteCategories" [modal]="true" [closable]="false" [showHeader]="false"
+  [draggable]="false" [resizable]="false" [closeOnEscape]="false" styleClass="rounded-xl overflow-hidden"
   [style]="{ width: '90vw', maxWidth: '24rem', border: 'none' }">
 
   <div class="bg-white px-4">
