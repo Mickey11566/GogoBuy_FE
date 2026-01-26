@@ -19,8 +19,8 @@ import { StoreInfoComponent } from './stores/store-info/store-info.component';
 import { CartPageComponent } from './account/cart-page/cart-page.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { StoreListComponent } from './stores/store-list/store-list.component';
-import { GroupEventComponent } from './groupbuy-event/group-event/group-event.component';
 import { OrderInfoComponent } from './order-info/order-info.component';
+import { GroupEventComponent } from './groupbuy-event/group-event/group-event.component';
 
 export const routes: Routes = [
   // 1. 公開頁面與首頁
