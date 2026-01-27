@@ -451,4 +451,9 @@ export class AuthService {
     this.store.set(list);
     this.filterEventsByStoreIds(list.map((x: any) => x.id));
   }
+  // 查詢全部user
+  getAllUser() {
+    return this.https.getApi(`http://localhost:8080/gogobuy/user/get-all-user`);
+  }
+
 }
