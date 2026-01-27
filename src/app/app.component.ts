@@ -24,7 +24,6 @@ import { Subscription } from 'rxjs';
 
 // 選擇欄位
 type SearchMode = 'store' | 'host' | 'event';
-
 export interface User {
   id: string;
   nickname: string;
@@ -60,6 +59,9 @@ export interface Category {
   styleUrl: './app.component.scss',
 })
 export class AppComponent {
+
+
+  showAdminBtn: boolean = false;
 
   private sub?: Subscription;
   constructor(
@@ -119,26 +121,13 @@ export class AppComponent {
     return u.user_avatar_url || u.avatar_url || u.avatarUrl || '/Snoopy.jpg';
   });
 
-  // 4. ngOnInit 現在不需要處理頭像邏輯了
-
   ngOnInit(): void {
     // 初始載入
     this.auths.performSearch('');
     this.auths.loadAllEventsOnce();
-    this.sub = this.auth.user$
-      .pipe(
-        filter((u: any) => !!u && !!u.id),
-        map((u: any) => u.id),
-        distinctUntilChanged()
-      )
-      .subscribe((userId: string) => {
-        this.sse.connect(userId);
-      });
+
   }
 
-  ngOnDestroy() {
-    this.sub?.unsubscribe();
-  }
 
   // 切換搜尋模式
   searchMode = signal<SearchMode>('store');
@@ -181,13 +170,25 @@ export class AppComponent {
       this.auths.events.set(this.auths.eventsAll());
       return;
     }
-    if (mode === 'store') return this.auths.performSearch(q);
-    if (mode === 'host') return this.auths.performEventSearch(q);
-    if (mode === 'event') return this.auths.filterEventsByName(q);
+
+    // 店家搜尋
+    if (mode == 'store') {
+      this.auths.performSearch(q);
+      return;
+    }
+
+    // 團長搜尋用使用API
+    if (mode == 'host') {
+      this.auths.performEventSearch(q);
+      return;
+    }
+
+    // 團名搜尋用 eventsAll 在前端 filter（不用 API
+    if (mode == 'event') {
+      this.auths.filterEventsByName(q);
+      return;
+    }
   }
-
-
-
 
   // 預設頭像
   // userAvatar: string | null = null;
@@ -310,10 +311,13 @@ export class AppComponent {
     this.router.navigate(['/user/cart']);
   }
 
+  toDashboard() {
+    this.router.navigate(['/admin']);
+  }
 
   // 登出清除session
   logout() {
-    this.auths.logout();
+    this.auth.logout();
     // 清除前端紀錄
     localStorage.clear();
     // 回到首頁
