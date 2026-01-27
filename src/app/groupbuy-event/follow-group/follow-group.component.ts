@@ -1,15 +1,15 @@
 import { Component } from '@angular/core';
-import { AuthService } from '../@service/auth.service';
-import { HttpService } from '../@service/http.service';
+import { AuthService } from '../../@service/auth.service';
+import { HttpService } from '../../@service/http.service';
 import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
-  selector: 'app-group-event',
+  selector: 'app-follow-group',
   imports: [],
-  templateUrl: './group-event.component.html',
-  styleUrl: './group-event.component.scss'
+  templateUrl: './follow-group.component.html',
+  styleUrl: './follow-group.component.scss'
 })
-export class GroupEventComponent {
+export class FollowGroupComponent {
   constructor(
     private auth:AuthService,
     private http:HttpService,
@@ -23,4 +23,11 @@ export class GroupEventComponent {
     this.userId=String(localStorage.getItem('user_id'));
     this.storeId=Number(this.route.snapshot.paramMap.get('qId'));
   }
+
+
+
+
+
+
+
 }
