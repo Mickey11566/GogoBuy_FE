@@ -17,20 +17,10 @@ import { FloatLabelModule } from 'primeng/floatlabel';
 import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 import { NearbyBarComponent } from './nearby-bar.component';
-import { SseService } from './@service/sse.service';
-import { filter, distinctUntilChanged, map } from 'rxjs/operators';
-import { Subscription } from 'rxjs';
 
 
 // 選擇欄位
 type SearchMode = 'store' | 'host' | 'event';
-export interface User {
-  id: string;
-  nickname: string;
-  email: string;
-  avatar_url: string | null;
-  role: 'ADMIN' | 'USER';
-}
 
 export interface Category {
   name: string;
@@ -63,12 +53,7 @@ export class AppComponent {
 
   showAdminBtn: boolean = false;
 
-  private sub?: Subscription;
-  constructor(
-    public router: Router,
-    private http: HttpService,
-    public auths: AuthService,
-    public sse: SseService) {
+  constructor(public router: Router, private http: HttpService, public auths: AuthService) {
   }
   title = 'gogobuy';
 
@@ -125,9 +110,22 @@ export class AppComponent {
     // 初始載入
     this.auths.performSearch('');
     this.auths.loadAllEventsOnce();
-
   }
 
+  isAdmin(): boolean {
+    try {
+      const raw = localStorage.getItem('user_info');
+      if (!raw) return false;
+
+      const user = JSON.parse(raw);
+
+      const userRole = user.role;
+
+      return userRole === 'admin';
+    } catch {
+      return false;
+    }
+  }
 
   // 切換搜尋模式
   searchMode = signal<SearchMode>('store');
@@ -170,60 +168,10 @@ export class AppComponent {
       this.auths.events.set(this.auths.eventsAll());
       return;
     }
-
-    // 店家搜尋
-    if (mode == 'store') {
-      this.auths.performSearch(q);
-      return;
-    }
-
-    // 團長搜尋用使用API
-    if (mode == 'host') {
-      this.auths.performEventSearch(q);
-      return;
-    }
-
-    // 團名搜尋用 eventsAll 在前端 filter（不用 API
-    if (mode == 'event') {
-      this.auths.filterEventsByName(q);
-      return;
-    }
+    if (mode === 'store') return this.auths.performSearch(q);
+    if (mode === 'host') return this.auths.performEventSearch(q);
+    if (mode === 'event') return this.auths.filterEventsByName(q);
   }
-
-  // 預設頭像
-  // userAvatar: string | null = null;
-  // ngOnInit() {
-  //   this.auth.user$.subscribe(user => {
-  //     console.log('導覽列收到使用者狀態更新:', user);
-
-  //     if (user) {
-  //       this.userAvatar = user.user_avatar_url || user.avatar_url || user.avatarUrl;
-  //       if (!this.userAvatar) {
-  //         this.userAvatar = '/Snoopy.jpg';
-  //       }
-  //     } else {
-  //       this.userAvatar = null;
-  //     }
-  //   });
-  //   // this.auth.refreshUser();
-  // }
-
-  // ngAfterViewInit() {
-  //   // 在這裡主動判斷資料是否有變更 (判斷 Angular 所無法判斷的部分)
-  //   if (!this.userAvatar || '/Snoopy.jpg' == this.userAvatar || 'assets/default-avatar.png' == this.userAvatar) {
-  //     this.auth.user$.subscribe(user => {
-
-  //       if (user) {
-  //         const newUserAvatar = user.user_avatar_url || user.avatar_url || user.avatarUrl || 'Snoopy.jpg';
-  //         if (this.userAvatar != newUserAvatar) {
-  //           this.userAvatar = newUserAvatar;
-  //         }
-  //       } else {
-  //         this.userAvatar = null;
-  //       }
-  //     });
-  //   }
-  // }
 
   // 用戶頭向下拉選單
   items: MenuItem[] = [
@@ -317,7 +265,7 @@ export class AppComponent {
 
   // 登出清除session
   logout() {
-    this.auth.logout();
+    this.auths.logout();
     // 清除前端紀錄
     localStorage.clear();
     // 回到首頁

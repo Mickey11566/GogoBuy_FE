@@ -404,6 +404,11 @@ export class AuthService {
     return this.https.getApi(`http://localhost:8080/gogobuy/getAll`);
   }
 
+  // 查詢全部user
+  getAllUser() {
+    return this.https.getApi(`http://localhost:8080/gogobuy/user/get-all-user`);
+  }
+
   // 搜尋附近商家(座標或地址)
   searchNearbyStore(lat?: number, lng?: number, address?: string, radius: number = 5) {
     const qs: string[] = [];
@@ -442,9 +447,4 @@ export class AuthService {
     this.store.set(list);
     this.filterEventsByStoreIds(list.map((x: any) => x.id));
   }
-  // 查詢全部user
-  getAllUser() {
-    return this.https.getApi(`http://localhost:8080/gogobuy/user/get-all-user`);
-  }
-
 }
