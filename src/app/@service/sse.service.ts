@@ -15,10 +15,6 @@ export class SseService {
   // 總共顯示筆數限制(如果不要這個限制，記得cleanup()要改)
   private maxItems = 50;
 
-  ngOnInit(): void {
-    this.userId = this.userId;
-  }
-
   // 通知列表（單一來源）
   private notificationsSubject = new BehaviorSubject<any[]>([]);
   notifications$ = this.notificationsSubject.asObservable();
@@ -35,12 +31,15 @@ export class SseService {
 
   constructor(
     private zone: NgZone,
-    public auth: AuthService
+    public auths: AuthService
   ) {
     const raw = localStorage.getItem('notifications_cache');
     if (raw) {
       try {
-        this.notifications = JSON.parse(raw);
+        const list = JSON.parse(raw);
+        this.notifications = Array.isArray(list)
+          ? list.filter(n => n?.id !== 'SYSTEM_NOTICE')
+          : [];
         this.emit();
       } catch { }
     }
@@ -78,7 +77,7 @@ export class SseService {
     // 一般通知（message）
     this.es.addEventListener('message', (event: any) => {
       this.zone.run(() => {
-        const item = this.toUiNotification(event.data, '通知');
+        const item = this.toUiNotification(event.data);
         this.notifications = [item, ...this.notifications];
         this.cleanup();
         this.emit();
@@ -99,6 +98,7 @@ export class SseService {
     this.connectedUserId = null;
   }
 
+
   // 測試用 +通知
   pushTest() {
     const item = {
@@ -117,13 +117,18 @@ export class SseService {
 
   // 讓 Bell / Page 共用已讀的操作
   markAsRead(id: string) {
-    this.notifications = this.notifications.map(n => n.id === id ? { ...n, isRead: true } : n);
+    this.notifications = this.notifications.map((n) =>
+      n.id === id ? { ...n, isRead: true } : n
+    );
     this.emit();
   }
 
   // 已讀全部
   markAllRead() {
-    this.notifications = this.notifications.map(n => ({ ...n, isRead: true }));
+    this.notifications = this.notifications.map((n) => ({
+      ...n,
+      isRead: true,
+    }));
     this.emit();
   }
 
@@ -136,25 +141,68 @@ export class SseService {
   // 小工具 -----------------------------------------------------------------------------
 
   private emit() {
-    // 讓訂閱了notificationsSubject的頁面在接收到更新時自動刷新
     this.notificationsSubject.next(this.notifications);
+
+    // 未讀數排除系統公告
     this.unreadCountSubject.next(
-      this.notifications.filter(n => !n.isRead && n.id !== 'SYSTEM_NOTICE').length);
-    // 重要! 讓刷新不消失(存入localStorage)
-    localStorage.setItem('notifications_cache', JSON.stringify(this.notifications));
+      this.notifications.filter(n => !n.isRead && n.id !== 'SYSTEM_NOTICE').length
+    );
+
+    // 快取也排除系統公告（你原本就有）
+    const cacheList = this.notifications.filter(n => n.id !== 'SYSTEM_NOTICE');
+    localStorage.setItem('notifications_cache', JSON.stringify(cacheList));
   }
 
+
   // 把後端丟來的一筆 data（字串）轉成 UI 能吃的物件
-  private toUiNotification(raw: string, fallbackTitle: string) {
+  private toUiNotification(raw: string) {
+    let data: any;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = { message: raw };
+    }
+
     return {
-      id: this.fallbackId(),
-      title: fallbackTitle,
-      message: raw ?? '',
-      createdAt: new Date().toLocaleString(),
+      id: data.id ?? this.fallbackId(),
+      title: data.title ?? data.type ?? '通知',
+      message: data.message ?? data.content ?? '',
+      createdAt: data.createdAt ?? new Date().toLocaleString(),
       isRead: false,
-      link: null,
+      link: data.link ?? null,
     };
   }
+
+  private upsertSystemNotice(raw: string) {
+    let data: any;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = { message: raw };
+    }
+
+    const id = 'SYSTEM_NOTICE';
+
+    const item = {
+      id,
+      title: data.title ?? '系統公告',
+      message: data.message ?? data.content ?? raw ?? '',
+      createdAt: data.createdAt ?? new Date().toLocaleString(),
+      isRead: false,
+      link: data.link ?? null,
+    };
+
+    const exists = this.notifications.some(n => n.id === id);
+
+    this.notifications = exists
+      ? this.notifications.map(n => (n.id === id ? { ...n, ...item } : n))
+      : [item, ...this.notifications];
+
+    this.cleanup();
+    this.emit();
+  }
+
+
 
   // 自動生成ID小工具
   private fallbackId() {
@@ -167,9 +215,9 @@ export class SseService {
     const maxAge = this.retentionDays * 24 * 60 * 60 * 1000;
 
     // 按時間過濾：只保留 30 天內
-    this.notifications = this.notifications.filter(n => {
-      const t = new Date(n.createdAt).getTime();
-      return Number.isFinite(t) ? now - t <= maxAge : true;
+    this.notifications = this.notifications.filter((n) => {
+      const t = this.parseTime(n.createdAt);
+      return now - t <= maxAge;
     });
 
     // 做筆數上限
@@ -188,29 +236,4 @@ export class SseService {
     // 如果都解析失敗，返回的會是當前時間
     return Number.isFinite(t) ? t : Date.now();
   }
-  private upsertSystemNotice(text: string) {
-    const id = 'SYSTEM_NOTICE'; // 固定ID：永遠同一筆公告
-
-    const item = {
-      id,
-      title: '系統公告',
-      message: text ?? '',
-      createdAt: new Date().toLocaleString(),
-      isRead: false,
-      link: null,
-    };
-
-    const idx = this.notifications.findIndex(n => n.id === id);
-    if (idx >= 0) {
-      // 已經有公告：覆蓋更新（不新增）
-      this.notifications[idx] = { ...this.notifications[idx], ...item };
-    } else {
-      // 第一次收到公告：新增一筆
-      this.notifications = [item, ...this.notifications];
-    }
-
-    this.cleanup();
-    this.emit();
-  }
-
 }

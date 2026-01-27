@@ -18,6 +18,8 @@ import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 import { NearbyBarComponent } from './nearby-bar.component';
 import { SseService } from './@service/sse.service';
+import { filter, distinctUntilChanged, map } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 
 
 // 選擇欄位
@@ -59,6 +61,7 @@ export interface Category {
 })
 export class AppComponent {
 
+  private sub?: Subscription;
   constructor(
     public router: Router,
     private http: HttpService,
@@ -122,10 +125,20 @@ export class AppComponent {
     // 初始載入
     this.auths.performSearch('');
     this.auths.loadAllEventsOnce();
-    const userId = localStorage.getItem('user_id');
-    if (userId) this.sse.connect(userId);
+    this.sub = this.auth.user$
+      .pipe(
+        filter((u: any) => !!u && !!u.id),
+        map((u: any) => u.id),
+        distinctUntilChanged()
+      )
+      .subscribe((userId: string) => {
+        this.sse.connect(userId);
+      });
   }
 
+  ngOnDestroy() {
+    this.sub?.unsubscribe();
+  }
 
   // 切換搜尋模式
   searchMode = signal<SearchMode>('store');
