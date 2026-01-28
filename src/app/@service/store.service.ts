@@ -19,7 +19,7 @@ export class StoreService {
     publish: false,
     createdBy: 'A01',
     operatingHoursVoList: [] as OperatingHoursVoList[],
-    feeDescription: [] as FeeDescriptionVolist[],
+    feeDescription: [] as FeeDescriptionVoList[],
     menuVoList: [] as MenuVoList[],
     menuCategoriesVoList: [] as MenuCategoriesVoList[],
     productOptionGroupsVoList: [] as ProductOptionGroupsVoList[]
@@ -38,7 +38,7 @@ export class StoreService {
       publish: false,
       createdBy: 'A01',
       operatingHoursVoList: [],
-      feeDescription: [] as FeeDescriptionVolist[],
+      feeDescription: [] as FeeDescriptionVoList[],
       menuVoList: [] as MenuVoList[],
       menuCategoriesVoList: [] as MenuCategoriesVoList[],
       productOptionGroupsVoList: [] as ProductOptionGroupsVoList[]
@@ -57,14 +57,14 @@ export interface Stores {
   image?: any | null;
   publish: boolean;
   createdBy: string;
-  feeDescription?: FeeDescriptionVolist[];
+  feeDescription?: FeeDescriptionVoList[];
   operatingHoursVoList: OperatingHoursVoList[];
   menuVoList: MenuVoList[];
   menuCategoriesVoList?: MenuCategoriesVoList[];
   productOptionGroupsVoList?: ProductOptionGroupsVoList[]
 }
 
-export interface FeeDescriptionVolist {
+export interface FeeDescriptionVoList {
   km: number;
   fee: number;
 }
