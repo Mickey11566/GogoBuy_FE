@@ -17,6 +17,9 @@ import { FloatLabelModule } from 'primeng/floatlabel';
 import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 import { NearbyBarComponent } from './nearby-bar.component';
+import { Subscription } from 'rxjs';
+import { filter, distinctUntilChanged, map } from 'rxjs/operators';
+import { SseService } from './@service/sse.service';
 
 
 // 選擇欄位
@@ -50,10 +53,15 @@ export interface Category {
 })
 export class AppComponent {
 
+  private sub?: Subscription;
 
   showAdminBtn: boolean = false;
 
-  constructor(public router: Router, private http: HttpService, public auths: AuthService) {
+  constructor(
+    public router: Router,
+    private http: HttpService,
+    public auths: AuthService,
+    public sse: SseService) {
   }
   title = 'gogobuy';
 
@@ -110,6 +118,20 @@ export class AppComponent {
     // 初始載入
     this.auths.performSearch('');
     this.auths.loadAllEventsOnce();
+    this.sub = this.auth.user$
+      .pipe(
+        filter((u: any) => !!u && !!u.id),
+        map((u: any) => u.id),
+        distinctUntilChanged()
+      )
+      .subscribe((userId: string) => {
+        this.sse.connect(userId);
+      });
+    this.auth.refreshUser();
+  }
+
+  ngOnDestroy() {
+    this.sub?.unsubscribe();
   }
 
   isAdmin(): boolean {
@@ -266,6 +288,7 @@ export class AppComponent {
   // 登出清除session
   logout() {
     this.auths.logout();
+    this.sse.disconnect();
     // 清除前端紀錄
     localStorage.clear();
     // 回到首頁
