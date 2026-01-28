@@ -697,6 +697,17 @@ export class GogoBuyComponent {
     ];
   });
 
+  // 取 status（避免欄位名不同 / 空白）
+  private getEventStatus(e: any): string {
+    return String(e.status)
+      .trim()
+      .toUpperCase();
+  }
+
+  // 「正在開團」的狀態（依後端定義調整）
+  private readonly ACTIVE_STATUS = new Set(['OPEN']);
+  // 如果你後端還有 ONGOING / IN_PROGRESS，就加進去：
+  // new Set(['OPEN', 'ONGOING', 'IN_PROGRESS'])
 
   // 篩選開團
   readonly filteredEventCards = computed(() => {
@@ -704,11 +715,11 @@ export class GogoBuyComponent {
     // 使用者選到的類別
     const t = this.selectedType();
 
-    // 你已經 join 店家後的卡片資料
-    const cards = this.eventCards();
+    // 先把 FINISHED / 非 OPEN 的過濾掉
+    const activeCards = this.eventCards().filter(c => this.ACTIVE_STATUS.has(this.getEventStatus(c)));
 
-    if (t == 'ALL') return cards;
-    return cards.filter(c => this.getEventType(c) == t);
+    if (t === 'ALL') return activeCards;
+    return activeCards.filter(c => this.getEventType(c) === t);
   });
 
   /* 轉換ISO8601日期格式 */
