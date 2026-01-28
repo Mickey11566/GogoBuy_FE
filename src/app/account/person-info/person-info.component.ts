@@ -27,7 +27,6 @@ export class PersonInfoComponent {
     // 1. 訂閱 User 狀態流
     this.auth.user$.subscribe(user => {
       if (user) {
-        console.log('接收到用戶資料:', user);
         this.editInfo = { ...user };
 
         // 確保從最新的 user 物件中取得資料，而不是一直讀取 localStorage 的舊 Key
@@ -60,6 +59,11 @@ export class PersonInfoComponent {
   // 前往修改個人資料頁面
   goTOEdit() {
     this.router.navigate(['/user/profile/edit']);
+  }
+
+  // 判斷是否為手機業面
+  get isMobile(): boolean {
+    return window.innerWidth <= 768;
   }
 
 }
