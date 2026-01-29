@@ -56,15 +56,15 @@ export class StoreUpsertComponent {
 
     this.http.getDApi(url, false).subscribe((data: any) => {
       this.cityOptions = data.filter((city: any) => city.CityName !== '釣魚臺')
-      .map((city: any) => {
-        if(city.CityName == '宜蘭縣'){
-          return {
-            ...city,
-            AreaList: city.AreaList.filter((area: any) => area.AreaName !== '釣魚臺')
+        .map((city: any) => {
+          if (city.CityName == '宜蘭縣') {
+            return {
+              ...city,
+              AreaList: city.AreaList.filter((area: any) => area.AreaName !== '釣魚臺')
+            }
           }
-        }
-        return city;
-      });
+          return city;
+        });
       console.log("this.cityOptions", this.cityOptions);
       if (this.storeData.address) {
         this.parseAddress();
@@ -366,12 +366,21 @@ export class StoreUpsertComponent {
 
   // 運費級距
   addFeeRow() {
+    if (!this.storeData.feeDescription) {
+      this.storeData.feeDescription = []
+    }
     this.storeData.feeDescription?.push({ km: 0, fee: 0 });
   }
 
   removeFeeRow(index: number) {
     this.storeData.feeDescription?.splice(index, 1);
   }
+
+  // 返回上一個頁面
+  goBack() {
+    window.history.back();
+  }
+
 
   // 下一步
   onSubmit() {

@@ -33,7 +33,8 @@
           <i class="pi pi-objects-column"></i>
         </p-inputgroup-addon>
         <p-floatlabel class="w-full md:w-56" variant="on">
-          <p-select [(ngModel)]="storeData.category" id="on_label" [options]="category" optionLabel="name" optionValue="value"/>
+          <p-select [(ngModel)]="storeData.category" id="on_label" [options]="category" optionLabel="name"
+            optionValue="value" />
           <label for="on_label" class="text-slate-700 font-bold">經營類別</label>
         </p-floatlabel>
       </p-inputgroup>
@@ -72,24 +73,12 @@
       <label class="text-sm font-bold text-[#662222]/80">店家地址</label>
 
       <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
-        <p-select
-          [(ngModel)]="selectedCity"
-          [options]="cityOptions"
-          optionLabel="CityName"
-          dataKey="CityName"
-          placeholder="選擇縣市"
-          class="w-full text-sm"
-          (onChange)="onCityChange()">
+        <p-select [(ngModel)]="selectedCity" [options]="cityOptions" optionLabel="CityName" dataKey="CityName"
+          placeholder="選擇縣市" class="w-full text-sm" (onChange)="onCityChange()">
         </p-select>
 
-        <p-select
-          [(ngModel)]="selectedDistrict"
-          [options]="selectedCity?.AreaList || []"
-          optionLabel="AreaName"
-          dataKey="AreaName"
-          placeholder="選擇地區"
-          [disabled]="!selectedCity"
-          class="w-full text-sm"
+        <p-select [(ngModel)]="selectedDistrict" [options]="selectedCity?.AreaList || []" optionLabel="AreaName"
+          dataKey="AreaName" placeholder="選擇地區" [disabled]="!selectedCity" class="w-full text-sm"
           (onChange)="updateFullAddress()">
         </p-select>
 
@@ -99,11 +88,7 @@
               <i class="pi pi-map-marker"></i>
             </p-inputgroup-addon>
 
-            <input
-              pInputText
-              [(ngModel)]="detailAddress"
-              (input)="updateFullAddress()"
-              (blur)="updateFullAddress()"
+            <input pInputText [(ngModel)]="detailAddress" (input)="updateFullAddress()" (blur)="updateFullAddress()"
               placeholder="街道門牌號碼、樓層"
               class="border border-gray-300 focus:!border-2 focus:!border-[#662222] focus:!shadow-none outline-none w-full p-2 pl-3 rounded-r-xl transition-all" />
           </p-inputgroup>
@@ -226,7 +211,7 @@
                   <label class="block mb-1 text-base font-bold text-gray-700 uppercase tracking-wider">公里數
                     (KM)</label>
                   <p-inputnumber [(ngModel)]="shippingFee.km" [minFractionDigits]="1" [maxFractionDigits]="2"
-                     styleClass="w-full" inputStyleClass="w-full h-11 border border-gray-300 rounded-lg
+                    styleClass="w-full" inputStyleClass="w-full h-11 border border-gray-300 rounded-lg
                       px-3 focus:!border-[#662222] outline-none" placeholder="km" />
                 </div>
 
@@ -298,7 +283,8 @@
 
 
   <div class="mt-12 flex justify-end gap-4  pt-6">
-    <button class="px-8 py-3 cursor-pointer text-gray-500 font-semibold hover:text-gray-700 transition-colors">
+    <button class="px-8 py-3 cursor-pointer text-gray-500 font-semibold hover:text-gray-700 transition-colors"
+      (click)="goBack()">
       取消
     </button>
     <button (click)="onSubmit()"
