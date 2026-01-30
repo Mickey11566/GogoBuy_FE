@@ -134,6 +134,7 @@ export class AppComponent {
 
   ngOnDestroy() {
     this.sub?.unsubscribe();
+    this.stopNearbyWatch();
   }
 
   isAdmin(): boolean {
@@ -321,6 +322,14 @@ export class AppComponent {
 
   // 使用定位（允許後即時搜尋）
   enableNearbyAuto() {
+    // ✅ 防止重複註冊 watchPosition
+    if (this.watchId != null) {
+      // 已經在追蹤了，就不要再開新的
+      return;
+      // 或者你想每次都重開：就改成 stopNearbyWatch(); 再繼續往下
+      // this.stopNearbyWatch();
+    }
+
     if (!navigator.geolocation) {
       this.geoMode.set('manual');
       this.nearbyStatus.set('此裝置不支援定位，請改用地址搜尋');
@@ -330,13 +339,11 @@ export class AppComponent {
     this.geoMode.set('auto');
     this.nearbyStatus.set('定位中...');
 
-    // watchPosition：位置變動就回呼（即時）
     this.watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
 
-        // 簡單節流：避免一直打 API（15 秒最多一次）
         const now = Date.now();
         if (now - this.lastFetchAt < 15000) return;
 
@@ -354,6 +361,14 @@ export class AppComponent {
       { enableHighAccuracy: true, maximumAge: 30000, timeout: 10000 }
     );
   }
+
+  enableNearbyManual() {
+    this.geoMode.set('manual');
+    this.nearbyStatus.set(''); // 清空提示
+    this.stopNearbyWatch(); // 停掉 watchPosition
+    this.lastLatLng = null; // 避免半徑變更又用舊座標重查
+  }
+
 
   stopNearbyWatch() {
     if (this.watchId != null) {

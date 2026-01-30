@@ -309,6 +309,15 @@ export class AuthService {
   store = signal<{ id: number; name: string; type: string; address: string; image: string; }[]>([]);
   eventsAll = signal<any[]>([]);
   events = signal<any[]>([]);
+  private isPublicStore(s: any): boolean {
+    const v = s.publish
+    return v == 1 || v == '1' || v == true || v == 'true';
+  }
+
+  private isDeletedStore(s: any): boolean {
+    const v = s.deleted;
+    return v == 1 || v == '1' || v == true || v == 'true';
+  }
 
 
   performSearch(name: string) {
@@ -325,11 +334,13 @@ export class AuthService {
           'https://images.unsplash.com/photo-1544148103-0773bf10d330?w=800'  // 飲品
         ];
 
-        const processedList = (res.storeList || []).map((store: any, i: number) => ({
-          ...store,
-          // 如果 API 回傳的 image 是 null，就從陣列輪流拿圖
-          image: store.image || demoImages[i % demoImages.length]
-        }));
+        const processedList = (res.storeList || [])
+          .map((store: any, i: number) => ({
+            ...store,
+            // 如果 API 回傳的 image 是 null，就從陣列輪流拿圖
+            image: store.image || demoImages[i % demoImages.length]
+          }))
+          .filter((s: any) => this.isPublicStore(s) && !this.isDeletedStore(s));
         // 更新 Service 裡的 Signal
         this.store.set(processedList);
         if (!searchName) {
@@ -438,11 +449,11 @@ export class AuthService {
       'https://images.unsplash.com/photo-1544148103-0773bf10d330?w=800',
     ];
 
-    const list = (res.storeList ?? res.stores ?? res.data ?? []).map((s: any, i: number) => ({
-      ...s,
-      image: s.image || demoImages[i % demoImages.length],
-    }));
-
+    const list = (res.storeList ?? res.stores ?? res.data ?? [])
+      .map((s: any, i: number) => ({
+        ...s,
+        image: s.image || demoImages[i % demoImages.length],
+      }))
     // 讓「原本首頁」自動連動：店家清單變附近、開團跟著篩
     this.store.set(list);
     this.filterEventsByStoreIds(list.map((x: any) => x.id));

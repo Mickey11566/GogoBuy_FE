@@ -18,7 +18,8 @@
         </p-select>
 
         <input pInputText #searchInput type="text" [placeholder]="searchPlaceholder()"
-          (keyup.enter)="onSearch(searchInput.value)" class="!w-full" />
+          (keyup.enter)="onSearch(searchInput.value)" [ngModel]="manualAddress()"
+          (ngModelChange)="manualAddress.set($event); enableNearbyManual();" class="!w-full" />
 
         <button pButton type="button" icon="pi pi-search" class="p-button-danger" (click)="onSearch(searchInput.value)">
         </button>
