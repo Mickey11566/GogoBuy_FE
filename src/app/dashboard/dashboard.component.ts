@@ -14,6 +14,7 @@ import { DialogModule } from 'primeng/dialog';
 import { CalendarModule } from 'primeng/calendar';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
+import { TieredMenu } from 'primeng/tieredmenu';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 
@@ -35,6 +36,7 @@ import Swal from 'sweetalert2';
     CalendarModule,
     InputTextModule,
     TextareaModule,
+    TieredMenu,
     FormsModule
   ],
   templateUrl: './dashboard.component.html',
@@ -46,6 +48,7 @@ export class DashboardComponent {
   events: any[] = [];
   users: any[] = [];
   loading = false;
+  items: any[] | undefined;
 
   currentView: 'announce' | 'stores' | 'events' | 'users' = 'announce';
 
@@ -73,6 +76,24 @@ export class DashboardComponent {
   ) { }
 
   ngOnInit() {
+
+    this.items = [
+      {
+        label: '權限',
+        icon: 'pi pi-user-edit',
+        items: [
+          {
+            label: '升級為管理員',
+            icon: 'pi pi-crown',
+          },
+          {
+            label: '調整為一般用戶',
+            icon: 'pi pi-user',
+          },
+
+        ]
+      }];
+
     this.loadData();
   }
 
@@ -157,21 +178,21 @@ export class DashboardComponent {
 
     // 處理日期
     if (this.announceDate) {
-        // 簡單格式化 YYYY-MM-DD (視後端需求調整)
-        const year = this.announceDate.getFullYear();
-        const month = String(this.announceDate.getMonth() + 1).padStart(2, '0');
-        const day = String(this.announceDate.getDate()).padStart(2, '0');
-        this.announceData.expiredAt = `${year}-${month}-${day}`;
+      // 簡單格式化 YYYY-MM-DD (視後端需求調整)
+      const year = this.announceDate.getFullYear();
+      const month = String(this.announceDate.getMonth() + 1).padStart(2, '0');
+      const day = String(this.announceDate.getDate()).padStart(2, '0');
+      this.announceData.expiredAt = `${year}-${month}-${day}`;
     }
 
     // 呼叫 Service
     this.messageService.create(this.announceData as NotifiMesReq).subscribe({
       next: (res) => {
         if (res.code === 200 || res.message === 'Success') { // Adjust based on actual Backend response structure
-             Swal.fire('公告發送成功', '', 'success');
-             this.displayAnnounceDialog = false;
+          Swal.fire('公告發送成功', '', 'success');
+          this.displayAnnounceDialog = false;
         } else {
-             Swal.fire('發送失敗', res.message || '未知錯誤', 'error');
+          Swal.fire('發送失敗', res.message || '未知錯誤', 'error');
         }
       },
       error: (err) => {
