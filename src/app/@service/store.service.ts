@@ -82,7 +82,7 @@ export interface MenuVoList {
   categoryId: any;
   name: string;
   description?: string;
-  basePrice: number | null;
+  basePrice: any | null;
   available: boolean;
   image?: string;
   unusual?: { [key: string]: string };

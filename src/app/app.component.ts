@@ -17,6 +17,10 @@ import { FloatLabelModule } from 'primeng/floatlabel';
 import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 import { NearbyBarComponent } from './nearby-bar.component';
+import { Subscription } from 'rxjs';
+import { filter, distinctUntilChanged, map } from 'rxjs/operators';
+import { SseService } from './@service/sse.service';
+import { AvatarModule } from 'primeng/avatar';
 
 
 // 選擇欄位
@@ -44,16 +48,22 @@ export interface Category {
     SelectModule,
     FormsModule,
     NearbyBarComponent,
+    AvatarModule
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
 export class AppComponent {
 
+  private sub?: Subscription;
 
   showAdminBtn: boolean = false;
 
-  constructor(public router: Router, private http: HttpService, public auths: AuthService) {
+  constructor(
+    public router: Router,
+    private http: HttpService,
+    public auths: AuthService,
+    public sse: SseService) {
   }
   title = 'gogobuy';
 
@@ -103,13 +113,28 @@ export class AppComponent {
   userAvatar = computed(() => {
     const u: any = this.user();
     if (!u) return null;
-    return u.user_avatar_url || u.avatar_url || u.avatarUrl || '/Snoopy.jpg';
+    return u.user_avatar_url || u.avatar_url || u.avatarUrl || '/default_avatar.png';
   });
 
   ngOnInit(): void {
     // 初始載入
     this.auths.performSearch('');
     this.auths.loadAllEventsOnce();
+    this.sub = this.auth.user$
+      .pipe(
+        filter((u: any) => !!u && !!u.id),
+        map((u: any) => u.id),
+        distinctUntilChanged()
+      )
+      .subscribe((userId: string) => {
+        this.sse.connect(userId);
+      });
+    this.auth.refreshUser();
+  }
+
+  ngOnDestroy() {
+    this.sub?.unsubscribe();
+    this.stopNearbyWatch();
   }
 
   isAdmin(): boolean {
@@ -266,6 +291,7 @@ export class AppComponent {
   // 登出清除session
   logout() {
     this.auths.logout();
+    this.sse.disconnect();
     // 清除前端紀錄
     localStorage.clear();
     // 回到首頁
@@ -296,6 +322,14 @@ export class AppComponent {
 
   // 使用定位（允許後即時搜尋）
   enableNearbyAuto() {
+    // ✅ 防止重複註冊 watchPosition
+    if (this.watchId != null) {
+      // 已經在追蹤了，就不要再開新的
+      return;
+      // 或者你想每次都重開：就改成 stopNearbyWatch(); 再繼續往下
+      // this.stopNearbyWatch();
+    }
+
     if (!navigator.geolocation) {
       this.geoMode.set('manual');
       this.nearbyStatus.set('此裝置不支援定位，請改用地址搜尋');
@@ -305,13 +339,11 @@ export class AppComponent {
     this.geoMode.set('auto');
     this.nearbyStatus.set('定位中...');
 
-    // watchPosition：位置變動就回呼（即時）
     this.watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
 
-        // 簡單節流：避免一直打 API（15 秒最多一次）
         const now = Date.now();
         if (now - this.lastFetchAt < 15000) return;
 
@@ -329,6 +361,14 @@ export class AppComponent {
       { enableHighAccuracy: true, maximumAge: 30000, timeout: 10000 }
     );
   }
+
+  enableNearbyManual() {
+    this.geoMode.set('manual');
+    this.nearbyStatus.set(''); // 清空提示
+    this.stopNearbyWatch(); // 停掉 watchPosition
+    this.lastLatLng = null; // 避免半徑變更又用舊座標重查
+  }
+
 
   stopNearbyWatch() {
     if (this.watchId != null) {

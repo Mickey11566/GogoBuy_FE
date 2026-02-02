@@ -18,6 +18,7 @@ import { PanelModule } from 'primeng/panel';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { AuthService } from '../@service/auth.service';
 import { SelectModule } from 'primeng/select';
+import { FeeDescriptionVoList } from '../@service/store.service';
 
 
 export type Stores = {
@@ -64,7 +65,7 @@ export interface Store {
   "type": string,
   "memo": string,
   "image": string,
-  "feeDescription": string,
+  "feeDescription": any,
   "deleted": boolean,
   "publish": boolean,
   "force_closed": boolean,
@@ -72,6 +73,26 @@ export interface Store {
 }
 
 @Component({
+  template: `
+    <div class="card">
+      <p-tabs value="0" scrollable>
+        <p-tablist>
+          @for (tab of scrollableTabs; track tab.value) {
+              <p-tab [value]="tab.value">
+                  {{ tab.title }}
+              </p-tab>
+          }
+        </p-tablist>
+        <p-tabpanels>
+          @for (tab of scrollableTabs; track tab.value) {
+              <p-tabpanel [value]="tab.value">
+                  <p class="m-0">{{ tab.content }}</p>
+              </p-tabpanel>
+          }
+        </p-tabpanels>
+      </p-tabs>
+    </div>`,
+  standalone: true,
   selector: 'app-gogo-buy',
   imports: [
     CarouselModule,
@@ -106,6 +127,7 @@ export class GogoBuyComponent {
   visibleStores = computed(() => {
     const limit = this.storeStage() === 0 ? this.storeInitial : this.storeExpanded;
     return this.auths.store().slice(0, limit);
+
   });
 
   storeCtaLabel = computed(() => this.storeStage() === 0 ? '查看更多' : '查看全部');
@@ -133,6 +155,7 @@ export class GogoBuyComponent {
   visibleTooltip: boolean = true;
   storeSearch!: string;
   allStoresBackup: Store[] = []; // 備份完整清單
+  scrollableTabs!: any[];
 
 
   ngOnInit(): void {
@@ -143,110 +166,131 @@ export class GogoBuyComponent {
     // 店家
     if (this.auths.store().length == 0) {
       this.auths.performSearch('');
+
     }
 
+    this.http.getApi('http://localhost:8080/gogobuy/store/all').subscribe((res:any)=>{
+      const rawData = res.storeList || [];
+      this.storeList = rawData.map((store: any) => {
+        let parsedFees:FeeDescriptionVoList[] = [];
+        // 檢查是否有值且為字串，才進行解析
+        if (store.feeDescription && typeof store.feeDescription === 'string') {
+          try {
+            parsedFees = JSON.parse(store.feeDescription);
+          } catch (e) {
+            console.error('解析運費失敗:', e, store.feeDescription);
+            parsedFees = []; // 解析失敗給空陣列
+          }
+        } else if (Array.isArray(store.feeDescription)) {
+          parsedFees = store.feeDescription; // 如果已經是物件就直接賦值
+        }
+
+        return {
+          ...store,
+          feeDescription: parsedFees // 這裡就是你要的正常物件陣列
+        };
+      });
+      this.storeList = this.storeList.filter(store => !store.deleted && store.publish);  // 未刪除且公開
+      this.allStoresBackup = this.storeList;
+      this.fastStoreList = this.storeList.filter(store => !store.force_closed && store.category == "fast");
+      console.log(this.fastStoreList);
+      this.slowStoreList = this.storeList.filter(store => store.category == "slow");  // 只有團購可以顯示未營業，外送不可
+      this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
+      this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
+    });
     // 假資料，待後端串接
-    // this.http.getApi('http://localhost:8080/gogobuy/store/all').subscribe((res:any)=>{
-    //   this.storeList=res.storeList;
-    // });
-    this.storeList = [
-      {
-        id: 1, name: "清新搖搖冰", phone: "04-2345-6789", address: "台中市西區公益路200號",
-        category: "外送", type: "飲品", memo: "微糖微冰最推薦",
-        image: "https://picsum.photos/200/300?random=1", feeDescription: "外送費 $20",
-        deleted: false, publish: true, force_closed: true, created_by: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
-      },
-      {
-        id: 2, name: "阿嬤雜貨鋪", phone: "05-5544-3322", address: "嘉義市西區中山路",
-        category: "外送", type: "雜貨", memo: "什麼都有什麼都賣",
-        image: "https://picsum.photos/200/300?random=2", feeDescription: "免收服務費",
-        deleted: false, publish: true, force_closed: false, created_by: "e4d3c2b1-a0b9-4c8d-7e6f-5a4b3c2d1e0f"
-      },
-      {
-        id: 3, name: "美味漢堡店", phone: "02-1234-5678", address: "台北市大安區新生南路一段1號",
-        category: "外送", type: "美食", memo: "特製花生醬漢堡必點",
-        image: "https://picsum.photos/200/300?random=3", feeDescription: "外送費 $30",
-        deleted: false, publish: true, force_closed: false, created_by: "550e8400-e29b-41d4-a716-446655440000"
-      },
-      {
-        id: 4, name: "森林系咖啡館", phone: "08-8901-2345", address: "屏東縣屏東市公園路5號",
-        category: "外送", type: "飲品", memo: "安靜舒適，適合工作",
-        image: "https://picsum.photos/200/300?random=4", feeDescription: "內用低消一杯飲品",
-        deleted: false, publish: false, force_closed: false, created_by: "c9b8a7d6-e5f4-3c2b-1a0d-9e8f7a6b5c4d"
-      },
-      {
-        id: 5, name: "潔淨洗鞋大師", phone: "06-1122-3344", address: "台南市東區大學路",
-        category: "團購", type: "其他", memo: "給愛鞋煥然一新的機會",
-        image: "https://picsum.photos/200/300?random=5", feeDescription: "兩雙以上享 8 折",
-        deleted: true, publish: true, force_closed: true, created_by: "f0a1b2c3-d4e5-4f6a-7b8c-9d0e1f2a3b4c"
-      },
-      {
-        id: 6, name: "老張牛肉麵", phone: "07-3456-7890", address: "高雄市新興區中正三路15號",
-        category: "外送", type: "美食", memo: "湯頭濃郁，肉質軟嫩",
-        image: "https://picsum.photos/200/300?random=6", feeDescription: "僅供自取",
-        deleted: false, publish: true, force_closed: false, created_by: "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"
-      },
-      {
-        id: 7, name: "萌寵樂園", phone: "02-5566-4433", address: "新北市板橋區文化路",
-        category: "團購", type: "其他", memo: "溫柔洗澡不驚嚇",
-        image: "https://picsum.photos/200/300?random=7", feeDescription: "需提前一週預約",
-        deleted: false, publish: true, force_closed: false, created_by: "a4b5c6d7-e8f9-4a0b-1c2d-3e4f5a6b7c8d"
-      },
-      {
-        id: 8, name: "醇香烘焙拿鐵", phone: "02-2233-4455", address: "台北市信義區忠孝東路四段",
-        category: "外送", type: "飲品", memo: "衣索比亞精品豆限量供應",
-        image: "https://picsum.photos/200/300?random=8", feeDescription: "滿 $1000 免運",
-        deleted: false, publish: true, force_closed: false, created_by: "a8b9c0d1-e2f3-4a5b-6c7d-8e9f0a1b2c3d"
-      },
-      {
-        id: 9, name: "深夜食堂拉麵", phone: "02-8765-4321", address: "台北市信義區忠孝東路五段10號",
-        category: "外送", type: "美食", memo: "濃厚豚骨湯頭",
-        image: "https://picsum.photos/200/300?random=9", feeDescription: "外送費 $50",
-        deleted: false, publish: true, force_closed: false, created_by: "123e4567-e89b-12d3-a456-426614174000"
-      },
-      {
-        id: 10, name: "綠意選物店", phone: "04-9988-7766", address: "台中市北區崇德路",
-        category: "團購", type: "雜貨", memo: "文青最愛的設計單品",
-        image: "https://picsum.photos/200/300?random=10", feeDescription: "宅配運費 $80",
-        deleted: false, publish: true, force_closed: false, created_by: "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e"
-      },
-      {
-        id: 11, name: "快速裁縫鋪", phone: "03-2233-1122", address: "新竹市北區北大路",
-        category: "團購", type: "其他", memo: "阿姨手工精細",
-        image: "https://picsum.photos/200/300?random=11", feeDescription: "依內容報價",
-        deleted: false, publish: true, force_closed: true, created_by: "c1b2a3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"
-      },
-      {
-        id: 12, name: "泰想吃", phone: "03-7890-1234", address: "新竹市東區光復路二段80號",
-        category: "外送", type: "美食", memo: "打拋豬超下飯",
-        image: "https://picsum.photos/200/300?random=12", feeDescription: "團購滿 $1000 九折",
-        deleted: false, publish: true, force_closed: false, created_by: "3d9a1f2b-6c4e-4b8a-9d0f-1e2a3b4c5d6e"
-      },
-      {
-        id: 13, name: "找茶趣", phone: "03-5566-7788", address: "桃園市中壢區實踐路",
-        category: "外送", type: "飲品", memo: "高山青茶清甜回甘",
-        image: "https://picsum.photos/200/300?random=13", feeDescription: "買五送一",
-        deleted: false, publish: true, force_closed: false, created_by: "f1a2b3c4-d5e6-4b7c-8a9d-0e1f2a3b4c5d"
-      },
-      {
-        id: 14, name: "午后漫步書屋", phone: "02-6677-8899", address: "新北市永和區中正路",
-        category: "團購", type: "其他", memo: "閱讀配甜點",
-        image: "https://picsum.photos/200/300?random=14", feeDescription: "滿 $500 享 9 折",
-        deleted: false, publish: true, force_closed: false, created_by: "d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9a"
-      },
-      {
-        id: 15, name: "喵喵罐頭工廠", phone: "04-7788-9900", address: "彰化縣彰化市中山路",
-        category: "團購", type: "其他", memo: "無添加天然肉塊",
-        image: "https://picsum.photos/200/300?random=15", feeDescription: "整箱購買優惠",
-        deleted: false, publish: true, force_closed: false, created_by: "e1d2c3b4-a5f6-4a7b-8c9d-0e1f2a3b4c5d"
-      }
-    ];
-    this.storeList = this.storeList.filter(store => !store.deleted && store.publish);  // 未刪除且公開
-    this.allStoresBackup = this.storeList;
-    this.fastStoreList = this.storeList.filter(store => !store.force_closed && store.category == "外送");
-    this.slowStoreList = this.storeList.filter(store => store.category == "團購");  // 只有團購可以顯示未營業，外送不可
-    this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
-    this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
+    // this.storeList = [
+    //   {
+    //     id: 1, name: "清新搖搖冰", phone: "04-2345-6789", address: "台中市西區公益路200號",
+    //     category: "外送", type: "飲品A", memo: "微糖微冰最推薦",
+    //     image: "https://picsum.photos/200/300?random=1", feeDescription: "外送費 $20",
+    //     deleted: false, publish: true, force_closed: true, created_by: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+    //   },
+    //   {
+    //     id: 2, name: "阿嬤雜貨鋪", phone: "05-5544-3322", address: "嘉義市西區中山路",
+    //     category: "外送", type: "雜貨B", memo: "什麼都有什麼都賣",
+    //     image: "https://picsum.photos/200/300?random=2", feeDescription: "免收服務費",
+    //     deleted: false, publish: true, force_closed: false, created_by: "e4d3c2b1-a0b9-4c8d-7e6f-5a4b3c2d1e0f"
+    //   },
+    //   {
+    //     id: 3, name: "美味漢堡店", phone: "02-1234-5678", address: "台北市大安區新生南路一段1號",
+    //     category: "外送", type: "美食C", memo: "特製花生醬漢堡必點",
+    //     image: "https://picsum.photos/200/300?random=3", feeDescription: "外送費 $30",
+    //     deleted: false, publish: true, force_closed: false, created_by: "550e8400-e29b-41d4-a716-446655440000"
+    //   },
+    //   {
+    //     id: 4, name: "森林系咖啡館", phone: "08-8901-2345", address: "屏東縣屏東市公園路5號",
+    //     category: "外送", type: "飲品D", memo: "安靜舒適，適合工作",
+    //     image: "https://picsum.photos/200/300?random=4", feeDescription: "內用低消一杯飲品",
+    //     deleted: false, publish: false, force_closed: false, created_by: "c9b8a7d6-e5f4-3c2b-1a0d-9e8f7a6b5c4d"
+    //   },
+    //   {
+    //     id: 5, name: "潔淨洗鞋大師", phone: "06-1122-3344", address: "台南市東區大學路",
+    //     category: "團購", type: "其他E", memo: "給愛鞋煥然一新的機會",
+    //     image: "https://picsum.photos/200/300?random=5", feeDescription: "兩雙以上享 8 折",
+    //     deleted: true, publish: true, force_closed: true, created_by: "f0a1b2c3-d4e5-4f6a-7b8c-9d0e1f2a3b4c"
+    //   },
+    //   {
+    //     id: 6, name: "老張牛肉麵", phone: "07-3456-7890", address: "高雄市新興區中正三路15號",
+    //     category: "外送", type: "美食F", memo: "湯頭濃郁，肉質軟嫩",
+    //     image: "https://picsum.photos/200/300?random=6", feeDescription: "僅供自取",
+    //     deleted: false, publish: true, force_closed: false, created_by: "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"
+    //   },
+    //   {
+    //     id: 7, name: "萌寵樂園", phone: "02-5566-4433", address: "新北市板橋區文化路",
+    //     category: "團購", type: "其他", memo: "溫柔洗澡不驚嚇",
+    //     image: "https://picsum.photos/200/300?random=7", feeDescription: "需提前一週預約",
+    //     deleted: false, publish: true, force_closed: false, created_by: "a4b5c6d7-e8f9-4a0b-1c2d-3e4f5a6b7c8d"
+    //   },
+    //   {
+    //     id: 8, name: "醇香烘焙拿鐵", phone: "02-2233-4455", address: "台北市信義區忠孝東路四段",
+    //     category: "外送", type: "飲品", memo: "衣索比亞精品豆限量供應",
+    //     image: "https://picsum.photos/200/300?random=8", feeDescription: "滿 $1000 免運",
+    //     deleted: false, publish: true, force_closed: false, created_by: "a8b9c0d1-e2f3-4a5b-6c7d-8e9f0a1b2c3d"
+    //   },
+    //   {
+    //     id: 9, name: "深夜食堂拉麵", phone: "02-8765-4321", address: "台北市信義區忠孝東路五段10號",
+    //     category: "外送", type: "美食", memo: "濃厚豚骨湯頭",
+    //     image: "https://picsum.photos/200/300?random=9", feeDescription: "外送費 $50",
+    //     deleted: false, publish: true, force_closed: false, created_by: "123e4567-e89b-12d3-a456-426614174000"
+    //   },
+    //   {
+    //     id: 10, name: "綠意選物店", phone: "04-9988-7766", address: "台中市北區崇德路",
+    //     category: "團購", type: "雜貨", memo: "文青最愛的設計單品",
+    //     image: "https://picsum.photos/200/300?random=10", feeDescription: "宅配運費 $80",
+    //     deleted: false, publish: true, force_closed: false, created_by: "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e"
+    //   },
+    //   {
+    //     id: 11, name: "快速裁縫鋪", phone: "03-2233-1122", address: "新竹市北區北大路",
+    //     category: "團購", type: "其他", memo: "阿姨手工精細",
+    //     image: "https://picsum.photos/200/300?random=11", feeDescription: "依內容報價",
+    //     deleted: false, publish: true, force_closed: true, created_by: "c1b2a3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d"
+    //   },
+    //   {
+    //     id: 12, name: "泰想吃", phone: "03-7890-1234", address: "新竹市東區光復路二段80號",
+    //     category: "外送", type: "美食", memo: "打拋豬超下飯",
+    //     image: "https://picsum.photos/200/300?random=12", feeDescription: "團購滿 $1000 九折",
+    //     deleted: false, publish: true, force_closed: false, created_by: "3d9a1f2b-6c4e-4b8a-9d0f-1e2a3b4c5d6e"
+    //   },
+    //   {
+    //     id: 13, name: "找茶趣", phone: "03-5566-7788", address: "桃園市中壢區實踐路",
+    //     category: "外送", type: "飲品", memo: "高山青茶清甜回甘",
+    //     image: "https://picsum.photos/200/300?random=13", feeDescription: "買五送一",
+    //     deleted: false, publish: true, force_closed: false, created_by: "f1a2b3c4-d5e6-4b7c-8a9d-0e1f2a3b4c5d"
+    //   },
+    //   {
+    //     id: 14, name: "午后漫步書屋", phone: "02-6677-8899", address: "新北市永和區中正路",
+    //     category: "團購", type: "其他", memo: "閱讀配甜點",
+    //     image: "https://picsum.photos/200/300?random=14", feeDescription: "滿 $500 享 9 折",
+    //     deleted: false, publish: true, force_closed: false, created_by: "d5e6f7a8-b9c0-4d1e-2f3a-4b5c6d7e8f9a"
+    //   },
+    //   {
+    //     id: 15, name: "喵喵罐頭工廠", phone: "04-7788-9900", address: "彰化縣彰化市中山路",
+    //     category: "團購", type: "其他", memo: "無添加天然肉塊",
+    //     image: "https://picsum.photos/200/300?random=15", feeDescription: "整箱購買優惠",
+    //     deleted: false, publish: true, force_closed: false, created_by: "e1d2c3b4-a5f6-4a7b-8c9d-0e1f2a3b4c5d"
+    //   }
+    // ];
   }
 
   // 監聽全域滑鼠移動
@@ -306,6 +350,8 @@ export class GogoBuyComponent {
     if (this.idleTimer) {
       clearTimeout(this.idleTimer);
     }
+    for (const url of this.objectUrlPool) URL.revokeObjectURL(url);
+    this.objectUrlPool = [];
   }
 
   // event.page 是頁數d
@@ -530,8 +576,8 @@ export class GogoBuyComponent {
     const searchKey = this.storeSearch.toLowerCase().trim();
     if (!searchKey) {  // 搜尋資料不存在，還原成完整清單
       this.storeList = [...this.allStoresBackup];
-      this.fastStoreList = this.storeList.filter(store => !store.force_closed && store.category == "外送");
-      this.slowStoreList = this.storeList.filter(store => store.category == "團購");  // 只有團購可以顯示未營業，外送不可
+      this.fastStoreList = this.storeList.filter(store => !store.force_closed && store.category == "fast");
+      this.slowStoreList = this.storeList.filter(store => store.category == "slow");  // 只有團購可以顯示未營業，外送不可
       this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
       this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
       this.activeTab = 'allstores';
@@ -545,8 +591,8 @@ export class GogoBuyComponent {
       const storeName = store.name.toLowerCase();
       return eachLetter.every(char => storeName.includes(char));
     });
-    this.fastStoreList = this.storeList.filter(store => !store.force_closed && store.category == "外送");
-    this.slowStoreList = this.storeList.filter(store => store.category == "團購");  // 只有團購可以顯示未營業，外送不可
+    this.fastStoreList = this.storeList.filter(store => !store.force_closed && store.category == "fast");
+    this.slowStoreList = this.storeList.filter(store => store.category == "slow");  // 只有團購可以顯示未營業，外送不可
     this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
     this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
     this.fast = [...this.fastStoreList];
@@ -634,26 +680,26 @@ export class GogoBuyComponent {
     } else {
       if (category == "fast") {
         this.choice = "外送";
-        this.storeList = this.allStoresBackup.filter(store => !store.force_closed && store.category == "外送");  // tab篩選用
+        this.storeList = this.allStoresBackup.filter(store => !store.force_closed && store.category == "fast");  // tab篩選用
         this.uniqueTabs;
-        this.fastStoreList = this.allStoresBackup.filter(store => !store.force_closed && store.category == "外送");
+        this.fastStoreList = this.allStoresBackup.filter(store => !store.force_closed && store.category == "fast");
         this.slowStoreList = [];
         this.openStoreList = [];
         this.closeStoreList = [];
       } else if (category == "slow") {
         this.choice = "團購";
-        this.storeList = this.allStoresBackup.filter(store => store.category == "團購");  // tab篩選用
+        this.storeList = this.allStoresBackup.filter(store => store.category == "slow");  // tab篩選用
         this.uniqueTabs;
         this.fastStoreList = [];
-        this.slowStoreList = this.allStoresBackup.filter(store => store.category == "團購");  // 只有團購可以顯示未營業，外送不可
+        this.slowStoreList = this.allStoresBackup.filter(store => store.category == "slow");  // 只有團購可以顯示未營業，外送不可
         this.openStoreList = this.slowStoreList.filter(store => store.force_closed);
         this.closeStoreList = this.slowStoreList.filter(store => !store.force_closed);
       } else if (category == "all") {
         this.choice = "不限";
         this.storeList = this.allStoresBackup;  // tab篩選用
         this.uniqueTabs;
-        this.fastStoreList = this.allStoresBackup.filter(store => !store.force_closed && store.category == "外送");
-        this.slowStoreList = this.allStoresBackup.filter(store => store.category == "團購");  // 只有團購可以顯示未營業，外送不可
+        this.fastStoreList = this.allStoresBackup.filter(store => !store.force_closed && store.category == "fast");
+        this.slowStoreList = this.allStoresBackup.filter(store => store.category == "slow");  // 只有團購可以顯示未營業，外送不可
         this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
         this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
       }
@@ -693,10 +739,21 @@ export class GogoBuyComponent {
     // 額外加一個「全部」
     return [
       { label: `全部`, value: 'ALL' },
-      ...unique.map(t => ({ label: `${t} (${count.get(t)})`, value: t })),
+      ...unique.map(t => ({ label: `${t}`, value: t })),
     ];
   });
 
+  // 取 status（避免欄位名不同 / 空白）
+  private getEventStatus(e: any): string {
+    return String(e.status)
+      .trim()
+      .toUpperCase();
+  }
+
+  // 「正在開團」的狀態（依後端定義調整）
+  private readonly ACTIVE_STATUS = new Set(['OPEN']);
+  // 如果你後端還有 ONGOING / IN_PROGRESS，就加進去：
+  // new Set(['OPEN', 'ONGOING', 'IN_PROGRESS'])
 
   // 篩選開團
   readonly filteredEventCards = computed(() => {
@@ -704,11 +761,11 @@ export class GogoBuyComponent {
     // 使用者選到的類別
     const t = this.selectedType();
 
-    // 你已經 join 店家後的卡片資料
-    const cards = this.eventCards();
+    // 先把 FINISHED / 非 OPEN 的過濾掉
+    const activeCards = this.eventCards().filter(c => this.ACTIVE_STATUS.has(this.getEventStatus(c)));
 
-    if (t == 'ALL') return cards;
-    return cards.filter(c => this.getEventType(c) == t);
+    if (t === 'ALL') return activeCards;
+    return activeCards.filter(c => this.getEventType(c) === t);
   });
 
   /* 轉換ISO8601日期格式 */
@@ -725,5 +782,49 @@ export class GogoBuyComponent {
     return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
+  private objectUrlPool: string[] = [];
+
+  storeImgSrc(store: any): string {
+    const img = store?.image;
+
+    // 1) null/空字串 → 直接用 fallback
+    if (!img) return `https://picsum.photos/800/600?random=${store?.id ?? Math.random()}`;
+
+    // 2) string：可能是 URL / dataURL / base64
+    if (typeof img === 'string') {
+      const s = img.trim();
+
+      // 已經是可用的 src
+      if (s.startsWith('http://') || s.startsWith('https://') || s.startsWith('/') || s.startsWith('data:image/')) {
+        return s;
+      }
+
+      // 看起來像純 base64（iVBORw0K...），幫它補 dataURL 前綴
+      const looksLikeBase64 = s.length > 50 && /^[A-Za-z0-9+/=\r\n]+$/.test(s);
+      if (looksLikeBase64) return `data:image/png;base64,${s}`;
+
+      // 其他亂碼（例如你之前看到的 �PNG）就只能 fallback
+      return `https://picsum.photos/800/600?random=${store?.id ?? Math.random()}`;
+    }
+
+    // 3) number[]：byte array → 轉成 blob: URL
+    if (Array.isArray(img) && img.length > 0 && typeof img[0] === 'number') {
+      const blob = new Blob([new Uint8Array(img)], { type: 'image/png' });
+      const url = URL.createObjectURL(blob);
+      this.objectUrlPool.push(url);
+      return url;
+    }
+
+    // 4) 常見包裝：{ data: number[] } / { bytes: number[] }
+    const maybeArr = img?.data ?? img?.bytes;
+    if (Array.isArray(maybeArr) && maybeArr.length > 0 && typeof maybeArr[0] === 'number') {
+      const blob = new Blob([new Uint8Array(maybeArr)], { type: 'image/png' });
+      const url = URL.createObjectURL(blob);
+      this.objectUrlPool.push(url);
+      return url;
+    }
+
+    return `https://picsum.photos/800/600?random=${store?.id ?? Math.random()}`;
+  }
 
 }
