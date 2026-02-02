@@ -7,46 +7,64 @@ export class StoreService {
 
   constructor() { }
 
-  storeData = {
+  storeData: Stores = {
+    id: 0,
     name: '',
     phone: '',
     address: '',
-    category: null as Category | null,
+    category: '',
     type: '',
     memo: '',
-    image: null as Blob | string | null,
-    is_public: false,
-    created_by: 'A01',
-    operatingHoursVoList: [
-      {
-        week: [null as number | null],
-        openTime: '',
-        closeTime: ''
-      },
-    ],
-    fee_description: [] as FeeDescription[]
+    image: '',
+    publish: false,
+    createdBy: 'A01',
+    operatingHoursVoList: [] as OperatingHoursVoList[],
+    feeDescription: [] as FeeDescriptionVoList[],
+    menuVoList: [] as MenuVoList[],
+    menuCategoriesVoList: [] as MenuCategoriesVoList[],
+    productOptionGroupsVoList: [] as ProductOptionGroupsVoList[]
+  }
+
+  clearCurrentStore() {
+    this.storeData = {
+      id: 0,
+      name: '',
+      phone: '',
+      address: '',
+      category: '',
+      type: '',
+      memo: '',
+      image: null as Blob | string | null,
+      publish: false,
+      createdBy: 'A01',
+      operatingHoursVoList: [],
+      feeDescription: [] as FeeDescriptionVoList[],
+      menuVoList: [] as MenuVoList[],
+      menuCategoriesVoList: [] as MenuCategoriesVoList[],
+      productOptionGroupsVoList: [] as ProductOptionGroupsVoList[]
+    };
   }
 
 }
 export interface Stores {
-  id?: number;
-  storesName: string;
+  id: number;
+  name: string;
   phone: string;
   address: string;
-  category: any;
+  category: string;
   type: string;
-  memo?: string;
-  image?: any;
-  isPublic: boolean;
+  memo?: string | null;
+  image?: any | null;
+  publish: boolean;
   createdBy: string;
-  feeDescription?: FeeDescription[];
+  feeDescription?: FeeDescriptionVoList[];
   operatingHoursVoList: OperatingHoursVoList[];
   menuVoList: MenuVoList[];
   menuCategoriesVoList?: MenuCategoriesVoList[];
   productOptionGroupsVoList?: ProductOptionGroupsVoList[]
 }
 
-export interface FeeDescription {
+export interface FeeDescriptionVoList {
   km: number;
   fee: number;
 }
@@ -58,51 +76,50 @@ export interface OperatingHoursVoList {
 }
 
 export interface MenuVoList {
+  id: number,
   categoryId: number;
   name: string;
   description?: string;
-  basePrice: number;
-  isAvailable: boolean;
+  basePrice: any | null;
+  available: boolean;
   image?: string;
-  unusual?: string[];
+  unusual?: { [key: string]: string };
 }
 
 export interface MenuCategoriesVoList {
   id: number;
   name: string;
-  priceLevel: PriceLevel[];
+  priceLevel?: PriceLevel[];
 }
 
 export interface PriceLevel {
   name: string;
-  price: number;
+  price: number | null;
 }
 
 export interface ProductOptionGroupsVoList {
+  id: number;
   name: string;
-  isRequired: boolean;
-  maxSelection: number;
+  required: boolean;
+  maxSelection: number | null;
   items: Items[];
+  applicableCategoryIds?: number[]; // 前端判斷用 不計入到資料庫
 }
 
 export interface Items {
+  id: number;
   name: string;
-  extraPrice: number;
+  extraPrice: number | null;
 }
 
 // 以下是暫存資料的interface ----------------
 export interface Category {
   name: string;
-  code: number;
+  code: string;
 }
 
 export interface TimeSlotUI {
   selectedWeeks: number[];
   openTime: Date | null;
   closeTime: Date | null;
-}
-
-export interface FeeDescription {
-  km: number;
-  fee: number;
 }

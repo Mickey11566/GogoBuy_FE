@@ -1,38 +1,38 @@
-/* You can add global styles to this file, and also import other style files */
 @import "tailwindcss";
 @import "primeicons/primeicons.css";
 
 /* 強制鎖定 html 與 body，不准任何動態 Style 改變 padding */
 html,
 body {
-  padding-right: 0 !important;
+  padding-right: var(--scrollbar-offset, 0px) !important;
   margin-right: 0 !important;
-  overflow: auto !important;
   /* 或是根據你的需求設為 hidden */
 }
 
 :root {
   --brand-primary: #662222;
-  --brand-primary-hover: #8B2F2F;
+  --brand-primary-hover: #8b2f2f;
 
-  --bg-main: #F7EDEB;
-  --bg-section: #FAF3F1;
-  --bg-card: #FFFFFF;
+  --bg-main: #f7edeb;
+  --bg-section: #faf3f1;
+  --bg-card: #ffffff;
 
-  --accent-orange: #E07A3F;
-  --accent-soft: #F2B8A0;
+  --accent-orange: #e07a3f;
+  --accent-soft: #f2b8a0;
 
-  --text-title: #3A1F1F;
-  --text-body: #5C3A3A;
-  --text-muted: #8A6A6A;
-  --text-disabled: #BFA5A5;
+  --text-title: #3a1f1f;
+  --text-body: #5c3a3a;
+  --text-muted: #8a6a6a;
+  --text-disabled: #bfa5a5;
 
-  --border-light: #E6D2CF;
+  --border-light: #e6d2cf;
 
-  --footer-bg: #7A2E2E;
-  --footer-text: #F4EAEA;
+  --footer-bg: #7a2e2e;
+  --footer-text: #f4eaea;
+
+  --p-popover-arrow-offset: 10px;
+
 }
-
 
 /* 針對 Chrome, Edge, Safari */
 ::-webkit-scrollbar {
@@ -47,7 +47,9 @@ body {
 
 ::-webkit-scrollbar-thumb {
   /* 使用品牌色到懸停色的漸層 */
-  background: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-primary-hover) 100%);
+  background: linear-gradient(180deg,
+      var(--brand-primary) 0%,
+      var(--brand-primary-hover) 100%);
   border-radius: 10px;
   /* 增加邊界讓滑塊看起來像浮在軌道中央 */
   border: 3px solid var(--bg-section);
@@ -56,6 +58,36 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   /* 懸停時稍微加亮或改變漸層方向 */
   background: var(--brand-primary-hover);
+}
+
+/* 直接針對全域的 p-dialog-mask 設定 */
+.p-dialog-mask {
+  backdrop-filter: blur(3px) !important;
+  -webkit-backdrop-filter: blur(3px) !important;
+  /* 確保 Chrome/Edge/Safari 都看得到 */
+  background: rgba(0, 0, 0, 0.498) !important;
+}
+
+/* 全域覆蓋，不使用 :host */
+.p-tab[data-p-active="true"] {
+  color: #662222 !important;
+  border-color: #662222 !important;
+}
+
+.p-tab[data-p-active="true"] .p-tab-label {
+  color: #662222 !important;
+}
+
+/* 修改底部移動橫條 (Ink Bar) 的顏色 */
+.p-tablist-active-bar {
+  background: #662222 !important;
+  height: 2px !important;
+  /* 如果覺得線太細，可以調整這裡，預設通常是 2px */
+}
+
+/* 確保橫條在 Hover 或切換時不會變回原本的顏色 */
+.p-tablist-tab-list .p-tablist-active-bar {
+  background-color: #662222 !important;
 }
 
 /* 針對行動端 Webkit 瀏覽器 (Chrome, Safari, Android Browser) */
@@ -79,5 +111,4 @@ body {
 
     /* 這裡不需要像桌面端一樣加 border，因為 4px 已經很細了 */
   }
-
 }

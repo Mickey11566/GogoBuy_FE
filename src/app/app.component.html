@@ -1,38 +1,53 @@
 <div class="topbar-wrapper">
-  <header>
-    <!-- LOGO -->
-    <img routerLink="gogobuy" src="ggb3.png" class="logo cursor-pointer h-13">
+  <header class="relative flex items-center px-4">
+    <!-- 左：LOGO + nearby（怎麼變寬都不影響置中） -->
+    <div class="flex items-center gap-3 flex-none">
+      <img routerLink="gogobuy" src="ggb3.png" class="logo cursor-pointer h-13">
 
-    <!-- 搜尋欄，@if (showSearch)讓搜尋欄只在route:gogobuy出現 -->
+      @if (showSearch) {
+      <app-nearby-bar class="hidden md:block"></app-nearby-bar>
+      }
+    </div>
+
+    <!-- 中：搜尋欄「固定置中」(桌機才顯示，手機用你下面那條 search-mobile) -->
     @if (showSearch) {
-    <div class="max-w-4xl me-90 disappear">
-      <div class="ml-10 relative w-full max-w-md disappear">
-        <i
-          class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg pointer-events-none disappear"></i>
-        <input type="search" placeholder="搜尋店家、地址" class="w-3xl pl-10 pr-4 py-3 rounded-lg border border-gray-300
-              focus:outline-none focus:ring-2 focus:ring-red-300
-              focus:border-red-400 bg-white disappear" />
-      </div>
+    <div class="disappear absolute left-1/2 -translate-x-1/2 w-full max-w-[560px] px-4">
+      <p-inputgroup class="w-full">
+        <p-select [options]="category" optionLabel="name" optionValue="value"
+          (onChange)="onSearchModeChangePrime($event)" styleClass="!w-28">
+        </p-select>
+
+        <input pInputText #searchInput type="text" [placeholder]="searchPlaceholder()"
+          (keyup.enter)="onSearch(searchInput.value)" [ngModel]="manualAddress()"
+          (ngModelChange)="manualAddress.set($event); enableNearbyManual();" class="!w-full" />
+
+        <button pButton type="button" icon="pi pi-search" class="p-button-danger" (click)="onSearch(searchInput.value)">
+        </button>
+      </p-inputgroup>
     </div>
     }
+
+
 
     <nav>
       <!-- 右側功能列表 -->
       <ul class="items-center justify-center disappear">
+        <!-- 管理者介面 -->
+        @if(isAdmin()){
+        <li>
+          <i class="pi pi-wrench nav-icon cursor-pointer" style="font-size: 1.5rem" (click)="toDashboard()"></i>
+        </li>
+        }
         <!-- 通知鈴鐺 -->
         <li>
-          <app-notification-bell></app-notification-bell>
+          <app-notification-bell class="pi"></app-notification-bell>
         </li>
-        <li><i class="pi pi-cart-plus cursor-pointer" style="color: rgb(255, 255, 255); font-size: 1.5rem"></i></li>
+        <li><i class="pi pi-cart-plus nav-icon cursor-pointer" style="font-size: 1.5rem" (click)="gocart()"></i></li>
         <li>
-          @if (currentUser(); as user) {
-          <img [src]="user.user_avatar_url || 'Snoopy.png'" (click)="menu.toggle($event)"
-            class="w-9 h-9 rounded-full cursor-pointer">
-          } @else {
-          <i class="pi pi-user cursor-pointer" style=" color: rgb(255, 255, 255); font-size: 1.5rem"
-            (click)="menu.toggle($event)"></i>
-          }
-          <p-menu #menu [popup]="true" [model]="items" [model]="filteredItems" appendTo="body"></p-menu>
+          <i class="pi pi-user nav-icon cursor-pointer" style="font-size: 1.5rem" (click)="menu.toggle($event)"></i>
+
+          <!-- appendTo="body" 避免 menu 被 header/overflow 裁切 -->
+          <p-menu #menu [popup]="true" [model]="filteredItems" appendTo="body"></p-menu>
         </li>
       </ul>
     </nav>
@@ -41,46 +56,50 @@
   <!-- 跑馬燈 -->
   <div class="marquee">
     <div class="marquee__track">
-      <div class="marquee__group"> <span class="marquee__item">Your scrolling text goes here.</span> <span
-          class="marquee__item">GogoBuy 熱門團購</span> </div>
+      <div class="marquee__group">
+        <span class="marquee__item font-bold text-lg">🛡️ 【官方防詐聲明】
+          我們「絕不會」主動要求您提供：
+
+          密碼、銀行帳號、ATM 匯款操作等個人資訊，若出現以上行為，皆為詐騙。</span>
+      </div>
     </div>
   </div>
-
-  <!-- 手機板搜尋欄，class="search-mobile"讓搜尋欄只在手機板出現 -->
-  @if (showSearch) {
-  <div class="search-mobile">
-    <div class="relative w-full max-w-md">
-      <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg pointer-events-none"></i>
-      <input type="search" placeholder="搜尋店家、地址" class="pl-10 pr-4 py-3 rounded-lg border border-gray-300
-                  focus:outline-none focus:ring-2 focus:ring-red-300
-                  focus:border-red-400 bg-white" />
-    </div>
-  </div>
-  }
-
 </div>
+
+<!-- 手機板搜尋欄，class="search-mobile"讓搜尋欄只在手機板出現 -->
+@if (showSearch) {
+<div class="search-mobile">
+  <div class="relative flex items-center w-full md:w-[560px] group">
+
+    <p-inputgroup class="w-full">
+      <!-- 分類 -->
+      <p-select [options]="category" optionLabel="name" optionValue="value" (onChange)="onSearchModeChangePrime($event)"
+        styleClass="!w-28"></p-select>
+
+      <!-- 關鍵字 -->
+      <input pInputText #searchInput type="text" [placeholder]="searchPlaceholder()"
+        (keyup.enter)="onSearch(searchInput.value)" class="!w-full" />
+
+      <!-- 按鈕放回 inputgroup 內（不要 absolute） -->
+      <button pButton type="button" icon="pi pi-search" class="p-button-danger"
+        (click)="onSearch(searchInput.value)"></button>
+    </p-inputgroup>
+  </div>
+</div>
+}
 
 
 <!-- main(顯示頁面，其他網頁主要修改) -->
-<main [class.main--with-mobile-search]="showSearch">
+<main class="bg-[#F8FAFC]">
   <router-outlet></router-outlet>
 </main>
 
 <!-- footer -->
 <footer>
-  <div class="footer-container">
-    <div class="footer-info">
-      <h4 class="font-bold">聯繫我們</h4>
-      <p class="font-bold">地址：台南市歸仁區歸仁十三路一段6號</p>
-      <p class="font-bold">電話：(06) 303 2550</p>
-    </div>
-    <div class="footer-links">
-      <a class="font-bold" href="/support/privacy">隱私政策</a>
-      <a class="font-bold"> | </a>
-      <a class="font-bold" href="/support/conditions">服務條款</a>
-      <a class="font-bold"> | </a>
-      <a class="font-bold" href="/support/faq">常見問題</a>
-    </div>
+  <div class="footer-container footer-info">
+    <h4 class="font-bold">聯繫我們</h4>
+    <p class="font-bold">地址：台南市歸仁區歸仁十三路一段6號</p>
+    <p class="font-bold">電話：(06) 303 2550</p>
   </div>
   <div class="footer-bottom">
     <a class="font-bold text-base">&copy; 2026 GogoBuy</a>
@@ -95,18 +114,19 @@
 </button>
 <p-menu #problemMenu [popup]="true" [model]="problems"></p-menu>
 
-<!-- 手機板footer -->
+<!-- 手機 footer 依 router.url 判斷目前頁籤並高亮 -->
 <div class="footer-mobile">
   <!-- 首頁 -->
   <a routerLink="gogobuy/home">
     <div>
       <i class="pi pi-home cursor-pointer" style="font-size: 1.5rem"
-        [ngStyle]="{ 'color': (router.url == '/gogobuy/home') ? 'rgba(0, 0, 0)' : '' }"></i>
+        [ngStyle]="{ 'color': (router.url == '/gogobuy/home') ? 'rgb(252, 165, 165)' : '' }"></i>
     </div>
-    <div [ngStyle]="{ 'color': (router.url == '/gogobuy/home') ? 'rgba(0, 0, 0)' : '' }">
+    <div [ngStyle]="{ 'color': (router.url == '/gogobuy/home') ? 'rgb(252, 165, 165)' : '' }">
       訂購
     </div>
   </a>
+
   <!-- 購物車 -->
   <a>
     <div>
@@ -120,36 +140,30 @@
   <a routerLink="/user/orders">
     <div>
       <i class="pi pi-receipt cursor-pointer" style="font-size: 1.5rem"
-        [ngStyle]="{ 'color': (router.url == '/user/orders') ? 'rgba(0, 0, 0)' : '' }"></i>
+        [ngStyle]="{ 'color': (router.url == '/user/orders') ? 'rgb(252, 165, 165)' : '' }"></i>
     </div>
-    <div [ngStyle]="{ 'color': (router.url == '/user/orders') ? 'rgba(0, 0, 0)' : '' }">
+    <div [ngStyle]="{ 'color': (router.url == '/user/orders') ? 'rgb(252, 165, 165)' : '' }">
       訂單
     </div>
   </a>
   <!-- 通知訊息 -->
   <a routerLink="/user/notifications" class="flex flex-col items-center">
     <div>
-      <app-notification-bell mode="icon"
-        [ngStyle]="{ 'color': (router.url == '/user/notifications') ? 'rgba(0, 0, 0)' : '' }"></app-notification-bell>
+      <i class="pi pi-bell cursor-pointer" style="font-size: 1.5rem"
+        [ngStyle]="{ 'color': (router.url == '/user/notifications') ? 'rgb(252, 165, 165)' : '' }"></i>
     </div>
-    <div [ngStyle]="{ 'color': (router.url == '/user/notifications') ? 'rgba(0, 0, 0)' : '' }">
+    <div [ngStyle]="{ 'color': (router.url == '/user/notifications') ? 'rgb(252, 165, 165)' : '' }">
       通知
     </div>
   </a>
   <!-- 我的 -->
   <a routerLink="/user/profile">
     <div>
-      @if (userAvatar()) {
-      <img [src]="userAvatar()" alt="User Avatar" class="avatar-style" class="w-9 h-9 rounded-full cursor-pointer"
-        (click)="onUserClick($event, menu)" />
-      } @else {
       <i class="pi pi-user cursor-pointer" style=" color: rgb(255, 255, 255); font-size: 1.5rem"
-        (click)="onUserClick($event, menu)"
-        [ngStyle]="{ 'color': (router.url == '/user/profile'||router.url =='/user/profile/edit') ? 'rgba(0, 0, 0)' : '' }"></i>
-      }
+        [ngStyle]="{ 'color': (router.url == '/user/profile'||router.url =='/user/profile/edit') ? 'rgb(252, 165, 165)' : '' }"></i>
     </div>
     <div
-      [ngStyle]="{ 'color': (router.url == '/user/profile'||router.url =='/user/profile/edit') ? 'rgba(0, 0, 0)' : '' }">
+      [ngStyle]="{ 'color': (router.url == '/user/profile'||router.url =='/user/profile/edit') ? 'rgb(252, 165, 165)' : '' }">
       我的
     </div>
   </a>
