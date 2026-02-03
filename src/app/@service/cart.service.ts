@@ -1,15 +1,16 @@
 import { Injectable } from '@angular/core';
-import { AuthService } from '../@service/auth.service';
 import { HttpService } from './http.service';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpParams } from '@angular/common/http';
 
+/**
+ * CartService：處理「購物車 / 訂單 / 團購訂單視圖」相關 API
+ * 大多數 API 使用 query string 傳參數（user_id / event_id / events_id）
+ */
 @Injectable({
   providedIn: 'root'
 })
 export class CartService {
   constructor(
-    public auths: AuthService,
     private https: HttpService
   ) { }
 
@@ -29,6 +30,8 @@ export class CartService {
   }
 
   // 透過menuid取得訂單詳情
+  // 透過多個 menuId 取得品項詳細資料
+  // 用 HttpParams.append 逐個加上去（append 不會覆蓋，會累加）
   getMenuByMenuId(menuIds: number[]) {
     let params = new HttpParams();
     for (const id of menuIds) {
@@ -49,6 +52,8 @@ export class CartService {
 
 
   // 硬刪除
+  // 硬刪除訂單（後端用 POST 做刪除，不是 RESTful 的 DELETE）
+  // body 不需要資料，所以傳 null
   deleteOrderByUserIdAndEventsId(userId: string, eventsId: number) {
     const url =
       `http://localhost:8080/gogobuy/deleteOrderByUserIdAndEventsId?user_id=${encodeURIComponent(userId)}&events_id=${eventsId}`;

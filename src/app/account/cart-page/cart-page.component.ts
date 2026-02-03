@@ -1,9 +1,12 @@
 import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { computed, signal } from '@angular/core';
 import { CartService } from '../../@service/cart.service';
 import Swal from 'sweetalert2';
 import { finalize } from 'rxjs/operators';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 
 interface CartItem {
   id: number;
@@ -32,7 +35,9 @@ interface CartGroup {
   status: string | null;
   canModify: boolean;
   items: CartItem[];
+  isHost?: boolean;
 }
+
 
 interface CartRes {
   code: number;
@@ -52,7 +57,9 @@ type CartSummary = {
 
 @Component({
   selector: 'app-cart-page',
-  imports: [],
+  imports: [
+    CommonModule,
+  ],
   templateUrl: './cart-page.component.html',
   styleUrl: './cart-page.component.scss'
 })
@@ -68,11 +75,9 @@ export class CartPageComponent {
 
   ngOnInit(): void {
     const user = JSON.parse(localStorage.getItem('user_info') || '{}');
-    const userId = user.id;
-    if (!userId) {
-      this.isLoading = false;
-      return;
-    }
+    const userId: string = user.id;
+
+    if (!userId) { this.isLoading = false; return; }
 
     this.isLoading = true;
 
@@ -80,9 +85,22 @@ export class CartPageComponent {
       .pipe(finalize(() => this.isLoading = false))
       .subscribe({
         next: (r: CartRes) => {
-          this.res = r;
-          this.cartData.set(r.cartData);
-          console.log(this.res);
+          const list = r.cartData ?? [];
+
+
+          const jobs = list.map(g =>
+            this.cart.getEventsByEventsId(g.eventsId).pipe(
+              map((ev: any) => {
+                const event = ev.groupbuyEvents?.[0];
+                return { ...g, isHost: !!event && event.hostId === userId };
+              }),
+              catchError(() => of({ ...g, isHost: false }))
+            )
+          );
+
+          forkJoin(jobs).subscribe(finalList => {
+            this.cartData.set(finalList);
+          });
         },
         error: (err: any) => console.error('getCart failed:', err)
       });

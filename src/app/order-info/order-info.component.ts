@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { JsonPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { MenuItem, MessageService } from 'primeng/api';
 import { StepsModule } from 'primeng/steps';
@@ -9,10 +8,35 @@ import { CartService } from '../@service/cart.service';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../@service/auth.service';
 import { HttpService } from '../@service/http.service';
-import { of } from 'rxjs';
-import { switchMap, map } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 
 type SelectedOpt = { optionName: string; value: string; extraPrice?: number };
+
+interface OrdersAllRes {
+  code: number;
+  message: string;
+  ordersSearchViewList: OrderSearchViewDto[];
+}
+
+interface OrderSearchViewDto {
+  orderId: number;
+  eventId: number;
+  userId: string;
+  menuId: number;
+  quantity: number;
+  selectedOptionList: SelectedOpt[];
+  personalMemo: string | null;
+  orderTime: string;
+  pickupStatus: string;
+  pickupTime: string | null;
+  subtotal: number;
+  weight: number;
+  deleted: boolean;
+  menuName: string;
+  hostId: string;
+  hostNickname: string;
+}
+
 
 interface OrderDto {
   id: number;
@@ -81,7 +105,6 @@ export interface orders {
     StepsModule,
     ToastModule,
     FormsModule,
-    JsonPipe
   ],
   providers: [MessageService],
   templateUrl: './order-info.component.html',
@@ -129,6 +152,8 @@ export class OrderInfoComponent implements OnInit {
 
     // 載入cart傳入開團訂單詳情
     this.route.queryParamMap.subscribe(params => {
+      this.mode = (params.get('mode') == 'host') ? 'host' : 'member';
+
       this.userId = params.get('user_id') || '';
       this.eventsId = Number(params.get('events_id') || 0);
 
@@ -137,45 +162,42 @@ export class OrderInfoComponent implements OnInit {
       this.latestOrderTime = params.get('latestOrderTime') || '';
       this.totalAmount = params.get('totalAmount') || '';
 
-      if (!this.userId || !this.eventsId) return;
+      if (!this.eventsId) return;
+      if (this.mode == 'member' && !this.userId) return;
 
-      this.cart.getOrders(this.userId, this.eventsId).pipe(
-        switchMap((ordersRes: OrdersRes) => {
-          const orders = ordersRes.orders ?? [];
-          const menuIds = Array.from(new Set(orders.map(o => o.menuId)));
+      const orders$ = (this.mode == 'host')
+        ? this.cart.getOrdersAll(this.eventsId).pipe(
+          map((r: OrdersAllRes): OrdersRes => ({
+            code: r.code,
+            message: r.message,
+            orders: (r.ordersSearchViewList ?? []).map(v => ({
+              id: v.orderId,
+              eventsId: v.eventId,
+              userId: v.userId,
+              menuId: v.menuId,
+              quantity: v.quantity,
+              selectedOption: v.selectedOptionList as any,
+              personalMemo: v.personalMemo ?? '',
+              orderTime: v.orderTime,
+              pickupStatus: v.pickupStatus,
+              pickupTime: v.pickupTime,
+              subtotal: v.subtotal,
+              weight: v.weight,
+              deleted: v.deleted,
+              menuName: v.menuName,
+              userNickname: v.hostNickname,
+            }))
+          }))
+        )
+        : this.cart.getOrders(this.userId, this.eventsId); // 原本個人訂單
 
-          if (menuIds.length === 0) {
-            return of({ ordersRes, menuMap: new Map<number, MenuItemDto>() });
-          }
-
-          return this.cart.getMenuByMenuId(menuIds).pipe(
-            map((menuRes: MenuRes) => {
-              const menuMap = new Map<number, MenuItemDto>();
-              for (const m of menuRes.menuList ?? []) {
-                menuMap.set(m.id, m); // id 就是 menuId
-              }
-              return { ordersRes, menuMap };
-            })
-          );
-        }),
-        map(({ ordersRes, menuMap }) => {
-          const orders = (ordersRes.orders ?? []).map((o: { menuId: any; selectedOption: string; }) => ({
-            ...o,
-            menuName: menuMap.get(o.menuId)?.name ?? `menuId:${o.menuId}`,
-            // 你如果也要先 parse options（可選）
-            parsedOptions: this.safeParseSelectedOption(o.selectedOption),
-          }));
-
-          return { ...ordersRes, orders };
-        })
-      ).subscribe({
+      orders$.subscribe({
         next: (data: OrdersRes) => {
-          console.log('orders + menuName:', data);
+          console.log('orders:', data);
           this.res = data;
         },
         error: (err: any) => console.error('API error:', err),
       });
-
     });
   }
 
