@@ -163,7 +163,7 @@ export class CartPageComponent {
         const event = res.groupbuyEvents?.[0];
         if (!event) return;
 
-        const mode = (event.hostId === userId) ? 'host' : 'member';
+        const mode = (event.hostId == userId) ? 'host' : 'member';
 
         this.router.navigate(['/user/orders/info'], {
           queryParams: {

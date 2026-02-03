@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { JsonPipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { MenuItem, MessageService } from 'primeng/api';
 import { StepsModule } from 'primeng/steps';
@@ -8,35 +9,12 @@ import { CartService } from '../@service/cart.service';
 import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../@service/auth.service';
 import { HttpService } from '../@service/http.service';
-import { map } from 'rxjs/operators';
+import { of } from 'rxjs';
+import { tap, switchMap, map } from 'rxjs/operators';
+import Swal from 'sweetalert2';
+
 
 type SelectedOpt = { optionName: string; value: string; extraPrice?: number };
-
-interface OrdersAllRes {
-  code: number;
-  message: string;
-  ordersSearchViewList: OrderSearchViewDto[];
-}
-
-interface OrderSearchViewDto {
-  orderId: number;
-  eventId: number;
-  userId: string;
-  menuId: number;
-  quantity: number;
-  selectedOptionList: SelectedOpt[];
-  personalMemo: string | null;
-  orderTime: string;
-  pickupStatus: string;
-  pickupTime: string | null;
-  subtotal: number;
-  weight: number;
-  deleted: boolean;
-  menuName: string;
-  hostId: string;
-  hostNickname: string;
-}
-
 
 interface OrderDto {
   id: number;
@@ -105,6 +83,7 @@ export interface orders {
     StepsModule,
     ToastModule,
     FormsModule,
+    JsonPipe
   ],
   providers: [MessageService],
   templateUrl: './order-info.component.html',
@@ -166,40 +145,83 @@ export class OrderInfoComponent implements OnInit {
       if (this.mode == 'member' && !this.userId) return;
 
       const orders$ = (this.mode == 'host')
-        ? this.cart.getOrdersAll(this.eventsId).pipe(
-          map((r: OrdersAllRes): OrdersRes => ({
-            code: r.code,
-            message: r.message,
-            orders: (r.ordersSearchViewList ?? []).map(v => ({
-              id: v.orderId,
-              eventsId: v.eventId,
-              userId: v.userId,
-              menuId: v.menuId,
-              quantity: v.quantity,
-              selectedOption: v.selectedOptionList as any,
-              personalMemo: v.personalMemo ?? '',
-              orderTime: v.orderTime,
-              pickupStatus: v.pickupStatus,
-              pickupTime: v.pickupTime,
-              subtotal: v.subtotal,
-              weight: v.weight,
-              deleted: v.deleted,
-              menuName: v.menuName,
-              userNickname: v.hostNickname,
-            }))
-          }))
-        )
-        : this.cart.getOrders(this.userId, this.eventsId); // 原本個人訂單
+        ? this.cart.getOrdersAll(this.eventsId)
+        : this.cart.getOrders(this.userId, this.eventsId);
 
-      orders$.subscribe({
-        next: (data: OrdersRes) => {
-          console.log('orders:', data);
+      orders$.pipe(
+        tap((x: any) => console.log('[RAW ordersRes]', this.mode, x)),
+        switchMap((ordersRes: OrdersRes) => {
+          const raw: any = ordersRes;
+          const orders = (raw.orders ?? raw.ordersSearchViewList ?? []).map((o: any) => this.normalizeOrder(o));
+
+
+          // 先把 menuId 轉 number，並且濾掉 NaN / undefined
+          const menuIds: number[] = Array.from(
+            new Set(
+              orders
+                .map((o: { menuId: any; }) => Number(o.menuId))
+                .filter((id: unknown): id is number => Number.isFinite(id))
+            )
+          );
+
+
+          if (menuIds.length === 0) {
+            return of({ orders, menuMap: new Map<number, MenuItemDto>() });
+          }
+
+          return this.cart.getMenuByMenuId(menuIds).pipe(
+            map((menuRes: MenuRes) => {
+              const menuMap = new Map<number, MenuItemDto>();
+              for (const m of menuRes.menuList ?? []) menuMap.set(m.id, m);
+              return { orders, menuMap };
+            })
+          );
+        }),
+        map(({ orders, menuMap }) => {
+          const mergedOrders = orders.map((o: { menuId: any; selectedOption: string; }) => ({
+            ...o,
+            menuName: menuMap.get(o.menuId)?.name ?? `menuId:${o.menuId}`,
+            parsedOptions: this.safeParseSelectedOption(o.selectedOption),
+          }));
+          return { code: 200, message: 'ok', orders: mergedOrders } as OrdersRes;
+        })
+      ).subscribe({
+        next: (data: any) => {
           this.res = data;
+          console.log('mode=', this.mode, data.orders?.[0]);
         },
         error: (err: any) => console.error('API error:', err),
       });
+
     });
+
   }
+
+
+  private normalizeOrder(o: any) {
+    const selectedOptionList = o.selectedOptionList;
+    const selectedOption = o.selectedOption ?? o.selected_option;
+
+    return {
+      id: o.id ?? o.orderId,
+      eventsId: o.eventsId ?? o.eventId,
+      userId: o.userId ?? o.user_id ?? '',
+      menuId: Number(o.menuId ?? o.menu_id),
+      quantity: o.quantity ?? 0,
+      subtotal: o.subtotal ?? 0,
+      orderTime: o.orderTime ?? o.order_time,
+      personalMemo: o.personalMemo ?? o.personal_memo ?? '',
+      pickupStatus: o.pickupStatus ?? o.pickup_status,
+      pickupTime: o.pickupTime ?? o.pickup_time ?? null,
+      deleted: o.deleted ?? o.is_deleted ?? false,
+      userNickname: o.userNickname ?? o.user_nickname ?? o.hostNickname ?? null,
+      menuName: o.menuName ?? null,
+      selectedOption: Array.isArray(selectedOptionList)
+        ? JSON.stringify(selectedOptionList)
+        : (selectedOption ?? '[]'),
+    };
+  }
+
 
   private safeParseSelectedOption(raw: string): SelectedOpt[] {
     if (!raw) return [];
@@ -277,6 +299,57 @@ export class OrderInfoComponent implements OnInit {
     return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
+  removeorder(orderId: number) {
+    Swal.fire({
+      title: "確定刪除訂單?",
+      text: "刪除後無法復原!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "是的，刪除!",
+      cancelButtonText: "取消"
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+      Swal.fire({
+        title: "刪除中...",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => Swal.showLoading()
+      });
+      this.cart.deleteOrderById(orderId).subscribe({
+        next: (res) => {
+          if (res.code === 200) {
+            this.res.orders = (this.res.orders ?? []).filter(
+              (o: any) => (o.id ?? o.orderId) !== orderId
+            );
+            Swal.fire({
+              title: "刪除!",
+              text: "訂單已刪除完成.",
+              icon: "success"
+            });
+          } else {
+            Swal.fire({
+              title: "刪除失敗",
+              text: res.message ?? "請稍後再試",
+              icon: "error"
+            });
+          }
+        },
+        error: (err) => {
+          console.error(err);
+          Swal.fire({
+            title: "刪除失敗",
+            text: "刪除失敗，請稍後再試",
+            icon: "error"
+          });
+        }
+      });
+    });
+  }
+
+
 }
+
 
 
