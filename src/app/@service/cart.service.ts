@@ -2,6 +2,12 @@ import { Injectable } from '@angular/core';
 import { HttpService } from './http.service';
 import { HttpParams } from '@angular/common/http';
 
+export interface BasicRes {
+  code: number;
+  message: string;
+}
+
+
 /**
  * CartService：處理「購物車 / 訂單 / 團購訂單視圖」相關 API
  * 大多數 API 使用 query string 傳參數（user_id / event_id / events_id）
@@ -51,8 +57,7 @@ export class CartService {
   }
 
 
-  // 硬刪除
-  // 硬刪除訂單（後端用 POST 做刪除，不是 RESTful 的 DELETE）
+  // 刪除訂單（後端用 POST 做刪除，不是 RESTful 的 DELETE）
   // body 不需要資料，所以傳 null
   deleteOrderByUserIdAndEventsId(userId: string, eventsId: number) {
     const url =
@@ -60,6 +65,14 @@ export class CartService {
 
     return this.https.postApi(url, null);
   }
+
+  // 刪除單筆品項
+  deleteOrderById(orderId: number) {
+    const url = `http://localhost:8080/gogobuy/order/deleteOrderById?order_id=${orderId}`;
+    return this.https.postApi<BasicRes>(url, null);
+  }
+
+
 
 }
 
