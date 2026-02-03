@@ -124,7 +124,8 @@
           <tr>
             <td><span class="text-gray-800">#{{ store.id }}</span></td>
             <td class="font-semibold text-gray-900">{{ store.name }}</td>
-            <td><p-tag [value]="store.category || '未分類'" severity="info" [rounded]="true"></p-tag></td>
+            <td><p-tag [value]="store.category || '未分類'" [severity]="storeGetServerity(store.category)"
+                [rounded]="true"></p-tag></td>
             <td class="text-base font-bold text-gray-800">{{ store.address }}</td>
             <td class="text-base text-gray-600">{{ store.phone }}</td>
             <td>

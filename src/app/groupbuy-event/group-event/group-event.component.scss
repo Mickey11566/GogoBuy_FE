@@ -16,7 +16,7 @@
 }
 .store-table{
   @apply max-w-[295px] mt-[5px] ml-[10px]
-  md:max-w-none md:!w-[550px] md:mt-[10px];
+  md:max-w-none md:!w-[100%] md:mt-[10px];
   tr{
     @apply w-[100vw]
   }
@@ -104,6 +104,7 @@
     height: fit-content !important;
   }
 }
+
 
 .remove-badge {
   position: absolute;
