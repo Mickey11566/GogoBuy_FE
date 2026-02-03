@@ -3,7 +3,7 @@ import { Component } from '@angular/core';
 import { computed, signal } from '@angular/core';
 import { CartService } from '../../@service/cart.service';
 import Swal from 'sweetalert2';
-type SelectedOpt = { optionName: string; value: string; extraPrice?: number };
+import { finalize } from 'rxjs/operators';
 
 interface CartItem {
   id: number;
@@ -57,6 +57,7 @@ type CartSummary = {
   styleUrl: './cart-page.component.scss'
 })
 export class CartPageComponent {
+  isLoading = true
   res?: CartRes;
   cartData = signal<CartGroup[]>([]);
   constructor(
@@ -68,39 +69,27 @@ export class CartPageComponent {
   ngOnInit(): void {
     const user = JSON.parse(localStorage.getItem('user_info') || '{}');
     const userId = user.id;
-    if (!userId) return;
+    if (!userId) {
+      this.isLoading = false;
+      return;
+    }
 
-    this.cart.getCart(userId).subscribe({
-      next: (r: CartRes) => {
-        this.res = r;
-        this.cartData.set(r.cartData);
-        console.log(this.res);
-      },
-      error: (err: any) => console.error('getCart failed:', err)
-    });
+    this.isLoading = true;
+
+    this.cart.getCart(userId)
+      .pipe(finalize(() => this.isLoading = false))
+      .subscribe({
+        next: (r: CartRes) => {
+          this.res = r;
+          this.cartData.set(r.cartData);
+          console.log(this.res);
+        },
+        error: (err: any) => console.error('getCart failed:', err)
+      });
   }
 
-  // carts = signal<CartSummary[]>([]);
-  carts = signal<CartSummary[]>([
-    {
-      id: '01',
-      updatedAt: '2026-01-26T10:36:00',
-      storeName: '迷客夏',
-      storeBranch: '歸仁店',
-      itemCount: 5,
-      total: 100,
-      img: '/Milksha.png',
-    },
-    {
-      id: '02',
-      updatedAt: '2026-01-25T21:10:00',
-      storeName: '多喝茶',
-      storeBranch: '歸仁店',
-      itemCount: 1,
-      total: 65,
-      img: '/多喝茶.jpg',
-    }
-  ]);
+
+  carts = signal<CartSummary[]>([]);
 
   cartsSorted = computed(() =>
     [...this.carts()].sort(
@@ -146,11 +135,35 @@ export class CartPageComponent {
 
   }
 
+  checkout(item: CartGroup) {
+    const user = JSON.parse(localStorage.getItem('user_info') || '{}');
+    const userId: string = user.id;
+    if (!userId) return;
 
-  checkout(id: number) {
-    this.router.navigate(['/user/orders/info']);
-    console.log('checkout', id);
+    this.cart.getEventsByEventsId(item.eventsId).subscribe({
+      next: (res: { groupbuyEvents: any[]; }) => {
+        const event = res.groupbuyEvents?.[0];
+        if (!event) return;
+
+        const mode = (event.hostId === userId) ? 'host' : 'member';
+
+        this.router.navigate(['/user/orders/info'], {
+          queryParams: {
+            user_id: userId,
+            events_id: item.eventsId,
+            eventName: item.eventName ?? '',
+            storeName: item.storeName ?? '',
+            latestOrderTime: item.latestOrderTime ?? '',
+            totalAmount: item.totalAmount ?? '',
+            // 身分判斷結果
+            mode, // 'host' | 'member'
+          }
+        });
+      },
+      error: (err: any) => console.error(err)
+    });
   }
+
 
   /* 轉換ISO8601日期格式 */
   formatDateTime(s: string) {
