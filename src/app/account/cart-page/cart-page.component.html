@@ -54,13 +54,14 @@
           </div>
 
           <div class="flex items-center gap-3">
-            <button type="button" class="px-4 py-2 rounded-full text-white font-bold active:scale-[0.98]"
+            <button type="button" class="px-4 py-2 rounded-full text-white font-bold active:scale-[0.98] cursor-pointer"
               [ngClass]="item.isHost? 'bg-emerald-600 hover:bg-emerald-700': 'bg-sky-600 hover:bg-sky-700'"
               (click)="checkout(item)">
               {{ item.isHost ? '查看全團' : '送單' }}
             </button>
-
-            <button type="button" class="p-2 rounded-full text-rose-500 hover:bg-rose-50"
+            <button type="button"
+              class="w-10 h-10 inline-flex items-center justify-center rounded-full text-rose-500 hover:bg-rose-50
+              cursor-pointer"
               (click)="removeCart(item.eventsId)" aria-label="刪除購物車">
               <i class="pi pi-trash"></i>
             </button>

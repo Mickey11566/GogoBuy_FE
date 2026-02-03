@@ -246,7 +246,7 @@ export class OrderInfoComponent implements OnInit {
   }
   // 返回繼續購物
   gotoshop() {
-
+    this.router.navigate(['/groupbuy-event/group-follow']);
   }
 
   // 前往下一個Step
@@ -323,6 +323,9 @@ export class OrderInfoComponent implements OnInit {
             this.res.orders = (this.res.orders ?? []).filter(
               (o: any) => (o.id ?? o.orderId) !== orderId
             );
+
+            this.recalcTotalAmount();
+
             Swal.fire({
               title: "刪除!",
               text: "訂單已刪除完成.",
@@ -346,6 +349,12 @@ export class OrderInfoComponent implements OnInit {
         }
       });
     });
+  }
+
+  private recalcTotalAmount() {
+    const sum = (this.res?.orders ?? [])
+      .reduce((acc: number, o: any) => acc + Number(o.subtotal ?? 0), 0);
+    this.totalAmount = String(sum);
   }
 
 

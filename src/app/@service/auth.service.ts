@@ -1,10 +1,14 @@
 import { Injectable, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { tap } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import Swal from 'sweetalert2';
 import { HttpService } from './http.service';
 import { BehaviorSubject } from 'rxjs';
 
+export interface BasicRes {
+  code: number;
+  message: string;
+}
 
 /*
  * AuthService（目前同時包含三種功能）
@@ -195,28 +199,11 @@ export class AuthService {
   }
 
   // 註冊API
-  register(payload: any) {
-    this.https
-      .postApi('http://localhost:8080/gogobuy/user/registration', payload)
-      .subscribe({
-        next: (res: any) => {
-          if (res.code === 200) {
-            localStorage.setItem('user_session', payload.email);
-            Swal.fire({
-              title: '註冊成功!<br>請返回登入頁面登入',
-              icon: 'success',
-            });
-          }
-        },
-        error: (err: any) => {
-          console.log(err.message);
-          Swal.fire({
-            title: err.message || '註冊失敗',
-            icon: 'error',
-            timer: 2000,
-          });
-        },
-      });
+  register(payload: any): Observable<BasicRes> {
+    return this.https.postApi<BasicRes>(
+      'http://localhost:8080/gogobuy/user/registration',
+      payload
+    );
   }
 
 
