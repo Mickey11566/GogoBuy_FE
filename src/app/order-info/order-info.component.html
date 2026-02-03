@@ -67,9 +67,11 @@
           <p class="flex items-center justify-between font-bold">
             <span class="text-[#E07A3F]">{{ order.menuName }}</span>
             <span>
-              {{ order.quantity }}杯 共${{ order.subtotal }}元
-              <button type="button" class="p-2 rounded-full text-rose-500 hover:bg-rose-50"
-                (click)="removeorder(order.id)" aria-label="刪除購物車">
+              {{ order.quantity }} 份 共 ${{ order.subtotal }} 元
+              <button type="button"
+                class="w-10 h-10 inline-flex items-center justify-center rounded-full text-rose-500 hover:bg-rose-50
+                cursor-pointer"
+                (click)="removeorder(order.id)" aria-label="刪除品項">
                 <i class="pi pi-trash"></i>
               </button>
             </span>
@@ -127,9 +129,11 @@
           </div>
           <p class="flex items-center justify-between font-bold">
             <span class="text-[#E07A3F]">{{ order.menuName }}</span>
-            <span>{{ order.quantity }}杯 共${{ order.subtotal }}元
-              <button type="button" class="p-2 rounded-full text-rose-500 hover:bg-rose-50"
-                (click)="removeorder(order.id)" aria-label="刪除購物車">
+            <span>{{ order.quantity }} 份 共 ${{ order.subtotal }} 元
+              <button type="button"
+                class="w-10 h-10 inline-flex items-center justify-center rounded-full text-rose-500 hover:bg-rose-50
+                cursor-pointer"
+                (click)="removeorder(order.id)" aria-label="刪除品項">
                 <i class="pi pi-trash"></i>
               </button>
             </span>

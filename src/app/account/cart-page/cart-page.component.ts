@@ -28,6 +28,7 @@ interface CartGroup {
   eventsId: number;
   eventName: string | null;
   storeName: string | null;
+  storesId: number;
   storeLogo: any;
   totalAmount: number;
   totalQuantity: number;
@@ -171,6 +172,7 @@ export class CartPageComponent {
             events_id: item.eventsId,
             eventName: item.eventName ?? '',
             storeName: item.storeName ?? '',
+            store_id: item.storesId ?? '',
             latestOrderTime: item.latestOrderTime ?? '',
             totalAmount: item.totalAmount ?? '',
             // 身分判斷結果
