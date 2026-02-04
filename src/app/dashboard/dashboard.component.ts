@@ -197,6 +197,13 @@ export class DashboardComponent {
     }
   }
 
+  storeGetServerity(category: string) {
+    switch (category) {
+      case 'fast': return 'info';
+      default: return 'success';
+    }
+  }
+
   // 開啟公告視窗
   openAnnounceDialog() {
     this.displayAnnounceDialog = true;

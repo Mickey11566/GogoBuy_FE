@@ -67,6 +67,8 @@ export class StoreComponent {
   displayDeleteProductSpec = false;
   displayExistenceSpec = false;
   displayUnableDelete = false;
+  displayUnableDeleteSpec = false;
+  displayPublishConfirm = false
 
   selectedProduct!: MenuVoList;
   selectedCategoryId: number | null = null;
@@ -212,16 +214,16 @@ export class StoreComponent {
         .subscribe((res: any) => {
 
           if (res.storeList && res.storeList.length > 0) {
-            this.storeData = res.storeList[0];
             this.storeData.menuCategoriesVoList = res.menuCategoriesVoList;
             this.storeData.productOptionGroupsVoList = res.productOptionGroupsVoList;
-            this.storeData.operatingHoursVoList = res.operatingHoursVoList.map((item: any) => ({
-              ...item,
-              openTime: item.openTime?.slice(0, 5),
-              closeTime: item.closeTime?.slice(0, 5)
-            }));
-            this.storeData.feeDescription = res.feeDescriptionVoList;
-            this.storeData.menuVoList = res.menuVoList;
+            this.storeData.menuVoList = res.menuVoList.map((product: any) => {
+              if (Array.isArray(product.unusual) && product.unusual.length > 0) {
+                product.unusual = product.unusual[0];
+              } else if (!product.unusual) {
+                product.unusual = {};
+              }
+              return product;
+            });
             this.rebuildApplicableCategoryIds();
             this.filteredProducts = [...this.storeData.menuVoList];
             console.log("storeDatastoreData", this.storeData);
@@ -232,7 +234,6 @@ export class StoreComponent {
         });
     }
     this.filteredProducts = [...this.storeData.menuVoList];
-    console.log("filteredProductsMenu2:", this.filteredProducts);
 
     if (this.storeService.storeData && this.storeService.storeData.name !== '') {
       const source = this.storeService.storeData;
@@ -267,6 +268,7 @@ export class StoreComponent {
       }
     }
     this.applyFilters();
+    this.rebuildApplicableCategoryIds();
   }
 
   // 店家資訊 ---------------------------------------------------------
@@ -454,16 +456,23 @@ export class StoreComponent {
     this.editingSpecIndex = index;
     this.currentGroup = JSON.parse(JSON.stringify(spec));
 
-    if (spec.applicableCategoryIds && spec.applicableCategoryIds.length > 0) {
-      this.selectedSpecsCategories = this.storeData.menuCategoriesVoList.filter(cate =>
-        cate.id !== undefined && spec.applicableCategoryIds!.includes(cate.id)
+    const categoryIds = this.storeData.menuVoList
+      .filter(menu => menu.unusual && menu.unusual[spec.id])
+      .map(menu => menu.categoryId);
+
+    this.selectedSpecsCategories =
+      this.storeData.menuCategoriesVoList!.filter(cate =>
+        categoryIds.includes(cate.id)
       );
-    } else {
-      this.selectedSpecsCategories = [];
-    }
+
+    this.newItemId = Math.max(
+      0,
+      ...this.currentGroup.items.map(i => i.id || 0)
+    ) + 1;
 
     this.displaySpecsDialog = true;
   }
+
 
   addSpecItem() {
     this.currentGroup.items.push({
@@ -487,7 +496,19 @@ export class StoreComponent {
     const target = this.tempSpecTarget;
     const index = this.tempSpecIndex;
 
+    if (!target) {
+      return;
+    }
     if (target.id) {
+      const hasLinkProduct = this.storeData.menuVoList.some(product =>
+        product.unusual && product.unusual[target.id]
+      );
+
+      if (hasLinkProduct) {
+        this.displayDeleteSpecs = false;
+        this.displayUnableDeleteSpec = true;
+        return;
+      }
       this.storeData.productOptionGroupsVoList = this.storeData.productOptionGroupsVoList.filter(
         item => item.id !== target.id
       );
@@ -540,28 +561,31 @@ export class StoreComponent {
   }
 
   rebuildApplicableCategoryIds() {
-    if (!this.storeData.productOptionGroupsVoList || !this.storeData.menuVoList) {
-      return;
-    }
-    this.storeData.menuVoList.forEach(menu => {
-      if (menu.unusual) {
-        Object.keys(menu.unusual).forEach(specIdStr => {
-          const specId = Number(specIdStr);
-          const specGroup = this.storeData.productOptionGroupsVoList.find(g => g.id === specId);
+    const groups = this.storeData.productOptionGroupsVoList;
+    const menus = this.storeData.menuVoList;
 
-          if (specGroup) {
-            if (!specGroup.applicableCategoryIds) {
-              specGroup.applicableCategoryIds = [];
-            }
-            if (!specGroup.applicableCategoryIds.includes(menu.categoryId)) {
-              specGroup.applicableCategoryIds.push(menu.categoryId);
-            }
-          }
+    if (!groups || !menus) return;
 
-        });
-      }
+    groups.forEach(g => g.applicableCategoryIds = []);
 
+    menus.forEach(menu => {
+      if (!menu.unusual) return;
+      Object.keys(menu.unusual).forEach(specIdStr => {
+        const specId = Number(specIdStr);
+        const specGroup = groups.find(g => g.id === specId);
+        if (!specGroup) return;
+
+        if (!specGroup.applicableCategoryIds!.includes(menu.categoryId)) {
+          specGroup.applicableCategoryIds!.push(menu.categoryId);
+        }
+      });
     });
+  }
+
+  getApplicableSpecsForCategory(categoryId: number): ProductOptionGroupsVoList[] {
+    return this.storeData.productOptionGroupsVoList.filter(group =>
+      group.applicableCategoryIds?.includes(categoryId)
+    );
   }
 
   // search ---------------------------------------------------------
@@ -864,8 +888,27 @@ export class StoreComponent {
     this.applyFilters();
   }
 
+  // 最下面按鈕 ---------------------------------------------------------
+  goBack() {
+    if (this.id && this.id !== 0) {
+      this.router.navigate(['/management/store_upsert', this.id]);
+    } else {
+      this.router.navigate(['/management/store_upsert']);
+    }
+
+  }
+
+  openPublic() {
+    if (this.id === 0) {
+      this.displayPublishConfirm = true;
+    } else {
+      this.onSaveAll();
+    }
+  }
+
   // 存資料庫 ---------------------------------------------------------
   onSaveAll() {
+    this.displayPublishConfirm = false;
     if (this.storeData.id == 0) {
       const payload = {
         storesname: this.storeData.name,
@@ -891,10 +934,10 @@ export class StoreComponent {
         productOptionGroupsVoList: this.storeData.productOptionGroupsVoList
       }
       console.log("payload(create):", payload);
-      // this.http.postApi('http://localhost:8080/gogobuy/store/create', payload)
-      //   .subscribe((res: any) => {
-      //     console.log("create store:", res);
-      //   });
+      this.http.postApi('http://localhost:8080/gogobuy/store/create', payload)
+        .subscribe((res: any) => {
+          console.log("create store:", res);
+        });
     } else {
       const payload = {
         ...this.storeData, storesname: this.storeData.name, fee_description: this.storeData.feeDescription,
@@ -902,10 +945,10 @@ export class StoreComponent {
       }
       console.log("payload(update):", payload);
 
-      // this.http.postApi(`http://localhost:8080/gogobuy/store/update?id=${this.storeData.id}`, payload)
-      //   .subscribe((res: any) => {
-      //     console.log("update store:", res);
-      //   });
+      this.http.postApi(`http://localhost:8080/gogobuy/store/update?id=${this.storeData.id}`, payload)
+        .subscribe((res: any) => {
+          console.log("update store:", res);
+        });
     }
     this.storeService.clearCurrentStore();
     this.displaySaveDialog = true;
@@ -913,15 +956,13 @@ export class StoreComponent {
   }
 
   closeSaveDialog() {
-    console.log('wishId', this.wishId);
-
     this.displaySaveDialog = false;
-    if (!this.wishId || this.wishId == undefined) {
-      this.router.navigate(['../../store_info', this.id]);
+    if (!this.wishId) {
+      this.router.navigate(['/management/store_info', this.id]);
     } else {
-      this.router.navigate(['../../../gogobuy-event/gogbuy-event'], {
+      this.router.navigate(['/groupbuy-event/group-event', this.id], {
         queryParams: { wish_id: this.wishId }
-      })
+      });
     }
   }
 
