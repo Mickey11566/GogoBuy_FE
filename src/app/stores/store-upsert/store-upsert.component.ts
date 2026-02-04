@@ -46,6 +46,7 @@ export class StoreUpsertComponent {
   alertMessage!: string;
   selectCategory!: string;
   phoneRegex = /^(09\d{8}|0\d{1,2}-?\d{6,8})$/;
+  districtsLoaded = false;
 
   // 暫存輸入時間
   timeSlots: TimeSlotUI[] = [];
@@ -70,8 +71,11 @@ export class StoreUpsertComponent {
           }
           return city;
         });
+        this.districtsLoaded = true;
+        if (this.storeData && this.storeData.address) {
+          this.parseAddressToFields();
+        }
     });
-    this.parseAddressToFields();
   }
 
   updateFullAddress() {
@@ -82,9 +86,11 @@ export class StoreUpsertComponent {
     this.storeData.address = `${city}${district}${detail}`;
   }
 
-  onCityChange() {
+  onCityChange(shouldUpdateAddress: boolean = true) {
     this.selectedDistrict = null;
-    this.updateFullAddress();
+    if (shouldUpdateAddress) {
+      this.updateFullAddress();
+    }
   }
 
   // 經營類別
@@ -123,7 +129,7 @@ export class StoreUpsertComponent {
     address: '',
     type: '',
     memo: '',
-    publish: false,
+    publish: true,
     category: '',
     image: '' as any,
     createdBy: 'A01',
@@ -151,20 +157,20 @@ export class StoreUpsertComponent {
   // 如果是用使用 搜尋店家名稱 取得店家資訊
   onStoreSelect(event: any) {
     const selected = event.value;
-    const fullAddress = selected.address;
     this.id = selected.id;
-    this.storeData = { ...selected };
     this.http.getApi(`http://localhost:8080/gogobuy/store/searchId?id=${this.id}`)
-      .subscribe((res: any) => {
-        if (res.storeList && res.storeList.length > 0) {
-          this.storeData = { ...res.storeList[0] };
-        }
-      });
-      if (typeof this.storeData.feeDescription === 'string') {
-        this.storeData.feeDescription = JSON.parse(this.storeData.feeDescription);
-      }
-      this.parseAddressToFields();
-      this.convertVoToTimeSlots(this.storeData.operatingHoursVoList || []);
+        .subscribe((res: any) => {
+          if (res.storeList && res.storeList.length > 0) {
+            this.storeData = { ...res.storeList[0] };
+
+            if (typeof this.storeData.feeDescription === 'string') {
+              this.storeData.feeDescription = JSON.parse(this.storeData.feeDescription);
+            }
+
+            this.convertVoToTimeSlots(res.operatingHoursVoList || []);
+            this.parseAddressToFields();
+          }
+        });
   }
 
   // 將完整地址拆分成 縣市/行政區域/路巷號
@@ -183,7 +189,7 @@ export class StoreUpsertComponent {
       this.selectedCity = this.cityOptions.find(c => c.CityName == cityName);
 
       if (this.selectedCity) {
-        this.onCityChange();
+        this.onCityChange(false);
 
         this.selectedDistrict = this.selectedCity.AreaList.find(
           (a: any) => a.AreaName === districtName);
@@ -222,7 +228,7 @@ export class StoreUpsertComponent {
 
     this.id = Number(this.route.snapshot.paramMap.get('id'));
 
-    if (this.id !== 0) {
+    if (this.id !== 0 || this.id) {
       this.http.getApi(`http://localhost:8080/gogobuy/store/searchId?id=${this.id}`)
         .subscribe((res: any) => {
           if (res.storeList && res.storeList.length > 0) {
@@ -243,24 +249,24 @@ export class StoreUpsertComponent {
         const parsed = JSON.parse(savedData);
         this.storeData = parsed;
         this.convertVoToTimeSlots(parsed.operatingHoursVoList || []);
-        // service 讀取資料
-      } else if (this.storeService.storeData && this.storeService.storeData.name !== '') {
-        const source = this.storeService.storeData;
-        this.storeData = {
-          ...this.storeData,
-          ...source,
-          memo: source.memo ?? '',
-          image: source.image ?? null,
-          feeDescription: source.feeDescription ?? []
-        } as any;
-        this.convertVoToTimeSlots(source.operatingHoursVoList || []);
-      } else {
-        this.addTimeSlot();
-      }
-
-      if (this.storeData.address) {
         this.parseAddressToFields();
       }
+    }
+    // service 讀取資料
+    if (this.storeService.storeData && this.storeService.storeData.name !== '') {
+      const source = this.storeService.storeData;
+      this.storeData = {
+        ...this.storeData,
+        ...source,
+        memo: source.memo ?? '',
+        image: source.image ?? null,
+        feeDescription: source.feeDescription ?? []
+      } as any;
+
+      this.parseAddressToFields();
+      this.convertVoToTimeSlots(source.operatingHoursVoList || []);
+    } else {
+      this.addTimeSlot();
     }
   }
 
@@ -286,26 +292,30 @@ export class StoreUpsertComponent {
     const map = new Map<string, number[]>();
 
     voList.forEach(vo => {
-      const key = `${vo.openTime}-${vo.closeTime}`;
+      const open = vo.openTime ? vo.openTime.substring(0, 5) : '09:00';
+      const close = vo.closeTime ? vo.closeTime.substring(0, 5) : '18:00';
+      const key = `${open}-${close}`;
+
       if (!map.has(key)) {
         map.set(key, []);
       }
-      // 這裡要判斷後端過來的 week 是不是已經被包成陣列了
+
       if (Array.isArray(vo.week)) {
-        map.get(key)?.push(...vo.week);
-      } else {
-        map.get(key)?.push(vo.week);
+        const weekNums = vo.week.map((w: any) => parseInt(w, 10));
+        map.get(key)?.push(...weekNums);
+      } else if (vo.week !== undefined && vo.week !== null) {
+        map.get(key)?.push(parseInt(vo.week, 10));
       }
     });
 
     const newSlots: TimeSlotUI[] = [];
     map.forEach((weeks, timeKey) => {
       const [openStr, closeStr] = timeKey.split('-');
-      const [openH, openM] = (openStr || '09:00').split(':');
-      const [closeH, closeM] = (closeStr || '18:00').split(':');
+      const [openH, openM] = openStr.split(':');
+      const [closeH, closeM] = closeStr.split(':');
 
       newSlots.push({
-        selectedWeeks: [...new Set(weeks)].sort((a, b) => a - b), // 使用 Set 去重
+        selectedWeeks: [...new Set(weeks)].sort((a, b) => a - b),
         openHour: openH.padStart(2, '0'),
         openMinute: openM.padStart(2, '0'),
         closeHour: closeH.padStart(2, '0'),
@@ -472,8 +482,6 @@ export interface Category {
 
 export interface TimeSlotUI {
   selectedWeeks: number[];
-  // openTime: Date | null;
-  // closeTime: Date | null;
   openHour: string;
   openMinute: string;
   closeHour: string;

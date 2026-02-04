@@ -1,7 +1,7 @@
 <div>
   <div class="flex flex-col lg:flex-row gap-6 p-5">
     <!-- 店家資訊 左 -->
-    <div class="flex justify-center p-1">
+    <div class="flex justify-center p-1 min-w-60">
       <div class="w-full rounded-2xl bg-white shadow-lg ring-1 ring-black/5
         transition-all hover:shadow-xl flex lg:flex-col">
 
@@ -124,7 +124,7 @@
                       hover:shadow-md transition-all relative">
             <div class="flex justify-between items-start mb-3">
               <div>
-                <div class="flex items-start gap-2">
+                <div class="flex items-center gap-2">
                   <span class="font-bold text-gray-700 text-lg">{{ group.name }}</span>
                   @if(group.required) {
                   <span class="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded">必填</span>
@@ -333,9 +333,15 @@
 
     </div>
   </div>
-  <!-- 儲存變更按鈕 -->
-  <div class="flex justify-center my-3">
-    <button type="button" (click)="onSaveAll()" class="flex items-center gap-2 px-8 py-4 bg-[#662222] text-white rounded-full  font-medium
+
+  <!-- 儲存變更按鈕 跳出是否公開店家dialog  -->
+  <div class="flex justify-center my-3 gap-10">
+    <button type="button" class="flex items-center gap-2 px-8  py-4 bg-white text-[#662222] border border-[#662222]
+      rounded-full font-medium shadow hover:bg-[#f3e5e0] active:scale-95 transition" (click)="goBack()">
+    <i class="pi pi-arrow-left text-sm"></i>
+    <span>上一步</span>
+  </button>
+    <button type="button" (click)="openPublic()" class="flex items-center gap-2 px-8 py-4 bg-[#662222] text-white rounded-full  font-medium
     shadow-lg hover:brightness-110 active:scale-95 transition">
       <i class="pi pi-save text-sm"></i>
       <span>儲存所有</span>
@@ -1067,5 +1073,72 @@
              hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-[#662222]/20">
       我知道了
     </button>
+  </div>
+</p-dialog>
+
+<!---------------------------- 無法刪除分類 Dialog ---------------------------->
+<p-dialog [(visible)]="displayUnableDeleteSpec" [modal]="true" [draggable]="false" [resizable]="false" [closable]="false"
+  [showHeader]="false" styleClass="rounded-2xl shadow-2xl overflow-hidden"
+  [style]="{ width: '90vw', maxWidth: '28rem', border: 'none' }">
+
+  <div class="flex flex-col items-center p-8 bg-white text-center">
+    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 m-3">
+      <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+      </svg>
+    </div>
+
+    <h3 class="text-2xl font-bold text-gray-800 mb-2">無法刪除規格</h3>
+    <p class="text-gray-500 leading-relaxed">
+      此規格下目前仍有綁定的商品。<br>請先將商品移除或更換至其他規格後，<br>再嘗試刪除此規格。
+    </p>
+
+    <button (click)="displayUnableDelete = false" class="w-full py-4 bg-[#662222] text-white rounded-2xl font-bold text-lg mt-5
+             hover:brightness-110 active:scale-[0.98] transition-all shadow-lg shadow-[#662222]/20">
+      我知道了
+    </button>
+  </div>
+</p-dialog>
+
+<!---------------------------- 公開嗎店家 Dialog ---------------------------->
+<p-dialog [(visible)]="displayPublishConfirm" [modal]="true" [closable]="false" [showHeader]="false" [draggable]="false"
+  [resizable]="false" [closeOnEscape]="false" styleClass="rounded-xl overflow-hidden"
+  [style]="{ width: '90vw', maxWidth: '28rem', border: 'none' }">
+
+  <div class="bg-white px-4 pb-5 pt-7">
+    <div>
+      <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+        <svg class="h-6 w-6 text-[#662222]" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9s2.015-9 4.5-9m0 18c5 0 9-4 9-9s-4-9-9-9-9 4-9 9 4 9 9 9Z" />
+        </svg>
+      </div>
+
+      <div class="mt-3 text-center sm:mt-5">
+        <h3 class="text-2xl font-semibold leading-6 text-gray-900">共享權限設定</h3>
+        <div class="mt-4 flex flex-col items-center">
+          <div class="flex items-center gap-3">
+            <p-checkbox [(ngModel)]="storeData.publish" [binary]="true" inputId="isPublic"></p-checkbox>
+            <label for="isPublic" class="text-base font-bold text-gray-700 cursor-pointer">
+              將此店家公開供大眾共享
+            </label>
+          </div>
+          <p class="mt-2 text-sm text-gray-500 leading-relaxed px-2">
+            勾選後，其他使用者也能看到此店家並發起團購；若不勾選，則僅供您個人管理使用。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-5 sm:mt-6 flex gap-3">
+      <button type="button" (click)="displayPublishConfirm = false"
+        class="inline-flex flex-1 justify-center rounded-md bg-gray-100 px-3 py-2 font-semibold text-gray-600 shadow-sm hover:bg-gray-200 transition-all active:scale-95 outline-none">
+        取消
+      </button>
+      <button type="button" (click)="onSaveAll()"
+        class="inline-flex flex-1 justify-center rounded-md bg-[#662222] px-3 py-2 font-semibold text-white shadow-sm hover:bg-[#662222]/90 transition-all active:scale-95 outline-none">
+        確認儲存
+      </button>
+    </div>
   </div>
 </p-dialog>
