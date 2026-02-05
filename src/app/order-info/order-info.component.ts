@@ -416,7 +416,7 @@ export class OrderInfoComponent implements OnInit {
           new Set(
             (data.orders ?? [])
               .map((o: any) => o.userId)
-              .filter((id: any): id is string => typeof id === 'string' && id.trim().length > 0)
+              .filter((id: any): id is string => typeof id == 'string' && id.trim().length > 0)
           )
         );
 
@@ -425,7 +425,7 @@ export class OrderInfoComponent implements OnInit {
 
         // 已抓過的就不要重抓
         const needFetch = userIds.filter(id => !this.avatarMap[id]);
-        if (needFetch.length === 0) return of(data);
+        if (needFetch.length == 0) return of(data);
 
         return forkJoin(
           needFetch.map(id =>
@@ -436,7 +436,7 @@ export class OrderInfoComponent implements OnInit {
         ).pipe(
           map((users: (UserRes | null)[]) => {
             for (const u of users) {
-              if (u && u.code === 200) {
+              if (u && u.code == 200) {
                 this.avatarMap[u.id] = u.avatarUrl ?? '';
                 this.nicknameMap[u.id] = u.nickname ?? '';
               }
