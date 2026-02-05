@@ -19,11 +19,10 @@ export class HttpService {
   }
 
   // 新增
-  postApi(url: string, postDate: any) {
-    return this.http.post(url, postDate, {
-      withCredentials: true
-    });
+  postApi<T>(url: string, postData: any) {
+    return this.http.post<T>(url, postData, { withCredentials: true });
   }
+
 
   // 更新
   putApi(url: string, putDate: any) {

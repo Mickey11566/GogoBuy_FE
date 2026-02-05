@@ -1,12 +1,22 @@
 import { Injectable, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { tap } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import Swal from 'sweetalert2';
 import { HttpService } from './http.service';
 import { BehaviorSubject } from 'rxjs';
 
+export interface BasicRes {
+  code: number;
+  message: string;
+}
 
-
+/*
+ * AuthService（目前同時包含三種功能）
+ * (1) 使用者：登入/登出/註冊/更新資料、localStorage 同步、user$ 推播
+ * (2) 店家：取得/搜尋店家、公開/刪除狀態過濾、附近搜尋結果套用
+ * (3) 開團：取得/搜尋開團、把不同 API 回傳格式 normalize 成同一種 events 資料結構
+ * (4) 如果要分開三種功能可以切出 UserService / StoreService / EventService
+ */
 @Injectable({
   providedIn: 'root',
 })
@@ -18,6 +28,8 @@ export class AuthService {
     private route: ActivatedRoute,) { }
   user: any = null;
 
+  // userSubject 用來讓「畫面上的 component」可以訂閱 user 變化（不用一直去讀 localStorage）
+  // localStorage 用來讓「F5 刷新後」還保有登入狀態
   private userSubject = new BehaviorSubject<any>(this.getUserFromStorage());
   user$ = this.userSubject.asObservable();
 
@@ -26,6 +38,10 @@ export class AuthService {
     'https://images.unsplash.com/photo-1544148103-0773bf10d330?w=800',
   ];
 
+  /*
+   * normalizeEvents：把各種不同 API 回傳格式，整理成前端統一可用的事件資料結構
+   * 補齊缺的欄位（例如 image 沒回就給 demo 圖）
+   */
   private normalizeEvents(res: any) {
     const raw = Array.isArray(res)
       ? res
@@ -49,6 +65,13 @@ export class AuthService {
     }));
   }
 
+  /**
+ * fetchEvents：統一處理「API 取得 events」後的流程
+ * - normalizeEvents：整理資料格式
+ * - events：目前畫面要顯示的清單（可能被搜尋/篩選後）
+ * - eventsAll：完整原始清單（只在首頁初始化時存一次，之後做 filter 用）
+ * saveAll=true 用在「第一次載入所有開團」，把完整資料存進 eventsAll
+ */
   private fetchEvents(apiCall: any, saveAll = false) {
     apiCall.subscribe({
       next: (res: any) => {
@@ -106,6 +129,10 @@ export class AuthService {
   }
 
   // 登入API
+  // 登入成功後：
+  // (1) 先把 login 回傳結果暫存
+  // (2) 再呼叫 refreshUser() 取得「完整使用者資料」
+  // (3) 最後導回 returnUrl() (登入時若點選的是用戶首頁，登入後返回用戶首頁)
   login(payload: any) {
     this.https.postApi('http://localhost:8080/gogobuy/user/login', payload)
       .subscribe({
@@ -172,28 +199,11 @@ export class AuthService {
   }
 
   // 註冊API
-  register(payload: any) {
-    this.https
-      .postApi('http://localhost:8080/gogobuy/user/registration', payload)
-      .subscribe({
-        next: (res: any) => {
-          if (res.code === 200) {
-            localStorage.setItem('user_session', payload.email);
-            Swal.fire({
-              title: '註冊成功!<br>請返回登入頁面登入',
-              icon: 'success',
-            });
-          }
-        },
-        error: (err: any) => {
-          console.log(err.message);
-          Swal.fire({
-            title: err.message || '註冊失敗',
-            icon: 'error',
-            timer: 2000,
-          });
-        },
-      });
+  register(payload: any): Observable<BasicRes> {
+    return this.https.postApi<BasicRes>(
+      'http://localhost:8080/gogobuy/user/registration',
+      payload
+    );
   }
 
 
@@ -317,44 +327,51 @@ export class AuthService {
     return v == 1 || v == '1' || v == true || v == 'true';
   }
 
-
+  /**
+   * performSearch：搜尋店家後，會讓首頁畫面「店家清單」跟「開團清單」連動
+   * - 沒輸入：載入全部店家 + events 回到全部
+   * - 有輸入：店家清單變搜尋結果 + events 只顯示這些店家的開團
+   */
   performSearch(name: string) {
     const searchName = name.trim();
     const apiCall = searchName
       ? this.searchStores(searchName)
       : this.getallstore();
+
     apiCall.subscribe({
       next: (res: any) => {
         const demoImages = [
-          'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800', // 餐廳內裝
-          'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800', // 牛排
-          'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800', // 披薩
-          'https://images.unsplash.com/photo-1544148103-0773bf10d330?w=800'  // 飲品
+          'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800',
+          'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
+          'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800',
+          'https://images.unsplash.com/photo-1544148103-0773bf10d330?w=800'
         ];
 
         const processedList = (res.storeList || [])
           .map((store: any, i: number) => ({
             ...store,
-            // 如果 API 回傳的 image 是 null，就從陣列輪流拿圖
-            image: store.image || demoImages[i % demoImages.length]
+            image: store.image || demoImages[i % demoImages.length],
           }))
           .filter((s: any) => this.isPublicStore(s) && !this.isDeletedStore(s));
-        // 更新 Service 裡的 Signal
+        // 更新店家清單
         this.store.set(processedList);
+        // 沒輸入 → 回到全部開團（不 filter）
         if (!searchName) {
-          this.events.set(this.eventsAll()); // 回到全部
-        } else {
-          this.filterEventsByStoreIds(processedList.map((s: { id: any; }) => s.id));
+          this.events.set(this.eventsAll());
+          return;
         }
-        if (processedList.length == 0) {
+        // 有輸入但找不到店家 → 開團清空
+        if (processedList.length === 0) {
           this.events.set([]);
           return;
         }
-        this.filterEventsByStoreIds(processedList.map((s: { id: any; }) => s.id));
+        const storeIds = processedList.map((s: { id: any; }) => s.id);
+        this.filterEventsByStoreIds(storeIds);
       },
       error: (err: any) => console.error('API 錯誤:', err)
     });
   }
+
 
   performEventSearch(hostNickname: string) {
     const q = hostNickname.trim();
@@ -441,6 +458,9 @@ export class AuthService {
     );
   }
 
+  // 套用附近搜尋結果：
+  // (1) store signal 直接改成附近店家清單
+  // (2) events 立刻用店家 id 去篩（讓首頁開團清單同步變成附近店家的開團）
   private applyNearbyStoreResult(res: any) {
     const demoImages = [
       'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800',

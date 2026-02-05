@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpService } from '../../@service/http.service';
 import Swal from 'sweetalert2';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-login',
@@ -16,7 +16,8 @@ export class LoginComponent {
   constructor(
     private http: HttpService,
     public auth: AuthService,
-    private route: ActivatedRoute,) { }
+    private route: ActivatedRoute,
+    public router: Router,) { }
 
   // 模式: 登入 | 註冊
   pageMode: 'login' | 'register' = 'login';
@@ -83,8 +84,42 @@ export class LoginComponent {
       phone: this.user.phone,
       password: this.user.password,
     };
-    this.auth.register(payload); // 呼叫AuthService
+
+    this.auth.register(payload).subscribe({
+      next: (res) => {
+        if (res.code === 200) {
+          localStorage.setItem('user_session', payload.email);
+
+          Swal.fire({
+            title: "創建帳號成功",
+            text: "請返回登入頁面登入",
+            icon: "success",
+            showConfirmButton: false,
+            timer: 1000,
+            timerProgressBar: true,
+          }).then(() => {
+            window.location.reload();
+          });
+
+        } else {
+          Swal.fire({
+            title: "註冊失敗",
+            text: res.message ?? "請稍後再試",
+            icon: "error",
+          });
+        }
+      },
+      error: (err) => {
+        console.log(err?.message);
+        Swal.fire({
+          title: err?.message || "註冊失敗",
+          icon: "error",
+          timer: 2000,
+        });
+      },
+    });
   }
+
 
   // 忘記密碼
   async resetPassword() {

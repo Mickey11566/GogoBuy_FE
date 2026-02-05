@@ -10,7 +10,9 @@ import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../@service/auth.service';
 import { HttpService } from '../@service/http.service';
 import { of } from 'rxjs';
-import { switchMap, map } from 'rxjs/operators';
+import { tap, switchMap, map } from 'rxjs/operators';
+import Swal from 'sweetalert2';
+
 
 type SelectedOpt = { optionName: string; value: string; extraPrice?: number };
 
@@ -129,6 +131,8 @@ export class OrderInfoComponent implements OnInit {
 
     // 載入cart傳入開團訂單詳情
     this.route.queryParamMap.subscribe(params => {
+      this.mode = (params.get('mode') == 'host') ? 'host' : 'member';
+
       this.userId = params.get('user_id') || '';
       this.eventsId = Number(params.get('events_id') || 0);
 
@@ -137,47 +141,87 @@ export class OrderInfoComponent implements OnInit {
       this.latestOrderTime = params.get('latestOrderTime') || '';
       this.totalAmount = params.get('totalAmount') || '';
 
-      if (!this.userId || !this.eventsId) return;
+      if (!this.eventsId) return;
+      if (this.mode == 'member' && !this.userId) return;
 
-      this.cart.getOrders(this.userId, this.eventsId).pipe(
+      const orders$ = (this.mode == 'host')
+        ? this.cart.getOrdersAll(this.eventsId)
+        : this.cart.getOrders(this.userId, this.eventsId);
+
+      orders$.pipe(
+        tap((x: any) => console.log('[RAW ordersRes]', this.mode, x)),
         switchMap((ordersRes: OrdersRes) => {
-          const orders = ordersRes.orders ?? [];
-          const menuIds = Array.from(new Set(orders.map(o => o.menuId)));
+          const raw: any = ordersRes;
+          const orders = (raw.orders ?? raw.ordersSearchViewList ?? []).map((o: any) => this.normalizeOrder(o));
+
+
+          // 先把 menuId 轉 number，並且濾掉 NaN / undefined
+          const menuIds: number[] = Array.from(
+            new Set(
+              orders
+                .map((o: { menuId: any; }) => Number(o.menuId))
+                .filter((id: unknown): id is number => Number.isFinite(id))
+            )
+          );
+
 
           if (menuIds.length === 0) {
-            return of({ ordersRes, menuMap: new Map<number, MenuItemDto>() });
+            return of({ orders, menuMap: new Map<number, MenuItemDto>() });
           }
 
           return this.cart.getMenuByMenuId(menuIds).pipe(
             map((menuRes: MenuRes) => {
               const menuMap = new Map<number, MenuItemDto>();
-              for (const m of menuRes.menuList ?? []) {
-                menuMap.set(m.id, m); // id 就是 menuId
-              }
-              return { ordersRes, menuMap };
+              for (const m of menuRes.menuList ?? []) menuMap.set(m.id, m);
+              return { orders, menuMap };
             })
           );
         }),
-        map(({ ordersRes, menuMap }) => {
-          const orders = (ordersRes.orders ?? []).map((o: { menuId: any; selectedOption: string; }) => ({
+        map(({ orders, menuMap }) => {
+          const mergedOrders = orders.map((o: { menuId: any; selectedOption: string; }) => ({
             ...o,
             menuName: menuMap.get(o.menuId)?.name ?? `menuId:${o.menuId}`,
-            // 你如果也要先 parse options（可選）
             parsedOptions: this.safeParseSelectedOption(o.selectedOption),
           }));
-
-          return { ...ordersRes, orders };
+          return { code: 200, message: 'ok', orders: mergedOrders } as OrdersRes;
         })
       ).subscribe({
-        next: (data: OrdersRes) => {
-          console.log('orders + menuName:', data);
+        next: (data: any) => {
           this.res = data;
+          console.log('mode=', this.mode, data.orders?.[0]);
         },
         error: (err: any) => console.error('API error:', err),
       });
 
     });
+
   }
+
+
+  private normalizeOrder(o: any) {
+    const selectedOptionList = o.selectedOptionList;
+    const selectedOption = o.selectedOption ?? o.selected_option;
+
+    return {
+      id: o.id ?? o.orderId,
+      eventsId: o.eventsId ?? o.eventId,
+      userId: o.userId ?? o.user_id ?? '',
+      menuId: Number(o.menuId ?? o.menu_id),
+      quantity: o.quantity ?? 0,
+      subtotal: o.subtotal ?? 0,
+      orderTime: o.orderTime ?? o.order_time,
+      personalMemo: o.personalMemo ?? o.personal_memo ?? '',
+      pickupStatus: o.pickupStatus ?? o.pickup_status,
+      pickupTime: o.pickupTime ?? o.pickup_time ?? null,
+      deleted: o.deleted ?? o.is_deleted ?? false,
+      userNickname: o.userNickname ?? o.user_nickname ?? o.hostNickname ?? null,
+      menuName: o.menuName ?? null,
+      selectedOption: Array.isArray(selectedOptionList)
+        ? JSON.stringify(selectedOptionList)
+        : (selectedOption ?? '[]'),
+    };
+  }
+
 
   private safeParseSelectedOption(raw: string): SelectedOpt[] {
     if (!raw) return [];
@@ -202,7 +246,7 @@ export class OrderInfoComponent implements OnInit {
   }
   // 返回繼續購物
   gotoshop() {
-
+    this.router.navigate(['/groupbuy-event/group-follow']);
   }
 
   // 前往下一個Step
@@ -255,6 +299,66 @@ export class OrderInfoComponent implements OnInit {
     return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
+  removeorder(orderId: number) {
+    Swal.fire({
+      title: "確定刪除訂單?",
+      text: "刪除後無法復原!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "是的，刪除!",
+      cancelButtonText: "取消"
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+      Swal.fire({
+        title: "刪除中...",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => Swal.showLoading()
+      });
+      this.cart.deleteOrderById(orderId).subscribe({
+        next: (res) => {
+          if (res.code === 200) {
+            this.res.orders = (this.res.orders ?? []).filter(
+              (o: any) => (o.id ?? o.orderId) !== orderId
+            );
+
+            this.recalcTotalAmount();
+
+            Swal.fire({
+              title: "刪除!",
+              text: "訂單已刪除完成.",
+              icon: "success"
+            });
+          } else {
+            Swal.fire({
+              title: "刪除失敗",
+              text: res.message ?? "請稍後再試",
+              icon: "error"
+            });
+          }
+        },
+        error: (err) => {
+          console.error(err);
+          Swal.fire({
+            title: "刪除失敗",
+            text: "刪除失敗，請稍後再試",
+            icon: "error"
+          });
+        }
+      });
+    });
+  }
+
+  private recalcTotalAmount() {
+    const sum = (this.res?.orders ?? [])
+      .reduce((acc: number, o: any) => acc + Number(o.subtotal ?? 0), 0);
+    this.totalAmount = String(sum);
+  }
+
+
 }
+
 
 
