@@ -76,6 +76,7 @@ export class GroupEventComponent {
 
   userId!:string;
   storeId!:number;
+  wishId?:number;
   isOpen!:boolean;
   operateString!:string;
   nextOperating!:string;
@@ -520,11 +521,27 @@ export class GroupEventComponent {
       limitation: this.limitation,
       deleted: false
     }
-    this.http.postApi('http://localhost:8080/gogobuy/addEvent', req).subscribe({
-      next: (res) => {
-        console.log('新增成功', res);
+    this.route.queryParams.subscribe(params => {  //若有wishId取來發通知
+      if(params['wish_id']){
+        this.wishId=Number(params['wish_id']);      }
+    });
+    this.http.postApi('http://localhost:8080/gogobuy/event/addEvent', req).subscribe({
+      next: (res: any) => {
+        if (res && res.id) {
+          if (this.wishId) {  // 有許願，先結案再跳轉
+            const finishUrl = 'http://localhost:8080/gogobuy/wish/finish_wish?id=${this.wishId}&userId=${this.userId}&targetUrl=localhost:4200/groupbuy-event/group-follow/${res.id}';
+            this.http.postApi(finishUrl, {}).subscribe({
+              next: () => this.router.navigate(['/groupbuy-event/group-follow', res.id]),
+              error: (err) => {
+                console.error('許願結案失敗', err);
+              }
+            });
+          } else {  // 沒有許願，直接跳轉
+            this.router.navigate(['/groupbuy-event/group-follow', res.id]);
+          }
+        }
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('新增失敗', err);
       }
     });
