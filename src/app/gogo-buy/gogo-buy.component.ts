@@ -403,18 +403,27 @@ export class GogoBuyComponent {
     },
     {
       image: 'JapaneseFood.png',
-      title: '日式料理團購開團中'
+      title: '日式料理團購開團中',
+      link: ''
     },
     {
       image: 'fastFood.png',
-      title: '速食限時優惠'
+      title: '速食限時優惠',
+      link: ''
+    }
+    ,
+    {
+      image: 'COUPON.png',
+      title: '優惠卷',
+      link: ''
     }
     ,
     {
       //位置
       image: 'Bubble.png',
       //圖片無法顯示時文字
-      title: '揪團喝珍奶'
+      title: '揪團喝珍奶',
+      link: ''
     }
   ];
 
