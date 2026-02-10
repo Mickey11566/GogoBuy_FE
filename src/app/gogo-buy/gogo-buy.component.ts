@@ -170,10 +170,10 @@ export class GogoBuyComponent {
 
     }
 
-    this.http.getApi('http://localhost:8080/gogobuy/store/all').subscribe((res:any)=>{
+    this.http.getApi('http://localhost:8080/gogobuy/store/all').subscribe((res: any) => {
       const rawData = res.storeList || [];
       this.storeList = rawData.map((store: any) => {
-        let parsedFees:FeeDescriptionVoList[] = [];
+        let parsedFees: FeeDescriptionVoList[] = [];
         // 檢查是否有值且為字串，才進行解析
         if (store.feeDescription && typeof store.feeDescription === 'string') {
           try {
@@ -392,14 +392,14 @@ export class GogoBuyComponent {
     {
       image: 'fastFood.png',
       title: '速食限時優惠',
-      link:'https://v19.primeng.org/carousel'
+      link: 'https://v19.primeng.org/carousel'
     },
     {
       //位置
       image: 'Bubble.png',
       //圖片無法顯示時文字
       title: '揪團喝珍奶',
-      link:'https://v19.primeng.org/carousel'
+      link: 'https://v19.primeng.org/carousel'
     },
     {
       image: 'JapaneseFood.png',
@@ -526,18 +526,6 @@ export class GogoBuyComponent {
     return this.sanitizer.bypassSecurityTrustHtml(result);
   }
 
-  addStore() {
-    // 跳轉前手動銷毀 Tooltip，防止文字殘留
-    if (this.tooltip) {
-      this.tooltip.deactivate();
-      this.tooltip.hide();
-    }
-    clearTimeout(this.idleTimer);
-    this.visible = false;
-    this.enableScroll();
-    this.storeService.clearCurrentStore();
-    this.router.navigate(['/management/store_upsert']);
-  }
   goStoreInfo(storeId: number) {
     // 跳轉前手動銷毀 Tooltip，防止文字殘留
     if (this.tooltip) {
