@@ -536,6 +536,7 @@ export class GogoBuyComponent {
     this.visible = false;
     this.enableScroll();
     this.storeService.clearCurrentStore();
+    sessionStorage.removeItem('temp_order_info');
     this.router.navigate(['/management/store_upsert']);
   }
   goStoreInfo(storeId: number) {
