@@ -1075,7 +1075,8 @@ export class StoreComponent {
           menuVo: this.storeData.menuVoList.filter(item => item.categoryId === category.id)
             .map(product => ({
               ...product,
-              unusual: transformUnusual(product.unusual)
+              unusual: (Array.isArray(product.unusual) || !product.unusual || Object.keys(product.unusual).length === 0)
+                ? null : [product.unusual]
             }))
         })),
         productOptionGroupsVoList: this.storeData.productOptionGroupsVoList
