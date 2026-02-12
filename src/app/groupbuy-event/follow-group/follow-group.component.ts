@@ -74,6 +74,7 @@ export class FollowGroupComponent {
   // =========================
   isLoading = true; // 是否讀取中
   userId = ''; // 用戶Id（未登入就空字串）
+  user: any | null = null; // 存用戶資料
   groupId = 0; // 團Id
   storeId = 0; // 店家Id
   openedPanels: string[] = []; // 目前展開的 panel value
@@ -305,6 +306,7 @@ export class FollowGroupComponent {
   ngOnInit(): void {
     scroll(0, 0);
     this.userId = String(localStorage.getItem('user_id') || '');
+    this.user = localStorage.getItem('user_info');
     this.groupId = Number(this.route.snapshot.paramMap.get('id') || 0);
 
     if (!this.groupId) {
@@ -314,6 +316,12 @@ export class FollowGroupComponent {
     }
 
     this.loadGroupById(this.groupId);
+  }
+
+  getPhone() {
+    const userDate = JSON.parse(this.user);
+    const phone = userDate.phone;
+    return phone;
   }
 
   // 取得既存訂單
@@ -787,6 +795,17 @@ export class FollowGroupComponent {
 
   // 送出訂單
   submitOrder(): void {
+    if (!this.userId) {
+      this.toastWarn('請先登入', '');
+      this.router.navigate(['/gogobuy/login']);
+      return;
+    }
+    let phone = this.getPhone();
+    if (phone === '未提供電話') {
+      this.toastWarn('電話號碼尚未填寫', '請先提供電話號碼');
+      this.router.navigate(['/user/profile']);
+      return;
+    }
     if ((this.orderItems?.length || 0) === 0) {
       this.toastWarn('尚未點餐', '請先點餐後再送出');
       return;
@@ -1130,6 +1149,12 @@ export class FollowGroupComponent {
       this.router.navigate(['/gogobuy/login']);
       return;
     }
+    let phone = this.getPhone();
+    if (phone === '未提供電話') {
+      this.toastWarn('電話號碼尚未填寫', '請先提供電話號碼');
+      this.router.navigate(['/user/profile']);
+      return;
+    }
     if (!this.productNeedsDialog(product)) {
       this.quickAdd(product);
       return;
@@ -1142,6 +1167,12 @@ export class FollowGroupComponent {
     if (!this.userId) {
       this.toastWarn('請先登入', '');
       this.router.navigate(['/gogobuy/login']);
+      return;
+    }
+    let phone = this.getPhone();
+    if (phone === '未提供電話') {
+      this.toastWarn('電話號碼尚未填寫', '請先提供電話號碼');
+      this.router.navigate(['/user/profile']);
       return;
     }
     if (!product) return;
@@ -1204,6 +1235,12 @@ export class FollowGroupComponent {
     if (!this.userId) {
       this.toastWarn('請先登入', '');
       this.router.navigate(['/gogobuy/login']);
+      return;
+    }
+    let phone = this.getPhone();
+    if (phone === '未提供電話') {
+      this.toastWarn('電話號碼尚未填寫', '請先提供電話號碼');
+      this.router.navigate(['/user/profile']);
       return;
     }
     if (!product) return;
