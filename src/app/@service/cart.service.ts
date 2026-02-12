@@ -72,6 +72,12 @@ export class CartService {
     return this.https.postApi(url, null);
   }
 
+  // 物理性刪除團購活動
+  deleteEventPhysically(id: number) {
+    const url =
+      `http://localhost:8080/gogobuy/event/deleteEventPhysically?id=${encodeURIComponent(id)}`;
+    return this.https.postApi(url, null);
+  }
   // 刪除單筆品項
   deleteOrderById(orderId: number) {
     const url = `http://localhost:8080/gogobuy/order/deleteOrderById?order_id=${orderId}`;

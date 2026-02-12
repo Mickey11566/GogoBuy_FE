@@ -57,6 +57,7 @@ export class AuthService {
       eventName: e.eventName ?? '',
       announcement: e.announcement ?? '',
       recommendDescription: e.recommendDescription ?? '',
+      nickname: e.nickname ?? e.hostNickname,
       image: e.image || this.eventDemoImages[i % this.eventDemoImages.length],
     }));
   }
@@ -152,12 +153,29 @@ export class AuthService {
             setTimeout(() => {
               this.router.navigateByUrl(returnUrl);
             }, 500);
-          } else {
+          } else if (res.code == 403) {
+            let title = '存取被拒';
+            let icon: 'error';
+
+            if (res.message.includes('開通')) {
+              title = '帳號尚未驗證';
+            } else if (res.message.includes('停權') || res.message.includes('停用')) {
+              title = '帳號狀態異常';
+              icon = 'error';
+            }
             Swal.fire({
-              title: res.message || '登入失敗',
+              title: title,
               icon: 'error',
+              text: res.message,
               showConfirmButton: false,
               timer: 1000
+            });
+          } else {
+            Swal.fire({
+              title: '登入失敗',
+              text: res.message || '請檢查帳號密碼',
+              icon: 'error',
+              timer: 2000
             });
           }
         },
@@ -418,7 +436,7 @@ export class AuthService {
   getGroupbuyEventByName(hostNickname: string) {
     const encoded = encodeURIComponent(hostNickname);
     return this.https.getApi(
-      `http://localhost:8080/gogobuy/getGroupbuyEventByNickName?host_nickname=${encoded}`
+      `http://localhost:8080/gogobuy/event/getGroupbuyEventByNickname?host_nickname=${encoded}`
     );
   }
 
@@ -523,5 +541,13 @@ export class AuthService {
    */
   getEventOrderView(eventId: number) {
     return this.https.getApi(`http://localhost:8080/gogobuy/event/getOrdersView?event_id=${eventId}`);
+  }
+
+  /**
+   * 停權用戶 (後台用)
+   * POST gogobuy/ban-user/{id}?id={userId}
+   */
+  banUser(userId: string) {
+    return this.https.postApi(`http://localhost:8080/gogobuy/ban-user/${userId}?id=${userId}`, {});
   }
 }
