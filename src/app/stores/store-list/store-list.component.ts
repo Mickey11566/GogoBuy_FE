@@ -5,8 +5,7 @@ import { AuthService } from '../../@service/auth.service';
 import { InputTextModule } from 'primeng/inputtext';
 import { Router } from '@angular/router';
 import { DropdownModule } from 'primeng/dropdown';
-
-
+import { HttpService } from '../../@service/http.service';
 
 type Store = {
   id: number;
@@ -16,6 +15,12 @@ type Store = {
   category: 'fast' | 'slow';
 };
 
+interface StoreOperating {
+  id: number;
+  open_time: string;
+  close_time: string;
+  category: string;
+}
 
 @Component({
   selector: 'app-store-list',
@@ -32,6 +37,7 @@ export class StoreListComponent {
   constructor(
     public router: Router,
     public auths: AuthService,
+    private https: HttpService,
   ) { }
   storeSearch!: string;
   // 選到的類型（外送 / 團購 / 不限）
@@ -42,6 +48,13 @@ export class StoreListComponent {
     { label: '不限類型 (外送 + 團購)', value: 'all' }
   ];
 
+  readonly selectedStatus = signal<'all' | 'open' | 'closed'>('all');
+  readonly statusOptions = [
+    { label: '顯示全部', value: 'all' },
+    { label: '營業中', value: 'open' },
+    { label: '休息中', value: 'closed' }
+  ];
+  readonly operatingStores = signal<StoreOperating[]>([]);
 
   // stores：存「所有店家資料」
   readonly stores = signal<Store[]>([]);
@@ -79,17 +92,35 @@ export class StoreListComponent {
   // 呼叫後端 API，拿到 storeList 後存進 stores()
   // next：成功回來
   // error：失敗時把 stores 清空，避免畫面卡住
+  //  修改 loadStores，載入完清單後自動抓營業狀態
   loadStores() {
     this.auths.getallstore().subscribe({
       next: (res: any) => {
         const list: Store[] = res?.storeList ?? [];
         this.stores.set(list);
+
+        // 拿到清單後，緊接著查詢營業狀態
+        if (list.length > 0) {
+          this.fetchOperatingStatus(list.map(s => s.id));
+        }
       },
       error: (err: any) => {
         console.error('getallstore error', err);
         this.stores.set([]);
       }
     });
+  }
+
+  // 新增請求營業狀態的方法 (由 HttpService 提供)
+  fetchOperatingStatus(ids: number[]) {
+    const payload = { filteredStoreIds: ids };
+    // 假設你的 http 服務是注入在建構子
+    this.auths.https.postApi('http://localhost:8080/gogobuy/store/getOperatingStores', payload)
+      .subscribe((res: any) => {
+        if (res.code === 200 && res.storeOperatingList) {
+          this.operatingStores.set(res.storeOperatingList);
+        }
+      });
   }
 
   // 品牌下拉選單的選項（給 p-multiselect 用）
@@ -141,32 +172,40 @@ export class StoreListComponent {
   // - 沒選餐點種類（selectedFoodTypes 是空）→ 不限制餐點種類
   readonly filteredStores = computed(() => {
     let out = this.stores();
-
     const selectedNames = this.selectedStoreNames();
     const selectedTypes = this.selectedFoodTypes();
     const category = this.selectedCategory();
+    const status = this.selectedStatus();
 
-    // 先過濾 外送/團購
+    // 取得營業中 ID 集合
+    const operatingIds = new Set(this.operatingStores().map(s => s.id));
+
+    // 處理原本的類型篩選
     if (category !== 'all') {
       out = out.filter(s => s.category == category);
     }
 
-    // 品牌
+    // 處理原本的品牌篩選
     if (selectedNames.length) {
-      out = out.filter(s =>
-        selectedNames.includes(this.getStoreName(s))
-      );
+      out = out.filter(s => selectedNames.includes(this.getStoreName(s)));
     }
 
-    // 餐點種類
+    // 處理原本的餐點種類篩選
     if (selectedTypes.length) {
-      out = out.filter(s =>
-        selectedTypes.includes(this.getType(s))
-      );
+      out = out.filter(s => selectedTypes.includes(this.getType(s)));
     }
 
-    return out;
+    // 處理營業狀態篩選，並同時幫物件補上 isClosed 標記供畫面使用
+    return out.map(s => ({
+      ...s,
+      isClosed: !operatingIds.has(s.id)
+    })).filter(s => {
+      if (status === 'open') return !s.isClosed;
+      if (status === 'closed') return s.isClosed;
+      return true; // all
+    });
   });
+
 
 
   // 前往商店頁面
