@@ -67,7 +67,7 @@ export class FollowGroupComponent {
     private router: Router,
     private route: ActivatedRoute,
     private cart: CartService,
-  ) {}
+  ) { }
 
   // =========================
   // 基本狀態
@@ -492,7 +492,7 @@ export class FollowGroupComponent {
           }
         }
         this.applyGroup(g);
-        this.loadStoreById(g.storesId);
+        this.loadStoreById(g.storeId);
       });
 
     // 假資料
@@ -546,7 +546,7 @@ export class FollowGroupComponent {
   // 套用團資料：解析 tempMenuList / recommendList + 基本防呆
   applyGroup(g: GroupbuyEvents): void {
     this.group = g;
-    this.storeId = Number(g.storesId);
+    this.storeId = Number(g.storeId);
     console.log('店家的ID是: ' + this.storeId);
 
     if (g.deleted === true) {
@@ -1046,7 +1046,7 @@ export class FollowGroupComponent {
       const decoded = atob(String(img));
       if (decoded.startsWith('http://') || decoded.startsWith('https://'))
         return decoded;
-    } catch {}
+    } catch { }
 
     return this.defaultProductCover;
   }
@@ -1592,10 +1592,10 @@ export class FollowGroupComponent {
       maxSelection: Number(g?.maxSelection ?? 1),
       items: Array.isArray(g?.items)
         ? g.items.map((it: any) => ({
-            id: Number(it?.id),
-            name: String(it?.name ?? ''),
-            extraPrice: Number(it?.extraPrice ?? 0),
-          }))
+          id: Number(it?.id),
+          name: String(it?.name ?? ''),
+          extraPrice: Number(it?.extraPrice ?? 0),
+        }))
         : [],
     }));
   }
@@ -2267,7 +2267,7 @@ export class FollowGroupComponent {
 export interface GroupbuyEvents {
   id: number;
   hostId: string;
-  storesId: number;
+  storeId: number;
   eventName: string;
   status: 'OPEN' | 'LOCKED' | 'FINISHED';
   endTime: string;
