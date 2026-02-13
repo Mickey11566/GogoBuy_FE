@@ -67,7 +67,7 @@ export class FollowGroupComponent {
     private router: Router,
     private route: ActivatedRoute,
     private cart: CartService,
-  ) {}
+  ) { }
 
   // =========================
   // 基本狀態
@@ -1047,7 +1047,7 @@ export class FollowGroupComponent {
       const decoded = atob(String(img));
       if (decoded.startsWith('http://') || decoded.startsWith('https://'))
         return decoded;
-    } catch {}
+    } catch { }
 
     return this.defaultProductCover;
   }
@@ -1593,10 +1593,10 @@ export class FollowGroupComponent {
       maxSelection: Number(g?.maxSelection ?? 1),
       items: Array.isArray(g?.items)
         ? g.items.map((it: any) => ({
-            id: Number(it?.id),
-            name: String(it?.name ?? ''),
-            extraPrice: Number(it?.extraPrice ?? 0),
-          }))
+          id: Number(it?.id),
+          name: String(it?.name ?? ''),
+          extraPrice: Number(it?.extraPrice ?? 0),
+        }))
         : [],
     }));
   }
