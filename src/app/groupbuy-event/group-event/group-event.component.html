@@ -169,9 +169,10 @@
                                 @if (isItemInTarget(product)) {
                                   <div>
                                     <button type="button" (click)="toggleRecommend(product, $event)"
-                                      [class.recommended-active]="product.isRecommended" class="bg-[#662222]/20 w-[105px] rounded-2xl border-[1px]
-                                                        border-[#662222]/20 px-2 py-1 transition-colors
-                                                        hover:bg-[#662222]/50 hover:text-white hover:border-[#662222]/50">
+                                      [class.recommended-active]="product.isRecommended"
+                                       class="bg-[#662222]/20 w-[105px] rounded-2xl border-[1px]
+                                              border-[#662222]/20 px-2 py-1 transition-colors
+                                              hover:bg-[#662222]/50 hover:text-white hover:border-[#662222]/50">
                                       @if(product.isRecommended){
                                         <i class="pi pi-times"></i>
                                       }@else{
@@ -278,7 +279,7 @@
                     </p-inputgroup-addon>
                     <p-floatlabel variant="on" style="flex: 1 1 auto; display: block;">
                       <p-datepicker [(ngModel)]="endTime" [showTime]="true" hourFormat="24" [minDate]="minDate" [maxDate]="maxEndDate"
-                        [showSeconds]="false" panelStyleClass="my-local-panel" [class.p-filled]="!!endTime"
+                        [showSeconds]="false" panelStyleClass="my-local-panel" [class.p-filled]="!!endTime" appendTo="body"
                         [fluid]="true" styleClass="w-full" [style]="{'width': '100%', 'display': 'flex'}"
                         inputStyleClass="w-full outline-none p-2 pl-3 !rounded-r-md
                         !rounded-l-none bg-white focus:!border-1 focus:!border-[#662222]"
@@ -320,7 +321,7 @@
                       <p-datepicker
                         [(ngModel)]="pickTime" [showTime]="true" hourFormat="24" [minDate]="endTime" [maxDate]="maxPickDate"
                         [showSeconds]="false" panelStyleClass="my-local-panel" [class.p-filled]="!!pickTime"
-                        [readonlyInput]="false" [keepInvalid]="true" dateFormat="yy/mm/dd"
+                        [readonlyInput]="false" [keepInvalid]="true" dateFormat="yy/mm/dd" appendTo="body"
                         (onShow)="handlePickupOnShow()" (onBlur)="handlePickupBlur()"
                         [fluid]="true" [style]="{'width': '100%', 'display': 'flex'}" [hideOnDateTimeSelect]="false"
                         inputStyleClass="w-full outline-none p-2 pl-3 !rounded-r-md !rounded-l-none bg-white
@@ -329,7 +330,7 @@
                       <label class="z-1">預計取貨時間</label>
                     </p-floatlabel>
                   </p-inputgroup>
-                  <div class="md:text-center text-[15px] text-gray-400 pr-2 pb-1">取貨時間不得早於或等於截止時間</div>
+                  <div class="md:text-center text-[15px] text-gray-400 pr-2 pb-1">取貨時間不得早於或等於截止時間，且須於截止後一個月內取貨</div>
                 </span>
               </div>
               <label class="w-full">

@@ -698,10 +698,10 @@ export class GroupEventComponent {
       this.showAlert('您選擇的取貨時間不在店家營業時間內', `該店當日營業時段為：${timeInfo}`);
     }
   }
-
   goHome() {
     this.router.navigate(['/gogobuy/home']);
   }
+
   cancel() {
     this.router.navigate(['/management/store_info', this.storeId]);
   }
