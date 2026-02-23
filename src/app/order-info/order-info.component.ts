@@ -14,6 +14,7 @@ import { tap, switchMap, map } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 import { CommonModule } from '@angular/common';
 import { catchError } from 'rxjs/operators';
+import { OrderTransferService } from '../@service/orderTransfer.service';
 
 
 
@@ -100,6 +101,7 @@ export class OrderInfoComponent implements OnInit {
     public auth: AuthService,
     public router: Router,
     private route: ActivatedRoute,
+    public transfer: OrderTransferService,
   ) { }
 
 
@@ -130,6 +132,7 @@ export class OrderInfoComponent implements OnInit {
         if (!event) return;
 
         // 取得欄位
+        this.latestOrderTime = event.latestOrderTime ?? '';
         this.eventName = event.eventName ?? '';
         this.storeName = event.storeName ?? '';
         this.pickupTime = event.pickupTime ?? '';
@@ -468,12 +471,12 @@ export class OrderInfoComponent implements OnInit {
           confirmButtonColor: "#3085d6",
           cancelButtonColor: "rgb(24, 173, 54)",
           confirmButtonText: "返回首頁",
-          cancelButtonText: "返回購物車"
+          cancelButtonText: "返回訂單"
         }).then((result) => {
           if (result.isConfirmed) {
             this.router.navigate(['/gogobuy/home'])
           } else if (result.dismiss == Swal.DismissReason.cancel) {
-            this.router.navigate(['/user/cart'])
+            this.router.navigate(['/user/orders'])
           }
         })
 
