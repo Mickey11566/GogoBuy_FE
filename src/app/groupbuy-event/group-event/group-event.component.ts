@@ -2,7 +2,7 @@ import { FeeDescriptionVoList, MenuCategoriesVoList, MenuVoList, OperatingHoursV
 import { Component } from '@angular/core';
 import { HttpService } from '../../@service/http.service';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { Dialog } from "primeng/dialog";
 import { PickListModule } from 'primeng/picklist';
 import { DragDropModule } from '@angular/cdk/drag-drop';
@@ -20,28 +20,20 @@ import { TabsModule } from 'primeng/tabs';
 
 @Component({
   template: `
-    <div
-      class="
-        card
-      "
-    >
+    <div class="card">
       <p-tabs value="0" scrollable>
         <p-tablist>
           @for (tab of scrollableTabs; track tab.value) {
-              <p-tab [value]="tab.value">
-                  {{ tab.title }}
-              </p-tab>
+            <p-tab [value]="tab.value">
+                {{ tab.title }}
+            </p-tab>
           }
         </p-tablist>
         <p-tabpanels>
           @for (tab of scrollableTabs; track tab.value) {
-              <p-tabpanel [value]="tab.value">
-                  <p
-                    class="
-                      m-0
-                    "
-                  >{{ tab.content }}</p>
-              </p-tabpanel>
+            <p-tabpanel [value]="tab.value">
+                <p class="m-0">{{ tab.content }}</p>
+            </p-tabpanel>
           }
         </p-tabpanels>
       </p-tabs>
@@ -61,7 +53,8 @@ export class GroupEventComponent {
     private http: HttpService,
     private router: Router,
     private route: ActivatedRoute,
-    private primeng: PrimeNG
+    private primeng: PrimeNG,
+    private location: Location
   ) { };
 
   storeList: Stores | null = null;
@@ -83,9 +76,12 @@ export class GroupEventComponent {
   pickTime!: Date;
   pickLocation!: string;
 
+  scrolllabelTabs: any = [];
+  isExist: boolean = true;
   userId!: string;
   storeId!: number;
-  wishId?: number;
+  // wishId?: number;
+  eventId?: number;
   isOpen!: boolean;
   operateString!: string;
   nextOperating!: string;
@@ -179,6 +175,23 @@ export class GroupEventComponent {
   //     }
   //   });
   // }
+  usualAlert(title: string) {  //一般警告
+    Swal.fire({
+      icon: 'warning',
+      title: title,
+      text: '即將返回上一頁',
+      width: 600,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+    }).then((result) => {
+      if (window.history.length > 1) {
+        this.location.back();
+      } else {
+        this.router.navigate(['/gogobuy/home']);
+      }
+    });
+  }
 
 
   ngOnInit(): void {
@@ -186,6 +199,16 @@ export class GroupEventComponent {
     if (!this.userId || this.userId === 'null') {
       this.loginFirst();
     }
+    this.route.queryParams.subscribe(params => {
+      if (params['event_id']) {
+        this.eventId = Number(params['event_id']);
+      }
+    });
+    this.route.queryParams.subscribe(params => {
+      if (params['store_id']) {
+        this.storeId = Number(params['store_id']);
+      }
+    });
     this.isPreview = false;
     this.useAll = false;
     // 設定中文語系
@@ -205,89 +228,147 @@ export class GroupEventComponent {
     const today = this.dateFormat(now);
     const time = now.getHours() * 100 + now.getMinutes();
 
-    this.storeId = Number(this.route.snapshot.paramMap.get('id'));
-    this.http.getApi('http://localhost:8080/gogobuy/store/searchId?id=' + this.storeId).subscribe((res: any) => {
-      // 1. 先判斷 res 是否存在且 storeList 有資料
-      if (!res || !res.storeList || res.storeList.length === 0) {
-        console.error('找不到店家資料或 API 異常');
-        return;
-      }
-      this.storeList = res.storeList[0];
-      if (this.storeList) {
-        this.type = this.storeList.type;
-      }
-      this.menuVoList = res.menuVoList.filter((item: any) => item.available) || [];
-      this.menuCategoriesVoList = res.menuCategoriesVoList || [];
-      if (this.menuCategoriesVoList?.length > 0) {
-        const categoryMap = new Map(
-          this.menuCategoriesVoList.map(cat => [cat.id, cat])
-        );
-        for (const cate of this.menuVoList) {
-          const matchedCategory = categoryMap.get(cate.categoryId);
-          const perPrice: PriceLevel[] = [];
-          const base = Number(cate.basePrice) || 0;
-          if (matchedCategory?.priceLevel && matchedCategory.priceLevel.length > 0) {
-            matchedCategory.priceLevel.forEach(level => {
-              perPrice.push({
-                name: level.name,
-                price: (level.price || 0) + base
-              });
-            });
-          } else {
-            perPrice.push({
-              name: '單價',
-              price: base
-            });
+    //行為判斷：有 storeId 沒 eventId 是開團頁面；有 eventId 沒 storeId 是跟團頁面
+    if (this.storeId && !this.eventId) {
+      this.http.getApi('http://localhost:8080/gogobuy/store/searchId?id=' + this.storeId).subscribe((res: any) => {
+        if (res.code == 200) {
+          this.isExist = true;
+          this.storeList = res.storeList[0];
+          if (this.storeList) {
+            this.type = this.storeList.type;
           }
-          cate.basePrice = perPrice;
-        }
-        this.activeTab = this.menuCategoriesVoList[0]?.id;
-      }
-      this.productOptionGroupsVoList = res.productOptionGroupsVoList;
-      this.feeDescriptionVoList = res.FeeDescription;
-
-      this.operatingHoursVoList = res.operatingHoursVoList.sort((a: any, b: any) => a.openTime.localeCompare(b.openTime));  // 排序 (字串比較)
-      const todayList = this.operatingHoursVoList
-        .filter(each => each.week == today)
-        .sort((a, b) => a.openTime.localeCompare(b.openTime));  // 排序 (字串比較)
-      // --------有return放最後面--------
-      if (todayList.length > 0) {
-        for (let i = 0; i < todayList.length; i++) {
-          const open = (+todayList[i].openTime.split(":")[0]) * 100 + (+todayList[i].openTime.split(":")[1]);
-          const close = (+todayList[i].closeTime.split(":")[0]) * 100 + (+todayList[i].closeTime.split(":")[1]);
-          // --- 營業中 ---
-          if (time >= open && time <= close) {
-            this.isOpen = true;
-            this.operateString = "營業至 " + todayList[i].closeTime.slice(0, 5);
-
-            if ((i + 1) < todayList.length) {
-              this.nextOperating = "下次開始營業時間為 " + todayList[i + 1].openTime.slice(0, 5);
-            } else {
-              this.nextOperating = this.getFutureOpenTime(today); // 抓明天的 function
+          this.menuVoList = res.menuVoList.filter((item: any) => item.available) || [];
+          this.menuCategoriesVoList = res.menuCategoriesVoList || [];
+          if (this.menuCategoriesVoList?.length > 0) {
+            const categoryMap = new Map(
+              this.menuCategoriesVoList.map(cat => [cat.id, cat])
+            );
+            for (const cate of this.menuVoList) {
+              const matchedCategory = categoryMap.get(cate.categoryId);
+              const perPrice: PriceLevel[] = [];
+              const base = Number(cate.basePrice) || 0;
+              if (matchedCategory?.priceLevel && matchedCategory.priceLevel.length > 0) {
+                matchedCategory.priceLevel.forEach(level => {
+                  perPrice.push({
+                    name: level.name,
+                    price: (level.price || 0) + base
+                  });
+                });
+              } else {
+                perPrice.push({
+                  name: '單價',
+                  price: base
+                });
+              }
+              cate.basePrice = perPrice;
             }
-            return; // 找到狀態，跳出
+            this.activeTab = this.menuCategoriesVoList[0]?.id;
           }
-          // --- 休息中：但今天稍後還有開門 ---
-          // 因為 todayList 排過序，第一個滿足 time < open 的就是最近的開門時間。
-          if (time < open) {
+          this.productOptionGroupsVoList = res.productOptionGroupsVoList;
+          this.feeDescriptionVoList = res.FeeDescription;
+
+          this.operatingHoursVoList = res.operatingHoursVoList.sort((a: any, b: any) => a.openTime.localeCompare(b.openTime));  // 排序 (字串比較)
+          const todayList = this.operatingHoursVoList
+            .filter(each => each.week == today)
+            .sort((a, b) => a.openTime.localeCompare(b.openTime));  // 排序 (字串比較)
+          // --------有return放最後面--------
+          if (todayList.length > 0) {
+            for (let i = 0; i < todayList.length; i++) {
+              const open = (+todayList[i].openTime.split(":")[0]) * 100 + (+todayList[i].openTime.split(":")[1]);
+              const close = (+todayList[i].closeTime.split(":")[0]) * 100 + (+todayList[i].closeTime.split(":")[1]);
+              // --- 營業中 ---
+              if (time >= open && time <= close) {
+                this.isOpen = true;
+                this.operateString = "營業至 " + todayList[i].closeTime.slice(0, 5);
+
+                if ((i + 1) < todayList.length) {
+                  this.nextOperating = "下次開始營業時間為 " + todayList[i + 1].openTime.slice(0, 5);
+                } else {
+                  this.nextOperating = this.getFutureOpenTime(today); // 抓明天的 function
+                }
+                return; // 找到狀態，跳出
+              }
+              // --- 休息中：但今天稍後還有開門 ---
+              // 因為 todayList 排過序，第一個滿足 time < open 的就是最近的開門時間。
+              if (time < open) {
+                this.isOpen = false;
+                this.operateString = "休息中";
+                this.nextOperating = "下次開始營業時間為 " + todayList[i].openTime.slice(0, 5);
+                return; // 找到最近的開門時間，跳出
+              }
+            }
+            // --- 休息中：今天所有的時段都已經結束了 ---
             this.isOpen = false;
             this.operateString = "休息中";
-            this.nextOperating = "下次開始營業時間為 " + todayList[i].openTime.slice(0, 5);
-            return; // 找到最近的開門時間，跳出
+            this.nextOperating = this.getFutureOpenTime(today);
+          } else {
+            // 今日整天公休
+            this.isOpen = false;
+            this.operateString = "休息中";
+            this.nextOperating = this.getFutureOpenTime(today);
           }
+        } else {
+          this.isExist = false;
         }
-        // --- 休息中：今天所有的時段都已經結束了 ---
-        this.isOpen = false;
-        this.operateString = "休息中";
-        this.nextOperating = this.getFutureOpenTime(today);
-      } else {
-        // 今日整天公休
-        this.isOpen = false;
-        this.operateString = "休息中";
-        this.nextOperating = this.getFutureOpenTime(today);
-      }
+      });
+    } else if (this.eventId && !this.storeId) {
+      this.http.getApi('http://localhost:8080/gogobuy/event/getEventsByEventsId?id=' + this.eventId).subscribe((res: any) => {
+        if (res.code = 200) {
+          if (this.userId == res.groupbuyEvents[0].hostId) {
+            this.eventName = res.groupbuyEvents[0].eventName;
+            this.endTime = res.groupbuyEvents[0].endTime;
+            this.splitType = res.groupbuyEvents[0].splitType;
+            this.announcement = res.groupbuyEvents[0].announcement;
+            this.type = res.groupbuyEvents[0].eventType;
+            this.tempMenu = res.groupbuyEvents[0].tempMenuList;
+            this.recommend = res.groupbuyEvents[0].recommendList;
+            this.recommendDescription = res.groupbuyEvents[0].recommendDescription;
+            this.limitation = res.groupbuyEvents[0].limitation;
+            this.pickTime = res.groupbuyEvents[0].pickupTime;
+            this.pickLocation = res.groupbuyEvents[0].pickLocation;
+          } else {
+            Swal.fire({
+              icon: 'warning',
+              title: '您沒有權限修改此活動資訊',
+              text: '即將返回上一頁',
+              width: 600,
+              timer: 2000,
+              showConfirmButton: false,
+              timerProgressBar: true,
+              didOpen: () => {
+                const c = document.querySelector('.swal2-container') as HTMLElement | null;
+                if (c) c.style.zIndex = '20000';
+              }
+            }).then((result) => {
+              if (window.history.length > 1) {
+                this.location.back();
+              } else {
+                this.router.navigate(['/gogobuy/home']);
+              }
+            });
+          }
+        } else {
+          this.usualAlert(res.message);
+        }
+      });
+    } else {
+      Swal.fire({
+        icon: 'warning',
+        title: '無效網址',
+        text: '即將跳轉至首頁',
+        width: 600,
+        timer: 2000,
+        showConfirmButton: false,
+        timerProgressBar: true,
+        didOpen: () => {
+          const c = document.querySelector('.swal2-container') as HTMLElement | null;
+          if (c) c.style.zIndex = '20000';
+        }
+      }).then((result) => {
+        this.router.navigate(['/gogobuy/home']);
+      });
+    }
 
-    });
   }
 
 
@@ -361,9 +442,30 @@ export class GroupEventComponent {
       this.fixPaddingPosition();
     }
   }
+  calculatePaddingHeight(): string {
+    // 減掉 1 是因為 selectedItems 裡面包含墊片
+    const itemCount = this.selectedItems.length - 1;
+    const totalHeight = 480; // 內部容器高度
+    const itemHeight = 95;  // product-item 估計高度
+    const remainingHeight = totalHeight - (itemCount * itemHeight);
+    // 確保墊片最少有 50px，最高不超過 480px
+    const finalHeight = Math.max(remainingHeight, 50);
+    return `${finalHeight}px`;
+  }
+  calculateSourcePaddingHeight(): string {
+    // 減掉 1 是因為 selectedItems 裡面包含墊片
+    const itemCount = this.displaySource.length - 1;
+    const totalHeight = 480; // 內部容器高度
+    const itemHeight = 95;  // product-item 估計高度
+    const remainingHeight = totalHeight - (itemCount * itemHeight);
+    // 確保墊片最少有 50px，最高不超過 480px
+    const finalHeight = Math.max(remainingHeight, 50);
+    return `${finalHeight}px`;
+  }
   // 給 PickList 顯示用的實體陣列
+  sourcePaddingItem = { id: 'SOURCE_PADDING', isPadding: true };
   paddingItem = { id: 'BOTTOM_PADDING', isPadding: true };
-  displaySource: any[] = [this.paddingItem];  // 目標清單
+  displaySource: any[] = [];  // 來源清單
   selectedItems: any[] = [this.paddingItem];  // 目標清單
   // 監控 Tab 切換 (在 p-tabs 綁定了 (valueChange) 或透過 activeTab 的 setter)
   private _activeTab: any;
@@ -377,12 +479,16 @@ export class GroupEventComponent {
       item.categoryId == this._activeTab &&
       !this.selectedItems.some(s => s.id === item.id)
     );
+    if (this.displaySource.length === 0) {
+      this.displaySource = [this.sourcePaddingItem];
+    } else {
+      this.displaySource.push(this.sourcePaddingItem);
+    }
   }
   onMoveToTarget(event: any) {  // 選中
     this.fixPaddingPosition();
   }
   onMoveToSource(event: any) {  // 取消選中 (從 Target 搬回 Source)
-    console.log(event.items);
     const movedItems = event.items;
     movedItems.forEach((item: any) => {
       this.recommend = this.recommend.filter(id => id !== item.id);
@@ -406,14 +512,16 @@ export class GroupEventComponent {
   fixPaddingPosition() {
     // 給 PrimeNG 內建邏輯 50ms 的緩衝，確保它跑完
     setTimeout(() => {
-      // 抓出目前兩個清單中「真正」的產品 (排除墊片)
-      const allProductsInSource = this.displaySource.filter(item => !item.isPadding);
-      const allProductsInTarget = this.selectedItems.filter(item => !item.isPadding);
-      // 校正來源區(不能有墊片)
-      this.displaySource = [...allProductsInSource];
-      // 校正目標區：[真正的產品] + [墊片永遠在最後]
-      // 使用新物件解構，確保觸發 Angular 的渲染更新
-      this.selectedItems = [...allProductsInTarget, { ...this.paddingItem }];
+      // 處理 Target
+      this.selectedItems = [
+        ...this.selectedItems.filter(i => i.id !== 'BOTTOM_PADDING' && i.id !== 'SOURCE_PADDING'),
+        this.paddingItem
+      ];
+      // 處理 Source
+      this.displaySource = [
+        ...this.displaySource.filter(i => i.id !== 'SOURCE_PADDING' && i.id !== 'BOTTOM_PADDING'),
+        this.sourcePaddingItem
+      ];
       this.updateDisplaySource();
     }, 10);
   }
@@ -792,11 +900,11 @@ export class GroupEventComponent {
     this.isPreview = false;
   }
   addEvent() {
-    this.route.queryParams.subscribe(params => {  //若有wishId取來發通知
-      if (params['wish_id']) {
-        this.wishId = Number(params['wish_id']);
-      }
-    });
+    // this.route.queryParams.subscribe(params => {  //若有wishId取來發通知
+    //   if (params['wish_id']) {
+    //     this.wishId = Number(params['wish_id']);
+    //   }
+    // });
     const missingFields: string[] = [];
     if (!this.endTime) {
       missingFields.push('截止日期與時間');
@@ -865,17 +973,17 @@ export class GroupEventComponent {
         console.log(req);
         console.log(res);
         if (res && res.id) {
-          if (this.wishId) {  // 有許願，先結案再跳轉
-            const finishUrl = `http://localhost:8080/gogobuy/wish/finish_wish?id=${this.wishId}&userId=${this.userId}&targetUrl=http://localhost:4200/groupbuy-event/group-follow/${res.id}`;
-            this.http.postApi(finishUrl, {}).subscribe({
-              next: () => this.router.navigate(['/groupbuy-event/group-follow', res.id]),
-              error: (err) => {
-                console.error('許願結案失敗', err);
-              }
-            });
-          } else {  // 沒有許願，直接跳轉
-            this.router.navigate(['/groupbuy-event/group-follow', res.id]);
-          }
+          // if (this.wishId) {  // 有許願，先結案再跳轉
+          //   const finishUrl = `http://localhost:8080/gogobuy/wish/finish_wish?id=${this.wishId}&userId=${this.userId}&targetUrl=http://localhost:4200/groupbuy-event/group-follow/${res.id}`;
+          //   this.http.postApi(finishUrl, {}).subscribe({
+          //     next: () => this.router.navigate(['/groupbuy-event/group-follow', res.id]),
+          //     error: (err) => {
+          //       console.error('許願結案失敗', err);
+          //     }
+          //   });
+          // } else {  // 沒有許願，直接跳轉
+          this.router.navigate(['/groupbuy-event/group-follow', res.id]);
+          // }
         } else if (res && res.code == 400) {
           const error: string[] = [];
           error.push(res.message);

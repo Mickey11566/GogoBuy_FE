@@ -20,7 +20,7 @@
     @if (showSearch) {
     <div class="disappear absolute left-1/2 -translate-x-1/2 w-full max-w-[560px] px-4">
       <p-inputgroup class="w-full">
-        <p-select [options]="category" optionLabel="name" optionValue="value"
+        <p-select [options]="category" class="font-bold!" optionLabel="name" optionValue="value"
           (onChange)="onSearchModeChangePrime($event)" styleClass="!w-28">
         </p-select>
 
@@ -152,12 +152,13 @@
   </a>
 
   <!-- 購物車 -->
-  <a>
+  <a routerLink="/user/wishes">
     <div>
-      <i class="pi pi-cart-plus cursor-pointer" style="font-size: 1.5rem"></i>
+      <i class="pi pi-star-fill cursor-pointer" style="font-size: 1.5rem"
+      [ngStyle]="{ 'color': (router.url == '/user/wishes') ? 'rgb(252, 165, 165)' : '' }"></i>
     </div>
-    <div>
-      購物車
+    <div [ngStyle]="{ 'color': (router.url == '/user/wishes') ? 'rgb(252, 165, 165)' : '' }">
+      許願池
     </div>
   </a>
   <!-- 訂單 -->
