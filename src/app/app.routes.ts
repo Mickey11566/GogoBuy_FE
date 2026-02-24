@@ -74,7 +74,7 @@ export const routes: Routes = [
     path: 'groupbuy-event',
     data: { breadcrumb: '團購活動' },
     children: [
-      { path: 'group-event/:id', component: GroupEventComponent, title: '開團資料設定', data: { breadcrumb: '開團' } },
+      { path: 'group-event', component: GroupEventComponent, title: '開團資料設定', data: { breadcrumb: '開團' } },
       { path: 'group-follow/:id', component: FollowGroupComponent, title: '跟團店家頁面', data: { breadcrumb: '跟團' } },
     ]
   },
