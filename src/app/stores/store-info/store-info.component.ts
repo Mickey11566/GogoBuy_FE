@@ -500,7 +500,7 @@ export class StoreInfoComponent implements OnInit {
     }
     this.router.navigate(['/groupbuy-event/group-event'], {
       queryParams: {
-        storeId: this.storeId,
+        store_id: this.storeId,
       },
     });
   }
