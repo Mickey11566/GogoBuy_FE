@@ -753,13 +753,13 @@
   [style]="{ width: 'min(550px, 92vw)' }"
   [contentStyle]="{ padding: '0' }"
 >
-  <ng-template pTemplate="header">
-    <div class="text-[22px] md:text-[25px] font-extrabold text-red-900">
+  <ng-template pTemplate="header" class="max-h-[50px]">
+    <div class="text-[20px] md:text-[25px] font-extrabold text-red-900">
       我要許願
     </div>
   </ng-template>
 
-  <div class="p-5 md:p-6 bg-[#FFF9F6] rounded-2xl">
+  <div class="p-4 md:p-6 bg-[#FFF9F6] rounded-2xl h-full max-h-[65vh] md:max-h-none">
     <div class="space-y-4 text-[18px] text-gray-800">
       <!-- 願望標題 -->
       <div>

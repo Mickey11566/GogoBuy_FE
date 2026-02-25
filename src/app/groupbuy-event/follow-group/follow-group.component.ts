@@ -125,7 +125,6 @@ export class FollowGroupComponent {
   // 前往店家 =======================================
   goToStore() {
     this.router.navigate(['/management/store_info', this.storeId]);
-    console.log('前往店面: ' + this.storeId);
   }
 
   // =========================
@@ -330,7 +329,6 @@ export class FollowGroupComponent {
     // 正式接 API 時
     // =========================
     const url = `http://localhost:8080/gogobuy/event/getAllOrdersByUserIdAndEventsId?user_id=${userId}&events_id=${groupId}`;
-    console.log('groupId是: ' + groupId + ' userId是: ' + userId);
     this.http.getApi(url).subscribe({
       next: (res: any) => {
         const parsed = this.parseGetOrderResponse(res);
@@ -491,7 +489,6 @@ export class FollowGroupComponent {
             return;
           }
         }
-        console.log(JSON.stringify(g, null, 2));
         this.applyGroup(g);
         this.loadStoreById(g.storeId);
       });
@@ -532,7 +529,6 @@ export class FollowGroupComponent {
       .subscribe((res: any) => {
         const normalized = this.normalizeStoreResponse(res);
         this.store = normalized;
-        // console.log('店家資訊: ' + JSON.stringify(this.store, null, 2));
         this.afterLoaded();
         this.loadExistingOrder(this.groupId, this.userId);
       });
@@ -548,7 +544,6 @@ export class FollowGroupComponent {
   applyGroup(g: GroupbuyEvents): void {
     this.group = g;
     this.storeId = Number(g.storeId);
-    console.log('店家的ID是: ' + this.storeId);
 
     if (g.deleted === true) {
       this.toastWarn('此團不存在', '此團已被刪除');
@@ -847,13 +842,11 @@ export class FollowGroupComponent {
     this.http.postApi<any>(url, payload).subscribe({
       next: (res) => {
         // 送出成功
-        console.log('送出訂單: ' + JSON.stringify(payload, null, 2));
         this.loading = false;
         this.toastSuccess('送出成功', '訂單已送給團長');
         this.router.navigate(['/user/orders']);
       },
       error: (err) => {
-        console.log('送出訂單: ' + JSON.stringify(payload, null, 2));
         console.error('addOrders error:', err);
         this.loading = false;
         // 送出失敗
@@ -1812,9 +1805,6 @@ export class FollowGroupComponent {
     const body = document.body;
     const scrollbarWidth =
       window.innerWidth - document.documentElement.clientWidth;
-
-    console.log('scrollbarWidth:', scrollbarWidth);
-
     // 設定 CSS variable
     document.documentElement.style.setProperty(
       '--scrollbar-offset',
