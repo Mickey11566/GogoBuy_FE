@@ -158,7 +158,6 @@ export class StoreInfoComponent implements OnInit {
 
   // 點擊收藏店家
   handleFavoriteClick(id: number) {
-    console.log('用戶ID: ' + this.userId);
     if (!this.userId || this.userId === 'null') {
       this.toastWarn('提醒', '請先登入才能收藏店家');
       return;
@@ -185,7 +184,6 @@ export class StoreInfoComponent implements OnInit {
       )
       .subscribe((res: any) => {
         this.event = res.groupbuyEvents.filter((o: any) => o.status === 'OPEN');
-        console.log('團: ' + JSON.stringify(this.event, null, 2));
         if (this.event.length > 0) {
           this.isGroupOpening = true;
         } else {
@@ -232,7 +230,6 @@ export class StoreInfoComponent implements OnInit {
     } else {
       const so = items.every((i) => i.available === false);
       if (so) {
-        console.log('已全數售完或是無商品');
         this.isAllSoldOut = true;
       }
     }
@@ -258,13 +255,10 @@ export class StoreInfoComponent implements OnInit {
     this.http
       .getApi(`http://localhost:8080/gogobuy/store/searchId?id=${id}`)
       .subscribe((res: any) => {
-        // console.log(res);
         const normalized = this.normalizeStoreResponse(res);
         this.store = normalized;
-        // console.log('店家資訊: ' + JSON.stringify(this.store, null, 2));
         // 判斷是否全部售完
         this.allSoldOut();
-        // console.log(JSON.stringify(this.store));
         this.afterLoaded();
       });
   }
@@ -294,7 +288,6 @@ export class StoreInfoComponent implements OnInit {
     if (this.store.publish === false) {
       const createdBy = this.store.createdBy;
       if (!this.userId || createdBy !== this.userId) {
-        console.log('此為不公開店家');
         this.toastWarn('不公開店家', '此為不公開店家');
         // 延遲再跳轉
         setTimeout(() => {
@@ -469,7 +462,6 @@ export class StoreInfoComponent implements OnInit {
   goEdit(): void {
     const userDate = JSON.parse(this.user);
     const role = userDate.role;
-    console.log('當前的角色是: ' + role);
     if (!this.userId) return;
     if (!this.user || role === 'user') {
       this.toastWarn('無法修改', '只有管理員可以修改店家資訊');
@@ -885,9 +877,6 @@ export class StoreInfoComponent implements OnInit {
     const body = document.body;
     const scrollbarWidth =
       window.innerWidth - document.documentElement.clientWidth;
-
-    console.log('scrollbarWidth:', scrollbarWidth);
-
     // 設定 CSS variable
     document.documentElement.style.setProperty(
       '--scrollbar-offset',
