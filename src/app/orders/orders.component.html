@@ -112,13 +112,13 @@
         <section class="max-w-[1440px] mx-auto p-4">
           <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
 
-            @if (!hostCarts || hostCarts.length == 0) {
+            @if (!hostActiveCarts || hostActiveCarts.length == 0) {
             <div class="text-center text-slate-500 py-16 col-span-full">
-              目前沒有購物車
+              目前沒有進行中的開團
             </div>
             } @else {
 
-            @for (item of hostCarts; track item.eventsId){
+            @for (item of hostActiveCarts; track item.eventsId){
             <article class="relative bg-white rounded-2xl shadow-xl p-4 flex flex-col justify-between">
               <div class="flex items-start justify-between gap-3 text-base text-black">
                 <span class="font-semibold truncate max-w-[65%]">
@@ -190,84 +190,58 @@
 
       <p-tabpanel value="management">
         <section class="max-w-[1440px] mx-auto p-4">
-          <div class="grid grid-cols-1 gap-6">
+          <div class="grid grid-cols-1 gap-8">
 
-            @if (!hostCarts || hostCarts.length == 0) {
+            <!-- 待處理開團區 -->
+            <div>
+              <div class="flex items-center gap-3 mb-6">
+                <div class="h-8 w-1.5 bg-sky-500 rounded-full"></div>
+                <h2 class="text-2xl font-black text-slate-800 tracking-tight">進行中與待核銷</h2>
+                <span class="px-2.5 py-1 rounded-lg bg-sky-50 text-sky-600 text-xs font-black">{{
+                  hostActiveManageCarts.length }} 團</span>
+              </div>
+
+              @if (hostActiveManageCarts.length === 0) {
+              <div class="bg-white rounded-3xl p-12 text-center border-2 border-dashed border-slate-100">
+                <i class="pi pi-inbox text-slate-200 text-5xl mb-4 block"></i>
+                <p class="text-slate-400 font-bold">目前沒有需要處理的開團項目</p>
+              </div>
+              } @else {
+              @for (item of hostActiveManageCarts; track item.eventsId) {
+              <ng-container *ngTemplateOutlet="manageCard; context: { $implicit: item }"></ng-container>
+              }
+              }
+            </div>
+
+            <!-- 已完全核銷區 (摺疊顯示) -->
+            @if (hostCompletedManageCarts.length > 0) {
+            <div class="mt-4">
+              <p-accordion>
+                <p-accordion-panel value="completed">
+                  <p-accordion-header>
+                    <div class="flex items-center gap-3">
+                      <div class="h-8 w-1.5 bg-slate-300 rounded-full"></div>
+                      <h2 class="text-xl font-bold text-slate-500 tracking-tight">已完成核銷的開團 (歷史管理)</h2>
+                      <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-xs font-black">{{
+                        hostCompletedManageCarts.length }} 團</span>
+                    </div>
+                  </p-accordion-header>
+                  <p-accordion-content>
+                    <div class="pt-6">
+                      @for (item of hostCompletedManageCarts; track item.eventsId) {
+                      <ng-container *ngTemplateOutlet="manageCard; context: { $implicit: item }"></ng-container>
+                      }
+                    </div>
+                  </p-accordion-content>
+                </p-accordion-panel>
+              </p-accordion>
+            </div>
+            }
+
+            @if (hostActiveManageCarts.length === 0 && hostCompletedManageCarts.length === 0) {
             <div class="text-center text-slate-500 py-16">
               目前沒有您發起的開團
             </div>
-            } @else {
-            @for (item of hostCarts; track item.eventsId) {
-            <div class="bg-white rounded-2xl shadow-md p-6 border border-slate-100">
-              <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 rounded-full overflow-hidden border border-slate-200 bg-slate-50">
-                    <img [src]="item.storeLogo" class="w-full h-full object-cover">
-                  </div>
-                  <div>
-                    <h3 class="text-xl font-bold text-slate-900">{{ item.eventName }}</h3>
-                    <p class="text-base font-semibold text-slate-500">{{ item.storeName }}</p>
-                  </div>
-                </div>
-                <button type="button"
-                  class="px-5 py-2 rounded-xl bg-emerald-50 text-emerald-700 font-bold hover:bg-emerald-100 transition-colors cursor-pointer"
-                  (click)="loadManageData(item.eventsId)">
-                  <i class="pi pi-users mr-2"></i> 管理成員與狀態
-                </button>
-              </div>
-
-              @if (manageMembersMap()[item.eventsId]) {
-              <div class="overflow-x-auto rounded-xl border border-slate-200">
-                <table class="w-full text-left">
-                  <thead class="bg-slate-50 text-slate-600 text-sm font-bold">
-                    <tr>
-                      <th class="px-4 text-base font-semibold py-3">成員</th>
-                      <th class="px-4 text-base font-semibold py-3 text-right">金額</th>
-                      <th class="px-4 text-base font-semibold py-3 text-center">付款狀態</th>
-                      <th class="px-4 text-base font-semibold py-3 text-center">取餐狀態</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-100">
-                    @for (m of manageMembersMap()[item.eventsId]; track m.userId) {
-                    <tr class="hover:bg-slate-50/50 transition-colors">
-                      <td class="px-4 py-4 font-medium text-slate-800">
-                        {{ m.userNickname || '匿名成員' }}
-                      </td>
-                      <td class="px-4 py-4 text-right text-emerald-600 font-bold">${{ m.totalSum }}</td>
-                      <td class="px-4 py-4 text-center">
-                        <button type="button" class="inline-flex flex-col items-center gap-1 group cursor-pointer"
-                          (click)="togglePaymentStatus(m, item.eventsId)">
-                          <span class="px-3 py-1 rounded-full text-base font-bold transition-all group-hover:scale-105"
-                            [ngClass]="m.paymentStatus === 'CONFIRMED' || m.paymentStatus === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'">
-                            {{ m.paymentStatus === 'CONFIRMED' || m.paymentStatus === 'PAID' ? '已收款' : '待付款' }}
-                          </span>
-                          <span
-                            class="text-base text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">點擊切換</span>
-                        </button>
-                      </td>
-                      <td class="px-4 py-4 text-center">
-                        <button type="button" class="inline-flex flex-col items-center gap-1 group cursor-pointer"
-                          (click)="togglePickupStatus(m, item.eventsId)">
-                          <span class="px-3 py-1 rounded-full text-base font-bold transition-all group-hover:scale-105"
-                            [ngClass]="m.pickupStatus === 'PICKED_UP' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
-                            {{ m.pickupStatus === 'PICKED_UP' ? '已取餐' : '未取餐' }}
-                          </span>
-                          <span
-                            class="text-base text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">點擊切換</span>
-                        </button>
-                      </td>
-                    </tr>
-                    } @empty {
-                    <tr>
-                      <td colspan="4" class="px-4 py-8 text-center text-slate-400">目前尚無跟團成員</td>
-                    </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-              }
-            </div>
-            }
             }
           </div>
         </section>
@@ -275,11 +249,194 @@
 
       <p-tabpanel value="history">
         <ng-container
-          *ngTemplateOutlet="orderList; context: { $implicit: historyOrders, openValues: historyOpenValues }"></ng-container>
+          *ngTemplateOutlet="orderList; context: { $implicit: historyOrdersSorted(), openValues: historyOpenValues }"></ng-container>
       </p-tabpanel>
     </p-tabpanels>
   </p-tabs>
 </div>
+
+<!-- 管理卡片模板 -->
+<ng-template #manageCard let-item>
+  <div
+    class="bg-white rounded-3xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-slate-100 mb-6">
+    <!-- 精美的標題列 -->
+    <div class="p-6 md:p-8 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
+      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+
+        <!-- 左側：店家與活動資訊 -->
+        <div class="flex items-center gap-5">
+          <div class="relative">
+            <div class="w-16 h-16 rounded-2xl overflow-hidden shadow-sm border-2 border-white ring-1 ring-slate-100">
+              <img [src]="item.storeLogo" class="w-full h-full object-cover">
+            </div>
+            <span class="absolute -bottom-1 -right-1 flex h-6 w-6">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                [ngClass]="item.eventStatus === 'FINISHED' ? 'bg-emerald-400' : 'bg-sky-400'"></span>
+              <span
+                class="relative inline-flex rounded-full h-6 w-6 text-white items-center justify-center text-[10px] font-bold shadow-sm"
+                [ngClass]="item.eventStatus === 'FINISHED' ? 'bg-emerald-500' : 'bg-sky-500'">
+                <i [class]="item.eventStatus === 'FINISHED' ? 'pi pi-check' : 'pi pi-sync'"></i>
+              </span>
+            </span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <h3 class="text-xl font-bold text-slate-800 tracking-tight">{{ item.eventName }}</h3>
+              <span class="px-2 py-0.5 rounded-md text-base font-bold uppercase tracking-wider"
+                [ngClass]="item.eventStatus === 'FINISHED' ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-100 text-sky-700'">
+                {{ item.eventStatus === 'FINISHED' ? '已結單' : '募資中' }}
+              </span>
+            </div>
+            <p class="text-sm font-semibold text-slate-500 flex items-center gap-1.5">
+              <i class="pi pi-map-marker text-xs"></i> {{ item.storeName }}
+            </p>
+          </div>
+        </div>
+
+        <!-- 中間：活動數據概覽 -->
+        <div class="flex flex-wrap gap-4 md:gap-8">
+          <div class="flex flex-col">
+            <span class="text-base font-bold text-slate-400 uppercase tracking-widest mb-1">全團總額</span>
+            <span class="text-lg font-black text-emerald-600">${{ item.totalAmount }}</span>
+          </div>
+          <div class="flex flex-col border-l border-slate-100 pl-4 md:pl-8">
+            <span class="text-base font-bold text-slate-400 uppercase tracking-widest mb-1">未完成人數</span>
+            <div class="flex items-center gap-2">
+              <span class="text-lg font-black" [ngClass]="item.unpaidCount > 0 ? 'text-orange-500' : 'text-slate-700'">
+                {{ item.unpaidCount }} <small class="text-xs font-medium text-slate-400">未付</small>
+              </span>
+              <span class="text-lg font-black" [ngClass]="item.unpickedCount > 0 ? 'text-sky-500' : 'text-slate-700'">
+                {{ item.unpickedCount }} <small class="text-xs font-medium text-slate-400">未取</small>
+              </span>
+            </div>
+          </div>
+          <div class="flex flex-col border-l border-slate-100 pl-4 md:pl-8">
+            <span class="text-base font-bold text-slate-400 uppercase tracking-widest mb-1">更新時間</span>
+            <span class="text-sm font-semibold text-slate-500 mt-1.5">{{ formatDateTime(item.latestOrderTime)
+              }}</span>
+          </div>
+        </div>
+
+        <!-- 右側：主要操作按鈕 -->
+        <div class="flex flex-col items-end gap-3 min-w-[160px]">
+          @if (item.eventStatus === 'FINISHED') {
+          <button type="button"
+            class="w-full px-6 py-3 rounded-2xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200 cursor-pointer flex items-center justify-center gap-2"
+            (click)="loadManageData(item.eventsId)">
+            <i class="pi pi-users text-sm"></i>
+            管理成員
+          </button>
+          } @else {
+          <div class="flex flex-col items-end w-full">
+            <button type="button"
+              class="w-full px-6 py-3 rounded-2xl bg-sky-50 text-sky-700 font-bold border border-sky-100 hover:bg-sky-100 transition-all cursor-pointer flex items-center justify-center gap-2 group"
+              (click)="checkout(item)">
+              前往結算 <i class="pi pi-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
+            </button>
+            <p class="text-base font-bold text-orange-500 mt-2 flex items-center gap-1">
+              <i class="pi pi-info-circle"></i> 需先完成結算才能管理收款
+            </p>
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- 管理內容區域（展開的成員列表） -->
+    @if (item.eventStatus === 'FINISHED' && manageMembersMap()[item.eventsId]) {
+    <div class="p-6 md:p-8 animate-fade-in-down">
+      <div class="mb-5 flex items-center justify-between">
+        <h4 class="text-base font-bold text-slate-500 uppercase tracking-widest border-l-4 border-slate-900 pl-3">
+          團員繳費與領餐清單
+        </h4>
+        <p class="text-base font-medium text-slate-700">點擊按鈕可快速切換狀態</p>
+      </div>
+
+      <div class="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/30">
+        <table class="w-full text-left border-collapse">
+          <thead
+            class="bg-white text-slate-500 text-base font-black uppercase tracking-wider border-b border-slate-100">
+            <tr>
+              <th class="px-6 py-4">成員資訊</th>
+              <th class="px-6 py-4 text-right whitespace-nowrap">金額明細</th>
+              <th class="px-6 py-4 text-center">收款進度</th>
+              <th class="px-6 py-4 text-center">領餐進度</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (m of manageMembersMap()[item.eventsId]; track m.userId) {
+            <tr class="hover:bg-white transition-colors group">
+              <td class="px-6 py-5">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-10 h-10 rounded-full overflow-hidden border border-slate-100 bg-slate-50 flex items-center justify-center">
+                    @if (m.userAvatar) {
+                    <img [src]="m.userAvatar" class="w-full h-full object-cover">
+                    } @else {
+                    <span class="text-slate-500 text-xs font-bold">{{ m.userNickname?.charAt(0) || '匿'
+                      }}</span>
+                    }
+                  </div>
+                  <div>
+                    <div class="font-bold text-slate-800 text-base">{{ m.userNickname || '匿名成員' }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-5 text-right">
+                <div class="font-black text-emerald-600">${{ m.totalSum }}</div>
+                <div class="text-sm text-slate-400 font-bold">含分攤費: ${{ m.personFee }}</div>
+              </td>
+              <td class="px-6 py-5">
+                <div class="flex justify-center">
+                  <button type="button"
+                    class="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-xl text-xs font-bold transition-all border cursor-pointer min-w-[90px]"
+                    [ngClass]="m.paymentStatus === 'CONFIRMED' || m.paymentStatus === 'PAID'
+                                  ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-100'
+                                  : 'bg-white border-slate-200 text-slate-400 hover:border-orange-200 hover:text-orange-500'"
+                    (click)="togglePaymentStatus(m, item.eventsId)">
+                    <i class="pi"
+                      [ngClass]="m.paymentStatus === 'CONFIRMED' || m.paymentStatus === 'PAID' ? 'pi-check-circle' : 'pi-clock'"></i>
+                    {{ m.paymentStatus === 'CONFIRMED' || m.paymentStatus === 'PAID' ? '已收訖' : '待收款' }}
+                  </button>
+                </div>
+              </td>
+              <td class="px-6 py-5">
+                <div class="flex justify-center">
+                  <button type="button"
+                    class="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-xl text-xs font-bold transition-all border cursor-pointer min-w-[90px]"
+                    [ngClass]="m.pickupStatus === 'PICKED_UP'
+                                  ? 'bg-slate-800 border-slate-800 text-white shadow-md shadow-slate-200 font-black'
+                                  : 'bg-white border-slate-200 text-slate-400 hover:border-sky-200 hover:text-sky-500'"
+                    (click)="togglePickupStatus(m, item.eventsId)">
+                    <i class="pi"
+                      [ngClass]="m.pickupStatus === 'PICKED_UP' ? 'pi-shopping-bag' : 'pi-shopping-cart'"></i>
+                    {{ m.pickupStatus === 'PICKED_UP' ? '已領取' : '未取餐' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+            } @empty {
+            <tr>
+              <td colspan="4" class="px-6 py-12 text-center">
+                <i class="pi pi-users text-slate-200 text-4xl mb-3 block"></i>
+                <p class="text-sm font-bold text-slate-400">目前尚無跟團成員下單</p>
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <div class="text-[11px] font-bold text-slate-400 flex items-center gap-2">
+          <span class="flex h-2 w-2 rounded-full bg-emerald-500"></span> 已收款
+          <span class="flex h-2 w-2 rounded-full bg-slate-200 ml-2"></span> 待收款
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+</ng-template>
 
 <ng-template #orderList let-orders let-openValues="openValues">
   <p-accordion [value]="openValues" [multiple]="true">
@@ -311,11 +468,21 @@
               <div>付款狀態：<span class="font-bold"
                   [ngClass]="o.paymentStatus === 'CONFIRMED' || o.paymentStatus === 'PAID' ? 'text-green-600' : 'text-orange-500'">{{
                   o.paymentStatus === 'CONFIRMED' || o.paymentStatus === 'PAID' ? '已付款' : '尚未付款' }}</span></div>
-              <div>預計取餐：{{ o.eventPickupTime ? (o.eventPickupTime | date:'yyyy/MM/dd HH:mm') : '尚未確認' }}</div>
+              <div class="font-semibold">預計取餐：{{ o.eventPickupTime ? (o.eventPickupTime | date:'yyyy/MM/dd HH:mm') :
+                '尚未確認' }}</div>
             </div>
-            @if (o.pickupTime) {
-            <div class="text-xs text-slate-500">實際取餐時間：{{ o.pickupTime | date:'yyyy/MM/dd HH:mm' }}</div>
-            }
+            <div class="text-base text-slate-700">
+              領餐狀態：
+              @if (o.pickupStatus === 'PICKED_UP') {
+              <span class="font-bold text-green-600">已領餐</span>
+              @if (o.pickupTime) {
+              <span class="text-base font-semibold text-slate-500 ml-2">（實際取餐時間：{{ o.pickupTime | date:'yyyy/MM/dd
+                HH:mm' }}）</span>
+              }
+              } @else {
+              <span class="font-bold text-orange-500">未取餐</span>
+              }
+            </div>
           </div>
 
           <!-- 收件資訊 -->
