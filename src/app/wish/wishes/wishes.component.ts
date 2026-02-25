@@ -101,7 +101,6 @@ export class WishesComponent implements OnInit {
     // 訂閱 User 狀態流
     this.auth.user$.subscribe((user) => {
       if (user) {
-        console.log('接收到用戶資料:', user);
         this.userId = user.id;
         this.timesRemaining = user.timesRemaining;
         this.role = user.role;
@@ -109,10 +108,6 @@ export class WishesComponent implements OnInit {
     });
     // 刷新資料
     this.auth.refreshUser();
-
-    console.log('用戶id : ' + this.userId);
-    console.log('許願次數 : ' + this.timesRemaining);
-    console.log('用戶身分 : ' + this.role);
 
     this.loadWishes();
   }
@@ -149,7 +144,6 @@ export class WishesComponent implements OnInit {
       .getApi('http://localhost:8080/gogobuy/wish/all_wishes')
       .subscribe((res: any) => {
         this.wishes = res.allWish || [];
-        console.log(JSON.stringify(this.wishes, null, 2));
         this.afterLoad();
         this.applyScrollAndHighlight();
       });
@@ -549,7 +543,6 @@ export class WishesComponent implements OnInit {
     };
 
     this.isCreating = true;
-    console.log('送出新增資料：' + JSON.stringify(payload, null, 2));
 
     // 後端上線後使用（成功再刷新/更新畫面）
     this.http
@@ -804,9 +797,6 @@ export class WishesComponent implements OnInit {
     const body = document.body;
     const scrollbarWidth =
       window.innerWidth - document.documentElement.clientWidth;
-
-    console.log('scrollbarWidth:', scrollbarWidth);
-
     // 設定 CSS variable
     document.documentElement.style.setProperty(
       '--scrollbar-offset',

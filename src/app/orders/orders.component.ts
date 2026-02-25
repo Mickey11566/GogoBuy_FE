@@ -40,9 +40,12 @@ interface CartGroup {
   canModify: boolean;
   items: CartItem[];
   isHost?: boolean;
+  eventStatus?: string;
   hostLogo: any;
   pickLocation: any;
   pickupTime: any;
+  unpaidCount: number;
+  unpickedCount: number;
 }
 
 
@@ -160,22 +163,32 @@ export class OrdersComponent {
 
     if (!userId) { this.isLoading = false; return; }
 
-    this.isLoading = true;
+    this.loadCartData();
+    this.fetchHistoryOrders(userId);
+  }
 
+  loadCartData() {
+    const user = JSON.parse(localStorage.getItem('user_info') || '{}');
+    const userId: string = user.id;
+    if (!userId) return;
+
+    this.isLoading = true;
     this.cart.getCart(userId)
       .pipe(finalize(() => this.isLoading = false))
       .subscribe({
         next: (r: CartRes) => {
           const list = r.cartData ?? [];
-
-
           const jobs = list.map(g =>
             this.cart.getEventsByEventsId(g.eventsId).pipe(
               map((ev: any) => {
                 const event = ev.groupbuyEvents?.[0];
-                return { ...g, isHost: !!event && event.hostId == userId };
+                return {
+                  ...g,
+                  isHost: !!event && event.hostId == userId,
+                  eventStatus: event?.eventStatus
+                };
               }),
-              catchError(() => of({ ...g, isHost: false }))
+              catchError(() => of({ ...g, isHost: false, eventStatus: 'UNKNOWN' }))
             )
           );
 
@@ -185,8 +198,6 @@ export class OrdersComponent {
         },
         error: (err: any) => console.error('getCart failed:', err)
       });
-
-    this.fetchHistoryOrders(userId);
   }
 
   fetchHistoryOrders(userId: string) {
@@ -194,7 +205,7 @@ export class OrdersComponent {
       next: (res: any) => {
         if (res.code === 200 && res.orderHistoryList) {
           const historyList: OrderHistoryDTO[] = res.orderHistoryList;
-          this.historyOrders = historyList.map(item => {
+          const orders = historyList.map(item => {
             return {
               code: item.orderCode,
               storeName: item.storeName || '未知店家',
@@ -216,6 +227,7 @@ export class OrdersComponent {
               }))
             };
           });
+          this.historyOrders.set(orders);
         }
       },
       error: (err: any) => console.error('fetchHistory failed:', err)
@@ -305,7 +317,34 @@ export class OrdersComponent {
 
   activeOrders: Order[] = [];
 
-  historyOrders: Order[] = [];
+  historyOrders = signal<Order[]>([]);
+
+  historyOrdersSorted = computed(() => {
+    const list = [...this.historyOrders()];
+    const getPriority = (o: Order) => {
+      const isPaid = o.paymentStatus === 'CONFIRMED' || o.paymentStatus === 'PAID';
+      const isPickedUp = o.pickupStatus === 'PICKED_UP';
+
+      // 優先級 0：未取餐 + 已付款 (最高優先)
+      if (!isPickedUp && isPaid) return 0;
+
+      // 優先級 1：未取餐 + 尚未付款
+      if (!isPickedUp && !isPaid) return 1;
+
+      // 優先級 2：已取餐 (最下面)
+      if (isPickedUp) return 2;
+
+      return 3;
+    };
+
+    return list.sort((a, b) => {
+      const pa = getPriority(a);
+      const pb = getPriority(b);
+      if (pa !== pb) return pa - pb;
+      // 同優先級則按建立時間倒序
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    });
+  });
 
   // 展開狀態（用 code 當 key）
   activeOpenValues: string[] = [];
@@ -325,9 +364,130 @@ export class OrdersComponent {
     return (this.cartData() ?? []).filter(x => !x.isHost);
   }
 
-  get hostCarts() {
-    return (this.cartData() ?? []).filter(x => x.isHost);
+  get hostActiveCarts() {
+    return (this.cartData() ?? []).filter(x => x.isHost && x.eventStatus !== 'FINISHED');
   }
 
+  get hostActiveManageCarts() {
+    return (this.cartData() ?? [])
+      .filter(x => x.isHost && x.totalQuantity > 0 && !(x.eventStatus === 'FINISHED' && x.unpaidCount === 0 && x.unpickedCount === 0))
+      .sort((a, b) => {
+        const timeA = new Date(a.latestOrderTime).getTime() || 0;
+        const timeB = new Date(b.latestOrderTime).getTime() || 0;
+        if (timeB !== timeA) return timeB - timeA;
+        return b.eventsId - a.eventsId;
+      });
+  }
+
+  get hostCompletedManageCarts() {
+    return (this.cartData() ?? [])
+      .filter(x => x.isHost && x.totalQuantity > 0 && x.eventStatus === 'FINISHED' && x.unpaidCount === 0 && x.unpickedCount === 0)
+      .sort((a, b) => {
+        const timeA = new Date(a.latestOrderTime).getTime() || 0;
+        const timeB = new Date(b.latestOrderTime).getTime() || 0;
+        return timeB - timeA;
+      });
+  }
+
+  // ==================== 管理中心邏輯 ====================
+  manageMembersMap = signal<Record<number, any[]>>({});
+
+  loadManageData(eventsId: number) {
+    this.cart.getPersonalOrdersByEventId(eventsId).subscribe({
+      next: (res: any) => {
+        if (res.code === 200) {
+          const list = res.personalOrder || [];
+          this.manageMembersMap.update(map => ({
+            ...map,
+            [eventsId]: list
+          }));
+        }
+      },
+      error: (err: any) => console.error(err)
+    });
+  }
+
+  togglePaymentStatus(member: any, eventsId: number) {
+    const isPaid = member.paymentStatus === 'CONFIRMED' || member.paymentStatus === 'PAID';
+    const nextStatus = isPaid ? 'UNPAID' : 'CONFIRMED';
+
+    const payload = {
+      eventsId: eventsId,
+      userId: member.userId,
+      paymentStatus: nextStatus,
+      totalSum: member.totalSum,
+      totalWeight: member.totalWeight,
+      personFee: member.personFee
+    };
+
+    this.cart.updatePersonalOrder(payload).subscribe({
+      next: (res: any) => {
+        if (res.code === 200) {
+          member.paymentStatus = nextStatus;
+          Swal.fire({
+            toast: true,
+            position: 'top',
+            icon: 'success',
+            title: '付款狀態已更新',
+            showConfirmButton: false,
+            timer: 1500
+          });
+          // 同步更新歷史訂單 (如果有的話)
+          this.fetchHistoryOrders(member.userId);
+          this.loadCartData();
+        }
+      },
+      error: (err: any) => {
+        console.error(err);
+        Swal.fire('更新失敗', '', 'error');
+      }
+    });
+  }
+
+  togglePickupStatus(member: any, eventsId: number) {
+    const isPickedUp = member.pickupStatus === 'PICKED_UP';
+    const nextStatus = isPickedUp ? 'NOT_PICKED_UP' : 'PICKED_UP';
+
+    const payload = {
+      eventsId: eventsId,
+      userId: member.userId,
+      pickupStatus: nextStatus, // 會同步更新到 orders 表
+      paymentStatus: member.paymentStatus,
+      totalSum: member.totalSum,
+      totalWeight: member.totalWeight,
+      personFee: member.personFee
+    };
+
+    this.cart.updatePersonalOrder(payload).subscribe({
+      next: (res: any) => {
+        if (res.code === 200) {
+          member.pickupStatus = nextStatus;
+          Swal.fire({
+            toast: true,
+            position: 'top',
+            icon: 'success',
+            title: '取餐狀態已更新',
+            showConfirmButton: false,
+            timer: 1500
+          });
+          // 同步更新資訊
+          this.fetchHistoryOrders(member.userId);
+          this.loadCartData();
+        }
+      },
+      error: (err: any) => {
+        console.error(err);
+        Swal.fire('更新失敗', '', 'error');
+      }
+    });
+  }
+  edit(item: CartGroup) {
+    this.router.navigate(['/groupbuy-event/group-event'], {
+      queryParams: {
+        event_id: item.eventsId, // 這裡應該傳實際的 eventsId
+      }
+    });
+    console.log(this.router.url)
+  }
 
 }

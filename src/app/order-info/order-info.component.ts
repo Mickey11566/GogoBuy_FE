@@ -107,6 +107,7 @@ export class OrderInfoComponent implements OnInit {
 
 
   ngOnInit() {
+    this.userId = String(localStorage.getItem('user_id') || '');
     this.host = [
       { label: 'Personal' },
       { label: 'Confirmation' }
@@ -522,9 +523,12 @@ export class OrderInfoComponent implements OnInit {
   }
 
   submitOrder() {
+    const title = this.mode === 'host' ? "確定確認全團並送出?" : "確定確認個人訂單?";
+    const text = this.mode === 'host' ? "確認後該團將結算並關閉，不可再修改內容!" : "確認後您的訂單將轉為已確認狀態!";
+
     Swal.fire({
-      title: "確定確認訂單?",
-      text: "確認後狀態將轉為已確認!",
+      title,
+      text,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
@@ -533,21 +537,25 @@ export class OrderInfoComponent implements OnInit {
       cancelButtonText: "取消"
     }).then((result) => {
       if (result.isConfirmed) {
-
-        // 呼叫 API 確定訂單
         const submitUserId = this.userId || this.auth.user?.id || '';
-        this.cart.confirmPersonalOrder(submitUserId, this.eventsId).subscribe({
+
+        // 根據身分呼叫不同 API
+        const request$ = this.mode === 'host'
+          ? this.cart.hostCloseEvent(this.eventsId, submitUserId)
+          : this.cart.confirmPersonalOrder(submitUserId, this.eventsId);
+
+        request$.subscribe({
           next: (res: any) => {
             if (res.code == 200) {
               Swal.fire({
                 title: "送出!",
-                text: "訂單已確認",
+                text: this.mode === 'host' ? "全團已成功結算" : "您的個人訂單已確認",
                 icon: "success",
                 showCancelButton: true,
                 confirmButtonColor: "#3085d6",
                 cancelButtonColor: "rgb(24, 173, 54)",
                 confirmButtonText: "返回首頁",
-                cancelButtonText: "返回歷史訂單"
+                cancelButtonText: "查看歷史訂單"
               }).then((result) => {
                 if (result.isConfirmed) {
                   this.router.navigate(['/gogobuy/home'])
@@ -556,7 +564,7 @@ export class OrderInfoComponent implements OnInit {
                 }
               });
             } else {
-              Swal.fire("錯誤", res.message || "確認失敗", "error");
+              Swal.fire("錯誤", res.message || "作業失敗", "error");
             }
           },
           error: (err: any) => {

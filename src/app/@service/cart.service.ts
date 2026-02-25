@@ -92,8 +92,19 @@ export class CartService {
     return this.https.postApi<BasicRes>(url, null);
   }
 
+  // [管理中心] 取得該團所有人的結算單
+  getPersonalOrdersByEventId(eventsId: number) {
+    return this.https.getApi(`http://localhost:8080/gogobuy/event/getPersonalOrdersByEventId?events_id=${eventsId}`);
+  }
 
+  // [管理中心] 更新結算單 (付款狀態、取餐狀態等)
+  updatePersonalOrder(payload: any) {
+    return this.https.postApi(`http://localhost:8080/gogobuy/event/updatePersonalOrder`, payload);
+  }
 
+  // [團長] 手動結單 (結帳完成，正式關閉活動並生成各員帳單)
+  hostCloseEvent(eventsId: number, hostId: string) {
+    const url = `http://localhost:8080/gogobuy/event/hostCloseEvent?id=${eventsId}&host_id=${encodeURIComponent(hostId)}`;
+    return this.https.postApi<BasicRes>(url, null);
+  }
 }
-
-
