@@ -481,4 +481,13 @@ export class OrdersComponent {
       }
     });
   }
+  edit(item: CartGroup) {
+    this.router.navigate(['/groupbuy-event/group-event'], {
+      queryParams: {
+        event_id: item.eventsId, // 這裡應該傳實際的 eventsId
+      }
+    });
+    console.log(this.router.url)
+  }
+
 }
