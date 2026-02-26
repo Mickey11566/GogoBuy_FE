@@ -1381,54 +1381,55 @@
       class="flex-grow overflow-y-auto pr-2 text-base text-gray-700 leading-relaxed custom-scrollbar"
     >
       <p class="mb-4 font-bold text-gray-800">
-        感謝您參與本平台團購，關於本訂單之運費收繳與退款機制，請詳細閱讀並同意以下聲明：
+        感謝您參與本平台團購，關於本訂單之「預授權扣款」與「運費平分機制」，請詳細閱讀並同意以下聲明：
       </p>
 
       <div class="space-y-4">
         <section>
           <h4 class="font-bold text-gray-900 flex items-center gap-2">
             <span class="w-2 h-2 bg-red-900 rounded-full"></span> 1.
-            固定運費預收制
+            運費平分機制
           </h4>
           <p class="pl-4 mt-1 text-gray-600">
-            為確保成團效率，所有參與團員於結帳時，系統將根據「開團者設定之配送距離」預收一筆固定金額運費。
+            本團購之總運費係根據配送距離計算（例如 3km 為 10
+            元）。結單時，系統將依據「最終實際參與人數」平均分攤總運費，並併入個人訂單應付金額。
           </p>
         </section>
 
-        <section>
-          <h4 class="font-bold text-gray-900 flex items-center gap-2">
-            <span class="w-2 h-2 bg-red-900 rounded-full"></span> 2.
-            支付方式說明
-          </h4>
-          <p class="pl-4 mt-1 text-gray-600">
-            本平台之訂單費用（含預收運費）一律採取
-            <span class="font-bold text-[#00c300]">LINE PAY</span>
-            進行全額支付，不支援其他付款方式。
-          </p>
-        </section>
-
-        <section class="bg-red-50 p-4 rounded-md border-l-4 border-red-900">
-          <h4 class="font-bold text-red-900 flex items-center gap-2">
-            <i class="pi pi-info-circle"></i> 3. 結單後退款機制
+        <section class="bg-blue-50 p-4 rounded-md border-l-4 border-blue-600">
+          <h4 class="font-bold text-blue-800 flex items-center gap-2">
+            <i class="pi pi-shield"></i> 2. 信用卡 / LINE Pay 預授權機制
           </h4>
           <p class="mt-2 text-gray-700">
-            待該團正式結單並確認最終參與人數後，系統將自動重新計算每位團員應負擔之實際運費，並採取以下措施：
+            當您點擊結帳時，系統僅會進行<strong>「預授權（佔用額度）」</strong>，此階段<strong>尚未產生實際扣款</strong>。
           </p>
-          <ul class="list-disc pl-8 mt-2 space-y-1 text-gray-600">
+          <ul class="list-disc pl-8 mt-2 space-y-1 text-gray-600 text-sm">
             <li>
-              <strong>溢收退回：</strong>
-              系統將自動計算預收與實際金額之差額，並退回至您的支付帳戶。
+              <strong>預授權：</strong>確保您的支付帳戶有足夠額度支付訂單上限。
             </li>
             <li>
-              <strong>透明計算：</strong>
-              實際運費金額將顯示於訂單明細中，供隨時查閱。
+              <strong>最終請款：</strong
+              >待結單並計算正確分攤運費後，系統才依「最終金額」發起請款。
             </li>
           </ul>
         </section>
 
-        <p class="text-sm text-gray-500 italic">
-          註：退款作業時間依金流平台處理進度為準，所有計算結果以系統產出之拆帳明細為最終依據。
-        </p>
+        <section>
+          <h4 class="font-bold text-gray-900 flex items-center gap-2">
+            <span class="w-2 h-2 bg-red-900 rounded-full"></span> 3.
+            結帳流程優勢
+          </h4>
+          <p class="pl-4 mt-1 text-gray-600">
+            透過預授權機制，您無需負擔頻繁退款產生的時間成本，亦可確保在成團人數異動時，獲得最精確的拆帳金額。
+          </p>
+        </section>
+
+        <div class="bg-gray-50 p-3 rounded text-sm text-gray-500 italic">
+          <p>
+            ※
+            註：您的銀行可能會發送扣款通知簡訊，該通知僅代表「授權成功」，實際扣款金額請以結單後之「最終帳單」為準。
+          </p>
+        </div>
       </div>
     </div>
 
