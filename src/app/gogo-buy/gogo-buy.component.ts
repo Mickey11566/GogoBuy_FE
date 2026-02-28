@@ -1,4 +1,5 @@
 import { Component, HostListener, ViewChild, computed, signal, OnInit, effect, } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { CarouselModule } from 'primeng/carousel';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
@@ -20,6 +21,9 @@ import { AuthService } from '../@service/auth.service';
 import { SelectModule } from 'primeng/select';
 import { FeeDescriptionVoList, StoreService } from '../@service/store.service';
 import { PopularComponent } from '../popular/popular.component';
+import { MessageService } from 'primeng/api';
+import Swal from 'sweetalert2';
+import { ToastModule } from "primeng/toast";
 
 export type Stores = {
   id: number;
@@ -120,8 +124,11 @@ interface StatusOption {
     TooltipModule,
     PanelModule,
     SelectModule,
-    PopularComponent
+    PopularComponent,
+    CommonModule,
+    ToastModule
   ],
+  providers: [MessageService],
   templateUrl: './gogo-buy.component.html',
   styleUrl: './gogo-buy.component.scss'
 })
@@ -132,11 +139,17 @@ export class GogoBuyComponent implements OnInit {
     private sanitizer: DomSanitizer,
     public auths: AuthService,
     private storeService: StoreService,
+    private messageService: MessageService,
   ) {
     effect(() => {
       const stores = this.auths.store();
       if (stores && stores.length > 0) {
         this.fetchOperatingStores(stores);
+      }
+      const u = this.auths.user;
+      if (u) {
+        this.userId = u.id;
+        this.favoriteIds = u.favoriteStore || [];
       }
     });
   }
@@ -214,6 +227,14 @@ export class GogoBuyComponent implements OnInit {
 
 
   ngOnInit(): void {
+    this.userId = String(localStorage.getItem('user_id'));
+    this.user = localStorage.getItem('user_info');
+    this.updateLocalFavoriteList();
+    this.auths.user$.subscribe((user) => {
+      if (user) {
+        this.favoriteIds = user.favoriteStore || [];
+      }
+    });
     // 全部開團
     this.auths.loadAllEventsOnce();
     // this.auths.performEventSearch('');
@@ -722,5 +743,80 @@ export class GogoBuyComponent implements OnInit {
 
     return `https://picsum.photos/800/600?random=${store?.id ?? Math.random()}`;
   }
+
+  //收藏功能(搬運自STORE-INFO)
+  userId = ''; // 沒登入就 ""
+  user: any | null = null; // 存用戶資料
+
+  // 放收藏店家陣列
+  favoriteIds: number[] = [];
+
+  // 更新同步收藏店家陣列
+  private updateLocalFavoriteList() {
+    if (this.user) {
+      this.favoriteIds = this.user.favoriteStore || [];
+    }
+  }
+
+  // 收藏的店家
+  isFavorite(storeId: number) {
+    return this.favoriteIds.includes(storeId);
+  }
+
+  // 收藏店家
+  toggleFavorite(storeId: number) {
+    // --- 樂觀更新 (Optimistic UI) ---
+    // 不等 API 回傳，先直接在畫面上改掉顏色
+    if (this.isFavorite(storeId)) {
+      this.favoriteIds = this.favoriteIds.filter((id) => id !== storeId);
+    } else {
+      this.favoriteIds = [...this.favoriteIds, storeId];
+    }
+    const urlWithParams = `http://localhost:8080/gogobuy/updateFavoriteStore?id=${this.userId}&storesList=${storeId}`;
+    this.http.postApi(urlWithParams, {}).subscribe({
+      next: (res: any) => {
+        if (res?.code === 200) {
+          this.toastSuccess('成功', '收藏狀態已更新');
+          this.auths.refreshUser(); // 後端同步
+        } else {
+          // 如果後端失敗，再把畫面改回來（回滾）
+          this.updateLocalFavoriteList();
+          this.toastWarn('失敗', '同步失敗');
+        }
+      },
+      error: () => {
+        this.updateLocalFavoriteList(); // 網路失敗也回滾
+      },
+    });
+  }
+
+  // 點擊收藏店家
+  handleFavoriteClick(id: number) {
+    if (!this.userId) {
+      this.toastWarn('提醒', '請先登入才能收藏店家');
+      return;
+    }
+    this.toggleFavorite(id);
+  }
+
+  // 狀態更新提示
+  private toastSuccess(summary: string, detail: string): void {
+    this.messageService.add({ severity: 'success', summary, detail });
+  }
+  toastWarn(title: string, text: string): void {
+    Swal.fire({
+      icon: 'warning',
+      title,
+      text,
+      confirmButtonColor: '#7F1D1D',
+      didOpen: () => {
+        const c = document.querySelector(
+          '.swal2-container',
+        ) as HTMLElement | null;
+        if (c) c.style.zIndex = '20000';
+      },
+    });
+  }
+
 
 }

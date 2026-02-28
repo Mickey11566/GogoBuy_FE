@@ -20,40 +20,40 @@
       <div class="flex flex-col gap-2">
         <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">餐點種類</label>
         <p-multiselect [options]="foodTypeOptions()" optionLabel="label" optionValue="value"
-          [ngModel]="selectedFoodTypes()" (ngModelChange)="selectedFoodTypes.set($event ?? [])"
-          [filter]="true" display="chip" placeholder="請選擇種類"
-          styleClass="w-full border-gray-300 rounded-lg h-10 overflow-hidden" class="w-full">
+          [ngModel]="selectedFoodTypes()" (ngModelChange)="selectedFoodTypes.set($event ?? [])" [filter]="true"
+          display="chip" placeholder="請選擇種類" styleClass="w-full border-gray-300 rounded-lg h-10 overflow-hidden"
+          class="w-full">
         </p-multiselect>
       </div>
 
       <div class="flex flex-col gap-2">
         <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">商店類型</label>
-        <p-dropdown [options]="categoryOptions" optionLabel="label" optionValue="value"
-          [ngModel]="selectedCategory()" (ngModelChange)="selectedCategory.set($event)"
-          styleClass="w-full border-gray-300 rounded-lg h-10" class="w-full">
+        <p-dropdown [options]="categoryOptions" optionLabel="label" optionValue="value" [ngModel]="selectedCategory()"
+          (ngModelChange)="selectedCategory.set($event)" styleClass="w-full border-gray-300 rounded-lg h-10"
+          class="w-full">
         </p-dropdown>
       </div>
 
       <div class="flex flex-col gap-2">
         <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">營業狀態</label>
-        <p-dropdown [options]="statusOptions" optionLabel="label" optionValue="value"
-          [ngModel]="selectedStatus()" (ngModelChange)="selectedStatus.set($event)"
-          styleClass="w-full border-gray-300 rounded-lg h-10" class="w-full">
+        <p-dropdown [options]="statusOptions" optionLabel="label" optionValue="value" [ngModel]="selectedStatus()"
+          (ngModelChange)="selectedStatus.set($event)" styleClass="w-full border-gray-300 rounded-lg h-10"
+          class="w-full">
         </p-dropdown>
       </div>
 
       <div class="flex flex-col gap-2">
         <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">距離範圍</label>
-        <p-dropdown [options]="distanceOptions" optionLabel="label" optionValue="value"
-          [ngModel]="selectedDistance()" (ngModelChange)="onDistanceChange($event)"
-          [placeholder]="userCoords() ? '選擇距離' : '點擊啟用定位'"
+        <p-dropdown [options]="distanceOptions" optionLabel="label" optionValue="value" [ngModel]="selectedDistance()"
+          (ngModelChange)="onDistanceChange($event)" [placeholder]="userCoords() ? '選擇距離' : '點擊啟用定位'"
           [pTooltip]="!userCoords() ? '需開啟定位權限才可使用距離搜尋' : ''" tooltipPosition="top"
           styleClass="w-full border-gray-300 rounded-lg h-10 {{!userCoords() ? 'bg-slate-50' : ''}}" class="w-full">
           <ng-template pTemplate="selectedItem">
             @if (userCoords()) {
-              <span class="flex items-center gap-1"><i class="pi pi-map-marker text-blue-500"></i> {{ selectedDistanceLabel() }}</span>
+            <span class="flex items-center gap-1"><i class="pi pi-map-marker text-blue-500"></i> {{
+              selectedDistanceLabel() }}</span>
             } @else {
-              <span class="text-slate-400 flex items-center gap-1"><i class="pi pi-lock mr-1"></i>定位未開啟</span>
+            <span class="text-slate-400 flex items-center gap-1"><i class="pi pi-lock mr-1"></i>定位未開啟</span>
             }
           </ng-template>
         </p-dropdown>
@@ -72,6 +72,15 @@
       <img [src]="item.image" (error)="item.image = 'https://picsum.photos/800/600?random=' + item.id"
         class="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
         [class.grayscale]="item.isClosed" />
+      <i class="pi absolute top-3 right-3 z-30" style="font-size:1.6rem"
+        (click)="handleFavoriteClick(item.id); $event.stopPropagation()" [ngClass]="[
+                        isFavorite(item.id)
+                          ? 'pi-heart-fill text-red-500'
+                          : 'pi-heart text-gray-400',
+                        userId && this.userId != 'null'
+                          ? 'cursor-pointer'
+                          : 'cursor-not-allowed',
+                      ]"></i>
 
       @if (item.isClosed) {
       <div class="absolute inset-0 bg-black/40 z-10 flex items-center justify-center">
