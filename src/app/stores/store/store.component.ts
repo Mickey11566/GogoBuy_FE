@@ -1,4 +1,4 @@
-import { FeeDescriptionVoList, StoreService } from './../../@service/store.service';
+import { FeeDescriptionVoList, StoreService, OperatingHoursVoList } from './../../@service/store.service';
 import { Component, ElementRef, HostListener, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { StepperModule } from 'primeng/stepper';
 import { ButtonModule } from 'primeng/button';
@@ -14,7 +14,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { DialogModule } from 'primeng/dialog';
 import { HttpService } from '../../@service/http.service';
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
-import { Items, MenuCategoriesVoList, MenuVoList, OperatingHoursVoList, ProductOptionGroupsVoList } from '../../@service/store.service';
+import { Items, MenuCategoriesVoList, MenuVoList, ProductOptionGroupsVoList } from '../../@service/store.service';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { FloatLabelModule } from 'primeng/floatlabel';
@@ -222,6 +222,20 @@ export class StoreComponent {
     sessionStorage.setItem('temp_order_info', JSON.stringify(this.storeData));
   }
 
+  private syncIdCounters() {
+    this.newCateId = this.storeData.menuCategoriesVoList?.length
+      ? Math.max(...this.storeData.menuCategoriesVoList.map(c => c.id || 0))
+      : 0;
+
+    this.newSpecId = this.storeData.productOptionGroupsVoList?.length
+      ? Math.max(...this.storeData.productOptionGroupsVoList.map(g => g.id || 0))
+      : 0;
+
+    this.newPId = this.storeData.menuVoList?.length
+      ? Math.max(...this.storeData.menuVoList.map(p => p.id || 0))
+      : 0;
+  }
+
   ngOnInit() {
     this.userId = String(localStorage.getItem('user_id') || '');
     this.id = Number(this.route.snapshot.paramMap.get('id'));
@@ -253,6 +267,8 @@ export class StoreComponent {
             this.newSpecId = this.storeData.productOptionGroupsVoList.length + 1;
             this.newCateId = this.storeData.menuCategoriesVoList.length + 1;
           }
+          
+          this.syncIdCounters();
         });
     }
 
@@ -449,6 +465,8 @@ export class StoreComponent {
       };
 
       this.storeData.menuCategoriesVoList.push(newCategory);
+      console.log("this.storeData.menuCategoriesVoList", this.storeData.menuCategoriesVoList);
+
     }
 
     this.storeData.menuCategoriesVoList = [...this.storeData.menuCategoriesVoList];
@@ -1002,12 +1020,22 @@ export class StoreComponent {
 
   }
 
-  openPublic() {
+  openPublic() { // 無使用
     if (this.id === 0) {
       this.displayPublishConfirm = true;
     } else {
       this.onSaveAll();
     }
+  }
+
+  nonPublishStore() {
+    this.storeData.publish = false;
+    this.onSaveAll();
+  }
+
+  yesPublishStore() {
+    this.storeData.publish = true;
+    this.onSaveAll();
   }
 
   // 存資料庫 ---------------------------------------------------------
@@ -1031,7 +1059,6 @@ export class StoreComponent {
       }
 
       if (this.storeData.id == 0) {
-        this.loading = true;
         const payload = {
           storesname: this.storeData.name,
           phone: this.storeData.phone,
@@ -1067,6 +1094,17 @@ export class StoreComponent {
                   if (myStores && myStores.length > 0) {
                     const latestStore = myStores.reduce((prev: any, current: any) => (prev.id > current.id) ? prev : current);
                     this.id = latestStore.id;
+
+                    // 如果是許願池來的，通知對應許願者與跟隨者
+                    if (this.wishId) {
+                      const targetUrl = `http://localhost:4200/management/store_info/${this.id}`;
+                      const finishUrl = `http://localhost:8080/gogobuy/wish/finish_wish?id=${this.wishId}&userId=${this.userId}&targetUrl=${encodeURIComponent(targetUrl)}`;
+                      this.http.postApi(finishUrl, {}).subscribe({
+                        next: () => console.log('願望結案通知成功'),
+                        error: (err) => console.error('願望結案通知失敗', err)
+                      });
+                    }
+
                     this.afterSaveSuccess();
                   } else {
                     this.router.navigate(['gogobuy/home']);
@@ -1129,7 +1167,6 @@ export class StoreComponent {
   }
 
   updateStore() {
-    this.loading = true;
     const payload = {
       ...this.storeData, storesname: this.storeData.name,
       phone: this.storeData.phone,

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../@service/auth.service';
@@ -60,7 +60,8 @@ type ProductOptionGroup = {
   templateUrl: './follow-group.component.html',
   styleUrl: './follow-group.component.scss',
 })
-export class FollowGroupComponent {
+export class FollowGroupComponent implements OnDestroy {
+  targetUserId = ''; // 新增：如果是團長幫成員修改，這裡會存成員 ID
   constructor(
     private auth: AuthService,
     private http: HttpService,
@@ -127,6 +128,31 @@ export class FollowGroupComponent {
     this.router.navigate(['/management/store_info', this.storeId]);
   }
 
+  // QR CORD =======================================
+  QRCodeVisible = false;
+  currentUrl: string = window.location.href;
+  currentUrl2: string = window.location.href;
+
+  openShareDialog() {
+    // 使用 encodeURIComponent 把網址編碼，這能解決「炸掉」的問題
+    this.currentUrl2 = encodeURIComponent(window.location.href);
+    this.QRCodeVisible = true;
+  }
+
+  showCopyTip: boolean = false;
+
+  copyLink() {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+      // 顯示提示
+      this.showCopyTip = true;
+      // 2 秒後自動關閉
+      setTimeout(() => {
+        this.showCopyTip = false;
+      }, 2000);
+    });
+  }
+
   // =========================
   // 店家卡：顯示圖
   // =========================
@@ -139,7 +165,7 @@ export class FollowGroupComponent {
   readonly defaultProductCover = '/Default Product Image.webp';
 
   // =========================
-  // 營業狀態計算
+  // 營業狀態計算（修正跨日/凌晨問題）
   // =========================
   buildOpenStatus(): void {
     // force_closed：直接覆蓋顯示
@@ -153,44 +179,65 @@ export class FollowGroupComponent {
     const hours: any[] = this.store?.operatingHoursVoList || [];
     const now = new Date();
 
-    // 取今天星期（資料是 1~7：週一=1…週日=7）
-    const jsDay = now.getDay(); // 0(日)~6(六)
-    const dayNum = jsDay === 0 ? 7 : jsDay; // 轉成 1~7
+    const getDayNum = (d: Date) => {
+      const jsDay = d.getDay(); // 0(日)~6(六)
+      return jsDay === 0 ? 7 : jsDay; // 轉成 1~7
+    };
 
-    // 找今天的時段
-    const todaySlots = hours
-      .filter((h) => Number(h.dayOfWeek) === dayNum)
-      .map((h) => ({
-        start: String(h.startTime || ''),
-        end: String(h.endTime || ''),
-      }))
-      .filter((s) => this.isValidTime(s.start) && this.isValidTime(s.end));
+    const buildSlots = (dayNum: number) => {
+      return hours
+        .filter((h) => Number(h.dayOfWeek) === dayNum)
+        .map((h) => ({
+          start: String(h.startTime || ''),
+          end: String(h.endTime || ''),
+        }))
+        .filter((s) => this.isValidTime(s.start) && this.isValidTime(s.end));
+    };
 
-    // 如果今天完全沒有營業時間
-    if (todaySlots.length === 0) {
-      this.openStatusDot = 'closed';
-      this.openStatusText = '休息中';
-      this.openStatusSubText = '今日無營業時段';
-      return;
-    }
+    const todayDayNum = getDayNum(now);
 
-    // 轉成區間（處理跨日）
-    const intervals = todaySlots
-      .map((s) => this.toInterval(now, s.start, s.end))
-      .sort((a, b) => a.start.getTime() - b.start.getTime());
+    // 今天的時段
+    const todaySlots = buildSlots(todayDayNum);
 
-    // now 是否在任何區間內
+    // 昨天（用來處理跨日延伸到今天凌晨）
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const yesterdayDayNum = getDayNum(yesterday);
+    const yesterdaySlots = buildSlots(yesterdayDayNum);
+
+    // 今天 intervals（baseDate=now）
+    const todayIntervals = todaySlots.map((s) =>
+      this.toInterval(now, s.start, s.end),
+    );
+
+    // 昨天跨日 intervals（只取 end<=start 的那些，才會延伸到今天）
+    // 注意：24H 若用 00:00~00:00 表示，end<=start 也會成立，這裡也會正確覆蓋到今天
+    const yesterdayCrossIntervals = yesterdaySlots
+      .filter((s) => {
+        // 判斷是否跨日：用 toInterval 的邏輯等價條件 end<=start
+        // 這裡不用 parse 太複雜，直接借用 setTime 比較最穩
+        const st = this.setTime(new Date(yesterday), s.start).getTime();
+        const ed = this.setTime(new Date(yesterday), s.end).getTime();
+        return ed <= st;
+      })
+      .map((s) => this.toInterval(yesterday, s.start, s.end));
+
+    // 合併並排序
+    const intervals = [...yesterdayCrossIntervals, ...todayIntervals].sort(
+      (a, b) => a.start.getTime() - b.start.getTime(),
+    );
+
+    // 先看現在是否在任何區間內（這一步修掉你 00:30 變休息中的 bug）
     const current = intervals.find((it) => now >= it.start && now < it.end);
 
     if (current) {
-      // 營業中 → 顯示將於 XX:XX 結束
       this.openStatusDot = 'open';
       this.openStatusText = '營業中';
       this.openStatusSubText = `將於 ${this.formatTime(current.end)} 休息`;
       return;
     }
 
-    // 不在區間內 → 找下一段開始
+    // 不在區間內 → 找下一段開始（優先找今天接下來的）
     const next = intervals.find((it) => now < it.start);
 
     if (next) {
@@ -200,30 +247,23 @@ export class FollowGroupComponent {
       return;
     }
 
-    // 今天沒有下一段 → 已打烊，找明天第一段
+    // 今天＆昨跨日都沒有下一段 → 找明天第一段
     const tomorrow = new Date(now);
     tomorrow.setDate(now.getDate() + 1);
-    const tomorrowJsDay = tomorrow.getDay();
-    const tomorrowDayNum = tomorrowJsDay === 0 ? 7 : tomorrowJsDay;
+    const tomorrowDayNum = getDayNum(tomorrow);
 
-    const tomorrowSlots = hours
-      .filter((h) => Number(h.dayOfWeek) === tomorrowDayNum)
-      .map((h) => ({
-        start: String(h.startTime || ''),
-        end: String(h.endTime || ''),
-      }))
-      .filter((s) => this.isValidTime(s.start) && this.isValidTime(s.end))
+    const tomorrowIntervals = buildSlots(tomorrowDayNum)
       .map((s) => this.toInterval(tomorrow, s.start, s.end))
       .sort((a, b) => a.start.getTime() - b.start.getTime());
 
-    if (tomorrowSlots.length > 0) {
+    if (tomorrowIntervals.length > 0) {
       this.openStatusDot = 'closed';
       this.openStatusText = '已打烊';
-      this.openStatusSubText = `明日 ${this.formatTime(tomorrowSlots[0].start)} 開始營業`;
+      this.openStatusSubText = `明日 ${this.formatTime(tomorrowIntervals[0].start)} 開始營業`;
       return;
     }
 
-    // 明天也沒有 → 先給保守文案
+    // 明天也沒有
     this.openStatusDot = 'closed';
     this.openStatusText = '已打烊';
     this.openStatusSubText = '近期無營業時段';
@@ -308,6 +348,13 @@ export class FollowGroupComponent {
     this.user = localStorage.getItem('user_info');
     this.groupId = Number(this.route.snapshot.paramMap.get('id') || 0);
 
+    // 取得 target_user_id (由管理中心帶過來)
+    this.route.queryParams.subscribe(params => {
+      if (params['target_user_id']) {
+        this.targetUserId = params['target_user_id'];
+      }
+    });
+
     if (!this.groupId) {
       this.toastWarn('錯誤', '找不到團 id');
       this.goBack();
@@ -337,16 +384,8 @@ export class FollowGroupComponent {
       error: () => {
         this.toastWarn('讀取失敗', '取得既有訂單失敗');
         this.router.navigate(['/gogobuy/home']);
-        this.isLoading = false;
       },
     });
-
-    // =========================
-    // 假資料
-    // =========================
-    // const res = this.getMockOrderResponse();
-    // const parsed = this.parseGetOrderResponse(res);
-    // this.handleParsedExistingOrder(parsed);
   }
 
   // 將後端回傳的「大包」解析成我要的格式
@@ -489,34 +528,27 @@ export class FollowGroupComponent {
             return;
           }
         }
+        console.log(g);
+        this.isHost(g.hostId);
         this.applyGroup(g);
         this.loadStoreById(g.storeId);
+        this.loadPopular(g.storeId);
       });
+  }
 
-    // 假資料
-    // const gRes = this.getMockGroupResponse();
-    // const g = gRes?.groupbuyEvents?.[0] as GroupbuyEvents | undefined;
+  userIsHost = false;
 
-    // if (!g) {
-    //   this.toastWarn('錯誤', '找不到團資料');
-    //   this.goBack();
-    //   return;
-    // } else {
-    //   // 現在時間
-    //   const now = new Date();
-    //   const target = new Date(g.endTime);
-    //   if (now.getTime() > target.getTime()) {
-    //     this.toastWarn('超時', '此團已過期');
-    //     this.router.navigate(['/gogobuy/home']);
-    //     return;
-    //   }
-    // }
+  isHost(id: string) {
+    this.userIsHost = id === this.userId;
+    console.log(this.userIsHost);
+  }
 
-    // this.applyGroup(g);
-
-    // =============================================
-    // STORE
-    // this.loadStoreById(this.storeId);
+  // Host 編輯團資訊
+  goToGroupEventEdit() {
+    // 導到：/groupbuy-event/group-event?event_id=xxx
+    this.router.navigate(['/groupbuy-event/group-event'], {
+      queryParams: { event_id: this.groupId },
+    });
   }
 
   // 讀取店家資訊
@@ -530,14 +562,11 @@ export class FollowGroupComponent {
         const normalized = this.normalizeStoreResponse(res);
         this.store = normalized;
         this.afterLoaded();
-        this.loadExistingOrder(this.groupId, this.userId);
+        
+        // 如果有指定目標用戶，載入該用戶的訂單，否則載入目前登入者的
+        const loadId = this.targetUserId || this.userId;
+        this.loadExistingOrder(this.groupId, loadId);
       });
-
-    // 假資料
-    // const sRes = this.getMockResponse();
-    // this.store = this.normalizeStoreResponse(sRes);
-    // this.afterLoaded();
-    // this.loadExistingOrder(this.groupId, this.userId);
   }
 
   // 套用團資料：解析 tempMenuList / recommendList + 基本防呆
@@ -862,6 +891,15 @@ export class FollowGroupComponent {
   getCategoryName(value: string): string {
     const item = this.category.find((c) => c.value === value);
     return item ? item.name : value;
+  }
+
+  isFast(category: string) {
+    let c = this.getCategoryName(category);
+    if (c === '外送') {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   // 地址帶入GoogleMap ==========================================================
@@ -1832,6 +1870,10 @@ export class FollowGroupComponent {
     window.scrollTo(0, -parseInt(scrollY || '0'));
   }
 
+  ngOnDestroy(): void {
+    this.enableScroll();
+  }
+
   // 處理營業時間 ==============================================
   getGroupedOperatingHours(): Array<{
     dayLabel: string;
@@ -1920,9 +1962,12 @@ export class FollowGroupComponent {
 
   // 建構POST資料
   buildOrderPostPayload(eventsId: number, userId: string): any {
+    const targetUserId = this.targetUserId || userId; // 如果有指定目標，就是幫目標下單
+    
     return {
       eventsId,
-      userId,
+      userId: targetUserId,
+      actingUserId: this.userId, // 當前操作者 (可能是自己，也可能是團長)
       menuList: this.orderItems.map((it) => ({
         menuId: it.menuId,
         quantity: it.quantity,
@@ -1960,322 +2005,37 @@ export class FollowGroupComponent {
     return [];
   }
 
-  // =========================
-  // 假資料
-  // =========================
-  // getMockGroupResponse(): any {
-  //   return {
-  //     code: 200,
-  //     message: '成功查詢資料',
-  //     groupbuyEvents: [
-  //       {
-  //         id: 8,
-  //         type: '餐廳',
-  //         status: 'OPEN',
-  //         hostId: '16c88406-e303-454d-bf60-508eb0f6ba83',
-  //         nickname: '王大明',
-  //         eventName:
-  //           '快來買快來買快來買快來買快來買快來買快來買快來買快來買快來買快來買快來買快來買',
-  //         shippingFee: 0,
-  //         limitation: 200,
-  //         splitType: 'EQUAL',
-  //         endTime: '2026-02-20T21:20:30',
-  //         announcement:
-  //           '每杯買二送一～每杯買二送一～每杯買二送一～每杯買二送一～每杯買二送一～',
-  //         storesId: 70,
-  //         recommendList: '[123,124]',
-  //         tempMenuList: '[122,123,124]',
-  //         recommendDescription:
-  //           '強推雞尾酒強推雞尾酒強推雞尾酒強推雞尾酒強推雞尾酒強推雞尾酒強推雞尾酒強推雞尾酒強推雞尾酒強推雞尾酒強推雞尾酒強推雞尾酒強推雞尾酒強推雞尾酒',
-  //         totalOrderAmount: 100,
-  //         deleted: 0,
-  //       },
-  //     ],
-  //   };
-  // }
-
-  // getMockResponse(): any {
-  //   return {
-  //     code: 200,
-  //     message: '成功',
-  //     storeList: [
-  //       {
-  //         id: 70,
-  //         name: '微醺之夜餐酒館 (Vibe Night)',
-  //         phone: '0423218888',
-  //         address: '台中市西區公益路二段99號',
-  //         category: 'fast',
-  //         type: '異國料理',
-  //         memo: '本館提供頂級松露料理與特調調酒，週五六提供深夜駐唱。',
-  //         image:
-  //           'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=1200',
-  //         feeDescription:
-  //           '[{"km":1,"fee":0},{"km":3,"fee":45},{"km":7,"fee":85},{"km":15,"fee":150}]',
-  //         deleted: false,
-  //         publish: true,
-  //         force_closed: false,
-  //         created_by: 'SystemManager',
-  //       },
-  //     ],
-  //     operatingHoursVoList: [
-  //       {
-  //         id: 61,
-  //         storesId: 70,
-  //         week: 1,
-  //         openTime: '11:00:00',
-  //         closeTime: '14:30:00',
-  //         closed: false,
-  //       },
-  //       {
-  //         id: 62,
-  //         storesId: 70,
-  //         week: 1,
-  //         openTime: '17:30:00',
-  //         closeTime: '22:00:00',
-  //         closed: false,
-  //       },
-  //       {
-  //         id: 63,
-  //         storesId: 70,
-  //         week: 2,
-  //         openTime: '11:00:00',
-  //         closeTime: '22:00:00',
-  //         closed: false,
-  //       },
-  //       {
-  //         id: 64,
-  //         storesId: 70,
-  //         week: 3,
-  //         openTime: '00:00:00',
-  //         closeTime: '00:00:00',
-  //         closed: true,
-  //       },
-  //       {
-  //         id: 65,
-  //         storesId: 70,
-  //         week: 4,
-  //         openTime: '11:00:00',
-  //         closeTime: '22:00:00',
-  //         closed: false,
-  //       },
-  //       {
-  //         id: 68,
-  //         storesId: 70,
-  //         week: 5,
-  //         openTime: '18:00:00',
-  //         closeTime: '02:00:00',
-  //         closed: false,
-  //       },
-  //       {
-  //         id: 69,
-  //         storesId: 70,
-  //         week: 6,
-  //         openTime: '18:00:00',
-  //         closeTime: '04:00:00',
-  //         closed: false,
-  //       },
-  //       {
-  //         id: 70,
-  //         storesId: 70,
-  //         week: 7,
-  //         openTime: '18:00:00',
-  //         closeTime: '00:00:00',
-  //         closed: false,
-  //       },
-  //     ],
-  //     menuVoList: [
-  //       {
-  //         id: 122,
-  //         storesId: 70,
-  //         categoryId: 1,
-  //         name: '松露金箔薯條',
-  //         description: '選用義大利頂級松露油與食用金箔裝飾',
-  //         basePrice: 220,
-  //         image:
-  //           'aHR0cHM6Ly9pbWdjZG4uY25hLmNvbS50dy93d3cvV2ViUGhvdG9zLzEwMjQvMjAyMTA3MjcvMTAyNHgxMDI0XzM3OTQyMDUzOTA4NS5qcGc=',
-  //         available: false,
-  //       },
-  //       {
-  //         id: 123,
-  //         storesId: 70,
-  //         categoryId: 1,
-  //         name: '紐奧良辣味雞翅翅翅翅翅翅翅',
-  //         description:
-  //           '獨家秘製辛香料，鮮嫩多汁。獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁獨家秘製辛香料，鮮嫩多汁',
-  //         basePrice: 280,
-  //         image:
-  //           'aHR0cHM6Ly9pbWFnZS1jZG4tZmxhcmUucWRtLmNsb3VkL3E2MDgxYzRmODFmMDFhL2ltYWdlL2RhdGEvJUU1JTk1JTg2JUU1JTkzJTgxJUU3JTg1JUE3JUU3JTg5JTg3LzEyXyVFNyVCNCU5MCVFNSVBNSVBNyVFOCU4OSVBRiVFOCVCRSVBMyVFNyVCRiU4NS8qJUU3JTk0JUEyJUU1JTkzJTgxJUU1JTlDJTk2LSVFNyVCNCU5MCVFNSVBNSVBNyVFOCU4OSVBRiVFOSU5QiU5RSVFNyVCRiU4NTAzLmpwZw==',
-  //         available: true,
-  //         unusual: {
-  //           '24': 'true',
-  //         },
-  //       },
-  //       {
-  //         id: 124,
-  //         storesId: 70,
-  //         categoryId: 59,
-  //         name: '午夜藍色夏威夷',
-  //         description: '伏特加基底搭配藍柑橘糖漿，口感清爽',
-  //         basePrice: 350,
-  //         image:
-  //           'aHR0cHM6Ly9hc3NldHMudG1lY29zeXMuY29tL2ltYWdlL3VwbG9hZC90X3dlYl9yZHBfcmVjaXBlXzU4NHg0ODBfMV81eC9pbWcvcmVjaXBlL3Jhcy9Bc3NldHMvOTA5REEyRjItODczOS00Mjk3LTkyQjAtMUQ4NkM5MjExMjMyL0Rlcml2YXRlcy8xMTZjZGIwNC05NDczLTQzZDAtOWVmZC1kOWY2ZjU5ZGZmYTMuanBn',
-  //         available: true,
-  //         unusual: {
-  //           '22': 'true',
-  //           '23': 'true',
-  //         },
-  //       },
-  //       {
-  //         id: 125,
-  //         storesId: 70,
-  //         categoryId: 58,
-  //         name: '深夜炸物大三元',
-  //         description: '包含雞塊、洋蔥圈、起司條',
-  //         basePrice: 450,
-  //         available: true,
-  //         unusual: {
-  //           '24': 'true',
-  //         },
-  //       },
-  //     ],
-  //     menuCategoriesVoList: [
-  //       {
-  //         id: 158,
-  //         storesId: 70,
-  //         name: '人氣單點小物',
-  //       },
-  //       {
-  //         id: 159,
-  //         storesId: 70,
-  //         name: '深夜炸物拼盤',
-  //         priceLevel: [
-  //           {
-  //             name: '雙人分享',
-  //             price: 250,
-  //           },
-  //           {
-  //             name: '派對特大',
-  //             price: 450,
-  //           },
-  //         ],
-  //       },
-  //       {
-  //         id: 160,
-  //         storesId: 70,
-  //         name: '特調調酒系列',
-  //         priceLevel: [
-  //           {
-  //             name: '標準',
-  //             price: 0,
-  //           },
-  //           {
-  //             name: '濃縮加強',
-  //             price: 200,
-  //           },
-  //         ],
-  //       },
-  //     ],
-  //     productOptionGroupsVoList: [
-  //       {
-  //         id: 145,
-  //         storesId: 70,
-  //         name: '基酒更換',
-  //         required: false,
-  //         maxSelection: 1,
-  //         items: [
-  //           { id: 47, groupId: 22, name: '換成琴酒 (Gin)', extraPrice: 50 },
-  //           { id: 48, groupId: 22, name: '換成伏特加 (Vodka)', extraPrice: 30 },
-  //           {
-  //             id: 55,
-  //             groupId: 22,
-  //             name: '換成威士忌 (Whisky)',
-  //             extraPrice: 80,
-  //           },
-  //         ],
-  //       },
-  //       {
-  //         id: 146,
-  //         storesId: 70,
-  //         name: '冰塊份量',
-  //         required: true,
-  //         maxSelection: 1,
-  //         items: [
-  //           { id: 49, groupId: 23, name: '正常冰', extraPrice: 0 },
-  //           { id: 50, groupId: 23, name: '少冰', extraPrice: 0 },
-  //           { id: 51, groupId: 23, name: '去冰', extraPrice: 0 },
-  //         ],
-  //       },
-  //       {
-  //         id: 144,
-  //         storesId: 70,
-  //         name: '加價沾醬 (可多選)',
-  //         required: false,
-  //         maxSelection: 3,
-  //         items: [
-  //           { id: 52, groupId: 24, name: '蜂蜜芥末醬', extraPrice: 20 },
-  //           { id: 53, groupId: 24, name: '松露蛋黃醬', extraPrice: 40 },
-  //           { id: 54, groupId: 24, name: '泰式酸辣醬', extraPrice: 20 },
-  //         ],
-  //       },
-  //     ],
-  //     feeDescriptionVoList: [
-  //       { km: 1, fee: 0 },
-  //       { km: 3, fee: 45 },
-  //       { km: 5, fee: 65 },
-  //       { km: 7, fee: 85 },
-  //       { km: 10, fee: 110 },
-  //       { km: 15, fee: 150 },
-  //     ],
-  //   };
-  // }
-
-  // 取得既存訂單資料（假資料）
-  // getMockOrderResponse(): any {
-  //   // 模擬未有既存資料
-  //   // return {
-  //   //   code: 404,
-  //   //   message: '未找到資料',
-  //   // };
-
-  //   // 模擬已有既存資料
-  //   return {
-  //     code: 0,
-  //     message: 'OK',
-  //     // 其他欄位先不管
-  //     groupbuyEvents: [],
-  //     orders: [],
-  //     personalOrder: [],
-  //     menuList: [],
-  //     groupsSearchViewList: [],
-  //     ordersSearchViewList: [],
-  //     cartData: [],
-  //     // 只要這個
-  //     ordersDto: {
-  //       eventsId: 8,
-  //       userId: 'string',
-  //       menuList: [
-  //         {
-  //           menuId: 124,
-  //           quantity: 1,
-  //           specName: '標準',
-  //           selectedOptionList: [
-  //             { optionName: '冰塊', value: '少冰' },
-  //             {
-  //               optionName: '基酒更換',
-  //               value: '換成伏特加 (Vodka)',
-  //               extraPrice: 30,
-  //             },
-  //           ],
-  //         },
-  //       ],
-  //       personalMemo: '要吸管',
-  //       weight: 0.1,
-  //     },
-  //   };
-  // }
-
-  // 測試用變數
-  test = {};
+  popular: any[] = [];
+  // 取得熱門餐點
+  loadPopular(storeId: number) {
+    this.http
+      .getApi(
+        `http://localhost:8080/gogobuy/salesStats/top10/${storeId}?type=MONTHLY`,
+      )
+      .subscribe({
+        next: (res: any) => {
+          console.log(res);
+          if (res?.code === 200) {
+            const pop = res.salesDetailList || [];
+            if (pop && pop.length > 0) {
+              // map只會取key值不重複的
+              this.popular = Array.from(
+                new Map(pop.map((item: any) => [item.menuId, item])).values(),
+              ).slice(0, 3); // 取最多3個但少於也不會報錯
+            }
+            console.log(this.popular);
+            this.isLoading = false;
+          }
+        },
+        error: () => {
+          console.log('熱門產品取得失敗');
+        },
+      });
+  }
+  // 判斷是不是熱門商品
+  isPopular(menuId: number) {
+    return this.popular.some((i) => i.menuId === menuId);
+  }
 }
 
 // 團的資料的interface
