@@ -100,24 +100,20 @@
   0%, 100% { transform: scaleX(1); }
   50% { transform: scaleX(-1); }
 }
-
 .flipping {
   /* 0.4s 快速翻轉，增加「搜尋中」的急迫感 */
   animation: fast-flip 1s infinite linear;
   background-color: #cc7a5c !important; /* 確保讀取時背景不變透明 */
   color: white !important;
 }
-
 /* 2. 原本的未定位彈跳動畫 (維持你之前的需求) */
 @keyframes mega-bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-12px); }
 }
-
 .super-bounce {
   animation: mega-bounce 0.8s infinite ease-in-out;
 }
-
 /* 確保圖示置中 */
 .pi-map-marker {
   /* 有些版本圖示位置稍微偏上，微調它 */

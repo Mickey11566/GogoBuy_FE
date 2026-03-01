@@ -125,7 +125,7 @@
             <div class="div-content">
               <div class="w-full ml-8 my-4">
                 <label>
-                  <input type="checkbox" class="w-4 h-4 rounded border-gray-300 mr-4" [checked]="useAll"
+                  <input type="checkbox" class="w-4 h-4 rounded border-gray-300 mr-4" [(ngModel)]="useAll"
                     (change)="useAllChange($event)">
                   <span class="text-md md:text-lg">套用所有品項</span>
                 </label>
@@ -355,12 +355,12 @@
                       <button type="button" (click)="getGeolocation()" [disabled]="isLoadingLocation"
                         class="flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
                         <i class="pi pi-map-marker"
-                          [class.super-bounce]="!isLoadingLocation && !currentLocation"
+                          [class.super-bounce]="!isLoadingLocation && !currentLocation && !pickLocation"
                           [class.flipping]="isLoadingLocation"
                           [style.background-color]="'#cc7a5c'" [style.color]="'#fff'"
                           style="cursor: pointer; display: inline-flex; align-items: center;
-                                  justify-content: center; border-radius: 50%; font-size: 1.2rem;
-                                  transition: all 0.3s ease-in-out;
+                                  justify-content: center; border-radius: 50%; font-size: 1rem;
+                                  transition: all 0.3s ease-in-out; width:24px; height:24px;
                                   box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         </i>
                       </button>
@@ -373,8 +373,9 @@
                   <div class="flex-1 flex flex-col border border-gray-300 rounded-r-md bg-white">
                     <p-floatlabel variant="on" autocomplete="off" (click)="op.toggle($event)">
                       <input type="text" class="outline-none w-full p-2 pl-3 rounded-r-md transition-all bg-white
-                      focus:!border-1 focus:!border-[#662222]" (keyup.enter)="searchLocation($event)"
-                        [class.p-filled]="!!pickLocation" [(ngModel)]="pickLocation" maxlength="50" />
+                            focus:!border-1 focus:!border-[#662222]"
+                            (keydown.enter)="searchLocation($event);$event.preventDefault()"
+                            [class.p-filled]="!!pickLocation" [(ngModel)]="pickLocation" maxlength="100" />
                       <label>取貨地點</label>
                     </p-floatlabel>
                   </div>
@@ -553,7 +554,6 @@
 
 
 
-
 <!-- <p-dialog [(visible)]="openDialog" appendTo="body" [modal]="true">
   <h2 class="text-xl font-bold text-[#662222] border-b-2 border-dashed border-[#662222] pb-2 mb-4">
     運費拆帳計算說明聲明
@@ -605,3 +605,59 @@
     </div>
   </div>
 </p-dialog> -->
+
+<p-dialog [(visible)]="openDisclaimer" appendTo="body" [modal]="true" [style]="{width: '90vw', maxWidth: '500px'}" [closable]="false">
+  <h2 class="text-xl font-bold text-[#662222] border-b-2 border-dashed border-[#662222] pb-2 mb-4 flex items-center gap-2">
+    <i class="pi pi-exclamation-triangle"></i> 平台開團服務免責聲明
+  </h2>
+
+  <div class="h-80 overflow-y-auto pr-2 text-base text-gray-700 leading-relaxed">
+    <div class="bg-red-50 p-3 rounded-md border-l-4 border-red-500 mb-4 text-red-800 font-bold">
+      請注意：本平台僅提供「訂單媒合與計算」技術服務，不涉及任何金流代收付。
+    </div>
+
+    <div class="space-y-5">
+      <section>
+        <h4 class="font-bold text-gray-900 flex items-center gap-2">
+          <span class="w-2 h-2 bg-[#662222] rounded-full"></span> 1. 開團者付款義務
+        </h4>
+        <p class="pl-4 mt-1 text-gray-600">
+          開團者（主揪）須負擔向店家**先行全額支付**貨款之責任。本平台無義務代為墊付任何款項。
+        </p>
+      </section>
+
+      <section>
+        <h4 class="font-bold text-gray-900 flex items-center gap-2">
+          <span class="w-2 h-2 bg-[#662222] rounded-full"></span> 2. 跟團者收費責任
+        </h4>
+        <p class="pl-4 mt-1 text-gray-600">
+          所有訂單款項之收取，須由**開團者自行聯繫跟團者**進行結清。若產生跑單、欠款或金額爭議，均屬開團者與跟團者間之私人行為。
+        </p>
+      </section>
+
+      <section>
+        <h4 class="font-bold text-gray-900 flex items-center gap-2">
+          <span class="w-2 h-2 bg-[#662222] rounded-full"></span> 3. 糾紛免責聲明
+        </h4>
+        <p class="pl-4 mt-1 text-gray-600">
+          本平台對於交易過程中產生之財物損失、訂單爭議或個人信用風險**不負損害賠償責任**。開團前請務必自行評估跟團成員之誠信狀態。
+        </p>
+      </section>
+
+      <p class="text-sm text-gray-500 italic mt-4">
+        ※ 點擊「我已閱讀並同意」即代表您理解並接受上述責任歸屬。
+      </p>
+    </div>
+  </div>
+
+  <div class="mt-6 pt-4 border-t border-gray-100 flex flex-col gap-3">
+    <button (click)="agreeDisclaimer()"
+      class="w-full py-3 rounded-full font-bold transition-all bg-[#662222] text-white border-1 border-[#662222] hover:scale-[1.02] active:scale-[0.98]">
+      我已確認內容，同意並開團
+    </button>
+    <button (click)="openDisclaimer = false"
+      class="w-full py-2 text-gray-500 text-sm hover:underline">
+      返回修改
+    </button>
+  </div>
+</p-dialog>

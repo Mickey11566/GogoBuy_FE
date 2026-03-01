@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { from, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -67,6 +67,13 @@ export class PositionService {
       }
     });
   }
+  // getAddressFromLocationIQ(lat: number, lng: number) {
+  //   const apiKey = 'pk.de33e27a5637b930bb00211539482209';
+  //   const url = `https://us1.locationiq.com/v1/reverse?key=${apiKey}&lat=${lat}&lon=${lng}&format=json&accept-language=zh-TW`;
+
+  //   // 使用原生 fetch 確保不會被 Angular 全域設定干擾
+  //   return from(fetch(url).then(res => res.json()));
+  // }
 
 
   // 計算兩點間的距離 (公尺)
