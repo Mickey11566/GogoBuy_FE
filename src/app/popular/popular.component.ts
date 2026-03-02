@@ -36,7 +36,7 @@ export class PopularComponent {
   salesDetailList = signal<SalesLeaderboardProjection[]>([]);
 
   // 篩選條件
-  statusFilter = signal<'ALL' | 'YEAR' | 'MONTHLY' | 'WEEKLY' | 'DAILY'>('ALL');
+  statusFilter = signal<'ALL' | 'YEAR' | 'MONTHLY' | 'WEEKLY' | 'DAILY'>('MONTHLY');
 
   // 排行榜資料
   top10List = signal<any[]>([]);
@@ -61,7 +61,7 @@ export class PopularComponent {
   }
 
   loadTop10() {
-    const type = this.statusFilter() == 'MONTHLY' ? undefined : this.statusFilter();
+    const type = this.statusFilter() == 'ALL' ? undefined : this.statusFilter();
     this.popularService.getTop10(type).subscribe({
       next: (res: any) => {
         this.salesDetailList.set(res.salesDetailList ?? []);
