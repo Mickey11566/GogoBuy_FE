@@ -332,8 +332,7 @@
           } @else {
             @for (store of fastStoreList; track $index) {
               @if (activeTab == "allstores" || activeTab == store.type) {
-                <div
-                  class="w-full bg-[#F4E7E1]/50 rounded-xl border border-gray-100 overflow-hidden mt-4 hover:border-2 hover:border-[#662222] hover:scale-[1.01] transition duration-200 active:scale-[0.98]"
+                <div class="w-full bg-[#F4E7E1]/50 rounded-xl border border-gray-100 overflow-hidden mt-4 hover:border-2 hover:border-[#662222] hover:scale-[1.01] transition duration-200 active:scale-[0.98]"
                   (click)="goStoreInfo(store.id)">
                   <div class="flex flex-col sm:flex-row items-stretch sm:items-center">
                     @if(store.isClosed==true){
@@ -566,8 +565,7 @@
             } -->
             @for (store of slowStoreList; track $index) {
               @if (activeTab == "allstores" || activeTab == store.type) {
-                <div
-                  class="w-full bg-[#F4E7E1]/50 rounded-xl border border-gray-100 overflow-hidden mt-4 hover:border-2 hover:border-[#662222] hover:scale-[1.01] transition duration-200 active:scale-[0.98]"
+                <div class="w-full bg-[#e1eef4]/50 rounded-xl border border-gray-100 overflow-hidden mt-4 hover:border-2 hover:border-[#075985] hover:scale-[1.01] transition duration-200 active:scale-[0.98]"
                   (click)="goStoreInfo(store.id)">
                   <div class="flex flex-col sm:flex-row items-stretch sm:items-center">
                     @if(store.isClosed==true){
@@ -596,12 +594,12 @@
                         </p>
                         <div class="flex md:flex-col md:items-end">
                           <span
-                            class="mt-1.25 h-[28px] md:w-fit shrink-0 px-2 py-0.5 rounded text-base bg-[#f0c9b7]/70 text-[#662222] truncate">
+                            class="mt-1.25 h-[28px] md:w-fit shrink-0 px-2 py-0.5 rounded text-base bg-sky-300/30 text-sky-800 truncate">
                             {{ store.type }}
                           </span>
                           <span
-                            class="shrink-0 ml-2 px-2 py-0.5 rounded text-base bg-[#f0c9b7]/70 text-[#662222] flex mt-[5px] min-w-[77px]">
-                            <div class="delivery-icon -scale-x-100" style="background-color: #662222"></div>
+                            class="shrink-0 ml-2 px-2 py-0.5 rounded text-base bg-sky-300/30 text-sky-800 flex mt-[5px] min-w-[77px]">
+                            <div class="delivery-icon -scale-x-100" style="background-color: #075985"></div>
                             &nbsp;團購
                           </span>
                         </div>
