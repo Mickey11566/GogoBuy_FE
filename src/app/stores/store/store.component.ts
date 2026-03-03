@@ -243,7 +243,7 @@ export class StoreComponent {
     this.activeEventsByStoreId = this.storeService.activeEventsByStoreId;
 
     if (this.id !== 0) {
-      this.http.getApi(`http://localhost:8080/gogobuy/store/searchId?id=${this.id}`)
+      this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/searchId?id=${this.id}`)
         .subscribe((res: any) => {
           console.log('res', res);
 
@@ -267,7 +267,7 @@ export class StoreComponent {
             this.newSpecId = this.storeData.productOptionGroupsVoList.length + 1;
             this.newCateId = this.storeData.menuCategoriesVoList.length + 1;
           }
-          
+
           this.syncIdCounters();
         });
     }
@@ -1083,13 +1083,13 @@ export class StoreComponent {
           productOptionGroupsVoList: this.storeData.productOptionGroupsVoList
         }
         console.log("payload(create):", payload);
-        this.http.postApi('http://localhost:8080/gogobuy/store/create', payload)
+        this.http.postApi(`${this.http.BASE_URL}/gogobuy/store/create`, payload)
           .subscribe({
             next: (res: any) => {
               console.log("create store:", res);
               if (res.code === 200) {
 
-                this.http.getApi('http://localhost:8080/gogobuy/store/all').subscribe((all: any) => {
+                this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/all`).subscribe((all: any) => {
                   const myStores = all.storeList.filter((s: any) => s.createdBy === this.userId);
                   if (myStores && myStores.length > 0) {
                     const latestStore = myStores.reduce((prev: any, current: any) => (prev.id > current.id) ? prev : current);
@@ -1097,8 +1097,8 @@ export class StoreComponent {
 
                     // 如果是許願池來的，通知對應許願者與跟隨者
                     if (this.wishId) {
-                      const targetUrl = `http://localhost:4200/management/store_info/${this.id}`;
-                      const finishUrl = `http://localhost:8080/gogobuy/wish/finish_wish?id=${this.wishId}&userId=${this.userId}&targetUrl=${encodeURIComponent(targetUrl)}`;
+                      const targetUrl = `${window.location.origin}/management/store_info/${this.id}`;
+                      const finishUrl = `${this.http.BASE_URL}/gogobuy/wish/finish_wish?id=${this.wishId}&userId=${this.userId}&targetUrl=${encodeURIComponent(targetUrl)}`;
                       this.http.postApi(finishUrl, {}).subscribe({
                         next: () => console.log('願望結案通知成功'),
                         error: (err) => console.error('願望結案通知失敗', err)
@@ -1193,7 +1193,7 @@ export class StoreComponent {
     }
     console.log("payload(update):", payload);
 
-    this.http.postApi(`http://localhost:8080/gogobuy/store/update?id=${this.storeData.id}`, payload)
+    this.http.postApi(`${this.http.BASE_URL}/gogobuy/store/update?id=${this.storeData.id}`, payload)
       .subscribe({
         next: (res: any) => {
           if (res.code === 200) {

@@ -111,7 +111,7 @@ export class AuthService {
     if (!userId) {
       return;
     }
-    this.https.getApi(`http://localhost:8080/gogobuy/user/get-user?id=${userId}`).subscribe({
+    this.https.getApi(`${this.https.BASE_URL}/gogobuy/user/get-user?id=${userId}`).subscribe({
       next: (res: any) => {
         const userData = res;
         localStorage.setItem('user_avatar_url', res.avatarUrl);
@@ -132,7 +132,7 @@ export class AuthService {
   // (2) 再呼叫 refreshUser() 取得「完整使用者資料」
   // (3) 最後導回 returnUrl() (登入時若點選的是用戶首頁，登入後返回用戶首頁)
   login(payload: any) {
-    this.https.postApi('http://localhost:8080/gogobuy/user/login', payload)
+    this.https.postApi(`${this.https.BASE_URL}/gogobuy/user/login`, payload)
       .subscribe({
         next: (res: any) => {
           if (res.code == 200) {
@@ -193,7 +193,7 @@ export class AuthService {
 
   // 登出API
   logout() {
-    this.https.postApi('http://localhost:8080/gogobuy/user/logout', { withCredentials: true })
+    this.https.postApi(`${this.https.BASE_URL}/gogobuy/user/logout`, { withCredentials: true })
       .subscribe(() => {
         this.user = null;
         this.userSubject.next(null);
@@ -216,17 +216,14 @@ export class AuthService {
   // 註冊API
   register(payload: any) {
     return this.https.postApi(
-      'http://localhost:8080/gogobuy/user/registration',
+      `${this.https.BASE_URL}/gogobuy/user/registration`,
       payload
     );
   }
 
-
-
-
   // 修改用戶資訊 (暱稱、大頭貼、載具)
   updateProfile(id: string, updateDto: any) {
-    const url = `http://localhost:8080/gogobuy/user/change-profile?id=${id}`;
+    const url = `${this.https.BASE_URL}/gogobuy/user/change-profile?id=${id}`;
 
     return this.https.patchApi(url, updateDto).pipe(
       tap((res: any) => {
@@ -254,7 +251,7 @@ export class AuthService {
   changePassword(password: any) {
     const userId = this.user?.id;
     this.https
-      .postApi(`http://localhost:8080/gogobuy/user/change-password?id=${userId}`, password)
+      .postApi(`${this.https.BASE_URL}/gogobuy/user/change-password?id=${userId}`, password)
       .subscribe({
         next: (res: any) => {
           Swal.fire('密碼修改成功，請重新登入');
@@ -273,7 +270,7 @@ export class AuthService {
       newPassword: newPassword
     };
 
-    return this.https.putApi(`http://localhost:8080/gogobuy/user/reset-password`, req);
+    return this.https.putApi(`${this.https.BASE_URL}/gogobuy/user/reset-password`, req);
   }
 
 
@@ -289,7 +286,7 @@ export class AuthService {
 
     const body = { email: userEmail };
 
-    const url = `http://localhost:8080/gogobuy/user/send-otp?id=${userId}`;
+    const url = `${this.https.BASE_URL}/gogobuy/user/send-otp?id=${userId}`;
 
     this.https.postApi(url, body).subscribe({
       next: (res) => {
@@ -303,12 +300,12 @@ export class AuthService {
 
   //根據email發送OTP驗證碼
   sendOtpEmail(email: string) {
-    return this.https.postApi(`http://localhost:8080/gogobuy/user/send-otp-email`, email);
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/user/send-otp-email`, email);
   }
 
   // 確認OTP驗證碼並更改email
   emailVerify(id: string, newEmail: string, otpCode: string) {
-    const url = `http://localhost:8080/gogobuy/user/email-verify?id=${id}`;
+    const url = `${this.https.BASE_URL}/gogobuy/user/email-verify?id=${id}`;
 
     const body = {
       newEmail: newEmail,
@@ -324,7 +321,7 @@ export class AuthService {
       phone: phone
     };
 
-    const url = `http://localhost:8080/gogobuy/user/connect-phone?id=${id}`;
+    const url = `${this.https.BASE_URL}/gogobuy/user/connect-phone?id=${id}`;
 
     return this.https.postApi(url, req.phone);
   }
@@ -424,31 +421,31 @@ export class AuthService {
 
   // 取得全部店家
   getallstore() {
-    return this.https.getApi(`http://localhost:8080/gogobuy/store/all`);
+    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/store/all`);
   }
 
   // 搜尋店家
   searchStores(name: string) {
     const encodedName = encodeURIComponent(name);
-    return this.https.getApi(`http://localhost:8080/gogobuy/store/searchName?name=${encodedName}`);
+    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/store/searchName?name=${encodedName}`);
   }
 
   // 查詢開團者暱稱搜尋團
   getGroupbuyEventByName(hostNickname: string) {
     const encoded = encodeURIComponent(hostNickname);
     return this.https.getApi(
-      `http://localhost:8080/gogobuy/event/getGroupbuyEventByNickname?host_nickname=${encoded}`
+      `${this.https.BASE_URL}/gogobuy/event/getGroupbuyEventByNickname?host_nickname=${encoded}`
     );
   }
 
   // 查詢全部開團
   getallevent() {
-    return this.https.getApi(`http://localhost:8080/gogobuy/event/getAll`);
+    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/event/getAll`);
   }
 
   // 查詢全部user
   getAllUser() {
-    return this.https.getApi(`http://localhost:8080/gogobuy/user/get-all-user`);
+    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/user/get-all-user`);
   }
 
   // 搜尋附近商家(座標或地址)
@@ -459,7 +456,7 @@ export class AuthService {
     if (address) qs.push(`address=${encodeURIComponent(address)}`);
     qs.push(`radius=${encodeURIComponent(String(radius))}`);
 
-    return this.https.getApi(`http://localhost:8080/gogobuy/store/searchNearby?${qs.join('&')}`);
+    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/store/searchNearby?${qs.join('&')}`);
   }
 
   loadNearbyByGeo(lat: number, lng: number, radius: number = 5) {
@@ -493,15 +490,12 @@ export class AuthService {
     this.filterEventsByStoreIds(list.map((x: any) => x.id));
   }
 
-
-  // ==================== 管理者功能 API ====================
-
   /**
    * 軟刪除店家
    * POST gogobuy/store/delete?id={id}
    */
   softDeleteStore(id: number) {
-    return this.https.postApi(`http://localhost:8080/gogobuy/store/delete?id=${id}`, {});
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/store/delete?id=${id}`, {});
   }
 
   /**
@@ -509,7 +503,7 @@ export class AuthService {
    * POST gogobuy/store/fulldelete?id={id}
    */
   hardDeleteStore(id: number) {
-    return this.https.postApi(`http://localhost:8080/gogobuy/store/fulldelete?id=${id}`, {});
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/store/fulldelete?id=${id}`, {});
   }
 
   /**
@@ -517,7 +511,7 @@ export class AuthService {
    * POST gogobuy/store/update?id={id}
    */
   updateStore(id: number, payload: any) {
-    return this.https.postApi(`http://localhost:8080/gogobuy/store/update?id=${id}`, payload);
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/store/update?id=${id}`, payload);
   }
 
   /**
@@ -525,7 +519,7 @@ export class AuthService {
    * POST gogobuy/event/closeEvent?id={id}&host_id={hostId}
    */
   forceCloseEvent(id: number, hostId: string) {
-    return this.https.postApi(`http://localhost:8080/gogobuy/event/closeEvent?id=${id}&host_id=${hostId}`, {});
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/event/closeEvent?id=${id}&host_id=${hostId}`, {});
   }
 
   /**
@@ -533,7 +527,7 @@ export class AuthService {
    * POST gogobuy/event/deleteEventPhysically?id={id}
    */
   deleteEventPhysically(id: number) {
-    return this.https.postApi(`http://localhost:8080/gogobuy/event/deleteEventPhysically?id=${id}`, {});
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/event/deleteEventPhysically?id=${id}`, {});
   }
 
   /**
@@ -541,7 +535,7 @@ export class AuthService {
    * GET gogobuy/event/getOrdersView?event_id={id}
    */
   getEventOrderView(eventId: number) {
-    return this.https.getApi(`http://localhost:8080/gogobuy/event/getOrdersView?event_id=${eventId}`);
+    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/event/getOrdersView?event_id=${eventId}`);
   }
 
   /**
@@ -549,7 +543,7 @@ export class AuthService {
    * POST gogobuy/ban-user?id={userId}
    */
   banUser(userId: string) {
-    return this.https.postApi(`http://localhost:8080/gogobuy/ban-user?id=${userId}`, {});
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/ban-user?id=${userId}`, {});
   }
 
   /**
@@ -557,6 +551,6 @@ export class AuthService {
    * POST gogobuy/active-user?id={userId}
    */
   activeUser(userId: string) {
-    return this.https.postApi(`http://localhost:8080/gogobuy/active-user?id=${userId}`, {});
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/active-user?id=${userId}`, {});
   }
 }

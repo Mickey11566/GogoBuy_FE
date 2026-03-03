@@ -17,7 +17,7 @@ export class PopularService {
     }
 
     return this.https.getApi(
-      'http://localhost:8080/gogobuy/salesStats/Top10',
+      `${this.https.BASE_URL}/gogobuy/salesStats/Top10`,
       { params }
     );
   }

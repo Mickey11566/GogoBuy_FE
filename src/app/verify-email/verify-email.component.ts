@@ -27,8 +27,9 @@ export class VerifyEmailComponent {
       return;
     }
 
+    const baseUrl = `${window.location.protocol}//${window.location.hostname}:8080`;
     // 發送至 Spring Boot API
-    this.http.get(`http://localhost:8080/gogobuy/user/active-account?token=${token}`)
+    this.http.get(`${baseUrl}/gogobuy/user/active-account?token=${token}`)
       .subscribe({
         next: (res: any) => {
           if (res.code === 200) {
@@ -73,7 +74,8 @@ export class VerifyEmailComponent {
         allowOutsideClick: false
       });
 
-      this.http.get(`http://localhost:8080/gogobuy/user/resend-active-account?email=${email}`)
+      const baseUrl = `${window.location.protocol}//${window.location.hostname}:8080`;
+      this.http.get(`${baseUrl}/gogobuy/user/resend-active-account?email=${email}`)
         .subscribe({
           next: (res: any) => {
             if (res.code === 200) {

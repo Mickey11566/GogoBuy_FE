@@ -87,7 +87,7 @@ export class PersonInfoComponent {
         allowOutsideClick: false
       });
 
-      this.http.postApi(`http://localhost:8080/gogobuy/user/suspend?id=${this.auth.user.id}`, {})
+      this.http.postApi(`${this.http.BASE_URL}/gogobuy/user/suspend?id=${this.auth.user.id}`, {})
         .subscribe({
           next: (res: any) => {
             if (res.code === 200) {

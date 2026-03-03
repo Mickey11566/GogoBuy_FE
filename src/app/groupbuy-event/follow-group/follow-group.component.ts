@@ -377,7 +377,7 @@ export class FollowGroupComponent implements OnDestroy {
     // =========================
     // 正式接 API 時
     // =========================
-    const url = `http://localhost:8080/gogobuy/event/getAllOrdersByUserIdAndEventsId?user_id=${userId}&events_id=${groupId}`;
+    const url = `${this.http.BASE_URL}/gogobuy/event/getAllOrdersByUserIdAndEventsId?user_id=${userId}&events_id=${groupId}`;
     this.http.getApi(url).subscribe({
       next: (res: any) => {
         const parsed = this.parseGetOrderResponse(res);
@@ -527,7 +527,8 @@ export class FollowGroupComponent implements OnDestroy {
     // GROUP（後端上線後使用）
     this.http
       .getApi(
-        `http://localhost:8080/gogobuy/event/getEventsByEventsId?id=${id}`,
+        `${this.http.BASE_URL}/gogobuy/event/getEventsByEventsId?id=${id}`,
+        { withCredentials: true }
       )
       .subscribe((res: any) => {
         const g = res?.groupbuyEvents?.[0] as GroupbuyEvents | undefined;
@@ -574,7 +575,7 @@ export class FollowGroupComponent implements OnDestroy {
 
     // 後端上線後使用
     this.http
-      .getApi(`http://localhost:8080/gogobuy/store/searchId?id=${id}`)
+      .getApi(`${this.http.BASE_URL}/gogobuy/store/searchId?id=${id}`)
       .subscribe((res: any) => {
         const normalized = this.normalizeStoreResponse(res);
         this.store = normalized;
@@ -722,7 +723,7 @@ export class FollowGroupComponent implements OnDestroy {
   }
 
   refreshGroupAmount(): void {
-    const url = `http://localhost:8080/gogobuy/event/getEventsByEventsId?id=${this.groupId}`;
+    const url = `${this.http.BASE_URL}/gogobuy/event/getEventsByEventsId?id=${this.groupId}`;
 
     this.http.getApi(url).subscribe({
       next: (res: any) => {
@@ -883,7 +884,7 @@ export class FollowGroupComponent implements OnDestroy {
     const payload = this.buildOrderPostPayload(eventsId, userId);
 
     // 正式接 API
-    const url = 'http://localhost:8080/gogobuy/event/addOrders';
+    const url = `${this.http.BASE_URL}/gogobuy/event/addOrders`;
 
     this.http.postApi<any>(url, payload).subscribe({
       next: (res) => {
@@ -2046,7 +2047,7 @@ export class FollowGroupComponent implements OnDestroy {
   loadPopular(storeId: number) {
     this.http
       .getApi(
-        `http://localhost:8080/gogobuy/salesStats/top10/${storeId}?type=YEAR`,
+        `${this.http.BASE_URL}/gogobuy/salesStats/top10/${storeId}?type=YEAR`,
       )
       .subscribe({
         next: (res: any) => {

@@ -127,7 +127,7 @@ export class LoginComponent {
   loginWithGoogle() {
     const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/gogobuy';
     sessionStorage.setItem('google_return_url', returnUrl);
-    window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+    window.location.href = `${this.http.BASE_URL}/oauth2/authorization/google`;
   }
 
   // 登入API
