@@ -59,7 +59,6 @@ export class PositionService {
   getAddressFromOSM(lat: number, lng: number) {
     // 加入 zoom=18 確保拿到街道與門牌
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=zh-TW`;
-
     return this.http.get<any>(url, {
       withCredentials: false,
       headers: {
