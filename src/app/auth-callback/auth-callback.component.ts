@@ -58,7 +58,7 @@ export class AuthCallbackComponent implements OnInit {
   }
 
   async ngOnInit() {
-    this.http.getApi('http://localhost:8080/gogobuy/user/oauth').subscribe({
+    this.http.getApi(`${this.http.BASE_URL}/gogobuy/user/oauth`).subscribe({
       next: async (res: any) => {
         if (!res) {
           Swal.fire('登入異常', '後端沒有回傳使用者資料', 'error');

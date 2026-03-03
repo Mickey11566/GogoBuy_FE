@@ -244,7 +244,7 @@ export class GogoBuyComponent implements OnInit {
       this.auths.performSearch('');
     }
 
-    this.http.getApi('http://localhost:8080/gogobuy/store/all').subscribe((res: any) => {
+    this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/all`).subscribe((res: any) => {
       const rawData = res.storeList || [];
       this.storeList = rawData.map((store: any) => {
         let parsedFees: FeeDescriptionVoList[] = [];
@@ -279,7 +279,7 @@ export class GogoBuyComponent implements OnInit {
     const allStoreIds = currentStores.map(s => s.id);
     const payload = { filteredStoreIds: allStoreIds };
 
-    this.http.postApi('http://localhost:8080/gogobuy/store/getOperatingStores', payload)
+    this.http.postApi(`${this.http.BASE_URL}/gogobuy/store/getOperatingStores`, payload)
       .subscribe({
         next: (res: any) => {
           if (res.code === 200 && res.storeOperatingList) {
@@ -772,7 +772,7 @@ export class GogoBuyComponent implements OnInit {
     } else {
       this.favoriteIds = [...this.favoriteIds, storeId];
     }
-    const urlWithParams = `http://localhost:8080/gogobuy/updateFavoriteStore?id=${this.userId}&storesList=${storeId}`;
+    const urlWithParams = `${this.http.BASE_URL}/gogobuy/updateFavoriteStore?id=${this.userId}&storesList=${storeId}`;
     this.http.postApi(urlWithParams, {}).subscribe({
       next: (res: any) => {
         if (res?.code === 200) {

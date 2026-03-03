@@ -84,7 +84,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
     private http: HttpService,
     private auth: AuthService,
     private messageService: MessageService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // userId（測試塞假id）
@@ -139,7 +139,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
     } else {
       this.favoriteIds = [...this.favoriteIds, storeId];
     }
-    const urlWithParams = `http://localhost:8080/gogobuy/updateFavoriteStore?id=${this.userId}&storesList=${storeId}`;
+    const urlWithParams = `${this.http.BASE_URL}/gogobuy/updateFavoriteStore?id=${this.userId}&storesList=${storeId}`;
     this.http.postApi(urlWithParams, {}).subscribe({
       next: (res: any) => {
         if (res?.code === 200) {
@@ -172,7 +172,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
   loadPopular(storeId: number) {
     this.http
       .getApi(
-        `http://localhost:8080/gogobuy/salesStats/top10/${storeId}?type=YEAR`,
+        `${this.http.BASE_URL}/gogobuy/salesStats/top10/${storeId}?type=YEAR`,
       )
       .subscribe({
         next: (res: any) => {
@@ -212,7 +212,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
   isEventOpen(storeId: number) {
     this.http
       .getApi(
-        `http://localhost:8080/gogobuy/event/getGroupbuyEventByStoresId?stores_id=${storeId}`,
+        `${this.http.BASE_URL}/gogobuy/event/getGroupbuyEventByStoresId?stores_id=${storeId}`,
       )
       .subscribe((res: any) => {
         this.event = res.groupbuyEvents.filter((o: any) => o.status === 'OPEN');
@@ -285,7 +285,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
 
     // 後端上線後使用
     this.http
-      .getApi(`http://localhost:8080/gogobuy/store/searchId?id=${id}`)
+      .getApi(`${this.http.BASE_URL}/gogobuy/store/searchId?id=${id}`)
       .subscribe((res: any) => {
         const normalized = this.normalizeStoreResponse(res);
         this.store = normalized;
@@ -622,7 +622,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
       const decoded = atob(String(img));
       if (decoded.startsWith('http://') || decoded.startsWith('https://'))
         return decoded;
-    } catch {}
+    } catch { }
 
     return this.defaultProductCover;
   }

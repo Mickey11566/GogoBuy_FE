@@ -31,7 +31,8 @@ export class SseService {
 
   constructor(
     private zone: NgZone,
-    public auths: AuthService
+    public auths: AuthService,
+    private https: HttpService
   ) {
     const raw = localStorage.getItem('notifications_cache');
     if (raw) {
@@ -51,7 +52,7 @@ export class SseService {
     this.disconnect();
     this.connectedUserId = userId;
 
-    this.es = new EventSource(`http://localhost:8080/api/sse/subscribe/${userId}`);
+    this.es = new EventSource(`${this.https.BASE_URL}/api/sse/subscribe/${userId}`);
 
     this.es.onopen = () => {
       this.zone.run(() => console.log('[SSE] connected'));
@@ -125,7 +126,7 @@ export class SseService {
   private addNotification(item: any) {
     // 檢查是否已存在 (避免重複)
     if (this.notifications.some(n => n.id === item.id)) return;
-    
+
     this.notifications = [item, ...this.notifications];
     this.cleanup();
     this.emit();

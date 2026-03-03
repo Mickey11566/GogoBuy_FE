@@ -21,29 +21,31 @@ export interface NotifiMesReq {
   userNotificationVoList?: any[];
 }
 
+import { HttpService } from './http.service';
+
 @Injectable({
   providedIn: 'root'
 })
 export class MessageService {
 
-  // 團員公告 API
-  private apiUrl = 'http://localhost:8080/gogobuy/messages';
-
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private https: HttpService
+  ) { }
 
   create(req: NotifiMesReq): Observable<any> {
-    return this.http.post(`${this.apiUrl}/create`, req);
+    return this.http.post(`${this.https.BASE_URL}/gogobuy/messages/create`, req);
   }
 
   // 管理者發送 SSE 公告
   setGlobalNotice(req: { content: string, expiredAt?: string }): Observable<any> {
-    const url = 'http://localhost:8080/api/sse/set-notice';
+    const url = `${this.https.BASE_URL}/api/sse/set-notice`;
     return this.http.post(url, req, { responseType: 'text' });
   }
 
   // 取得公告列表
   getGlobalNoticeHistory(): Observable<any> {
-    const url = 'http://localhost:8080/api/sse/history';
+    const url = `${this.https.BASE_URL}/api/sse/history`;
     return this.http.get(url);
   }
 }

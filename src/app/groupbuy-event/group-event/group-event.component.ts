@@ -261,7 +261,7 @@ export class GroupEventComponent {
 
     //行為判斷：有 storeId 沒 eventId 是新增；有 eventId 沒 storeId 是修改
     if (this.storeId && !this.eventId) {
-      this.http.getApi('http://localhost:8080/gogobuy/store/searchId?id=' + this.storeId).subscribe((res: any) => {
+      this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/searchId?id=${this.storeId}`).subscribe((res: any) => {
         if (res.code == 200) {
           this.getStore(res);
         } else {
@@ -269,9 +269,9 @@ export class GroupEventComponent {
         }
       });
     } else if (this.eventId && !this.storeId) {
-      this.http.getApi('http://localhost:8080/gogobuy/event/getEventsByEventsId?id=' + this.eventId).subscribe((eventRes: any) => {
+      this.http.getApi(`${this.http.BASE_URL}/gogobuy/event/getEventsByEventsId?id=${this.eventId}`).subscribe((eventRes: any) => {
         if (eventRes.code == 200) {
-          this.http.getApi('http://localhost:8080/gogobuy/store/searchId?id=' + eventRes.groupbuyEvents[0].storeId).subscribe((storeRes: any) => {
+          this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/searchId?id=${eventRes.groupbuyEvents[0].storeId}`).subscribe((storeRes: any) => {
             if (storeRes.code == 200) {
               this.getStore(storeRes);
               if (this.userId == eventRes.groupbuyEvents[0].hostId) {
@@ -1111,12 +1111,11 @@ export class GroupEventComponent {
         title: '正在儲存請稍後',
         allowOutsideClick: false,
         showConfirmButton: false,
-        width: '300px',
         didOpen: () => {
           Swal.showLoading();
         }
       });
-      this.http.postApi('http://localhost:8080/gogobuy/event/updateEvent', this.req).subscribe({
+      this.http.postApi(`${this.http.BASE_URL}/gogobuy/event/update?id=${this.eventId}`, this.req).subscribe({
         next: (res: any) => {
           console.log(this.req);
           console.log(res);
@@ -1136,22 +1135,12 @@ export class GroupEventComponent {
     }
   }
   agreeDisclaimer() {
-    this.http.postApi('http://localhost:8080/gogobuy/event/addEvent', this.req).subscribe({
+    this.http.postApi(`${this.http.BASE_URL}/gogobuy/event/create`, this.req).subscribe({
       next: (res: any) => {
         console.log(this.req);
         console.log(res);
         if (res && res.id) {
-          // if (this.wishId) {  // 有許願，先結案再跳轉
-          //   const finishUrl = `http://localhost:8080/gogobuy/wish/finish_wish?id=${this.wishId}&userId=${this.userId}&targetUrl=http://localhost:4200/groupbuy-event/group-follow/${res.id}`;
-          //   this.http.postApi(finishUrl, {}).subscribe({
-          //     next: () => this.router.navigate(['/groupbuy-event/group-follow', res.id]),
-          //     error: (err) => {
-          //       console.error('許願結案失敗', err);
-          //     }
-          //   });
-          // } else {  // 沒有許願，直接跳轉
           this.router.navigate(['/groupbuy-event/group-follow', res.id]);
-          // }
         } else if (res && res.code == 400) {
           const error: string[] = [];
           error.push(res.message);

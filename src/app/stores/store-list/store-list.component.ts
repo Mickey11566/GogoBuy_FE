@@ -265,7 +265,7 @@ export class StoreListComponent {
   fetchOperatingStatus(ids: number[]) {
     const payload = { filteredStoreIds: ids };
     // 假設你的 http 服務是注入在建構子
-    this.auths.https.postApi('http://localhost:8080/gogobuy/store/getOperatingStores', payload)
+    this.auths.https.postApi(`${this.https.BASE_URL}/gogobuy/store/getOperatingStores`, payload)
       .subscribe((res: any) => {
         if (res.code == 200 && res.storeOperatingList) {
           this.operatingStores.set(res.storeOperatingList);
@@ -402,7 +402,7 @@ export class StoreListComponent {
     } else {
       this.favoriteIds = [...this.favoriteIds, storeId];
     }
-    const urlWithParams = `http://localhost:8080/gogobuy/updateFavoriteStore?id=${this.userId}&storesList=${storeId}`;
+    const urlWithParams = `${this.https.BASE_URL}/gogobuy/updateFavoriteStore?id=${this.userId}&storesList=${storeId}`;
     this.https.postApi(urlWithParams, {}).subscribe({
       next: (res: any) => {
         if (res?.code === 200) {

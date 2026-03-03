@@ -5,6 +5,9 @@ import { Injectable } from '@angular/core';
   providedIn: 'root'
 })
 export class HttpService {
+  // 動態取得當前主機名稱，確保在不同電腦測試時 API 指向正確位置
+  public readonly BASE_URL = `${window.location.protocol}//${window.location.hostname}:8080`;
+
   constructor(private http: HttpClient) { }
 
   // 讀取

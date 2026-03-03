@@ -274,7 +274,7 @@ export class PersonInfoEditComponent {
 
     const userId = this.editInfo.id;
 
-    const sendOtpUrl = `http://localhost:8080/gogobuy/user/send-otp?id=${userId}`;
+    const sendOtpUrl = `${this.http.BASE_URL}/gogobuy/user/send-otp?id=${userId}`;
 
     this.http.postApi(sendOtpUrl, { email: newEmail }).subscribe({
       next: async (res: any) => {

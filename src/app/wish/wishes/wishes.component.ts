@@ -41,7 +41,7 @@ export class WishesComponent implements OnInit {
     private messageService: MessageService,
     private route: ActivatedRoute,
     private router: Router,
-  ) {}
+  ) { }
 
   // =========================
   // 用戶資料(ngOnInt注入)
@@ -133,9 +133,9 @@ export class WishesComponent implements OnInit {
 
       this.pendingFilter =
         filter === 'all' ||
-        filter === 'active' ||
-        filter === 'finished' ||
-        filter === 'expired'
+          filter === 'active' ||
+          filter === 'finished' ||
+          filter === 'expired'
           ? filter
           : null;
 
@@ -145,7 +145,7 @@ export class WishesComponent implements OnInit {
 
     // 後端上線後使用：
     this.http
-      .getApi('http://localhost:8080/gogobuy/wish/all_wishes')
+      .getApi(`${this.http.BASE_URL}/gogobuy/wish/all_wishes`)
       .subscribe((res: any) => {
         this.wishes = res.allWish || [];
         this.afterLoad();
@@ -546,11 +546,8 @@ export class WishesComponent implements OnInit {
       location,
     };
 
-    this.isCreating = true;
-
-    // 後端上線後使用（成功再刷新/更新畫面）
     this.http
-      .postApi('http://localhost:8080/gogobuy/wish/add_wishes', payload)
+      .postApi(`${this.http.BASE_URL}/gogobuy/wish/add_wishes`, payload)
       .subscribe((res: any) => {
         this.isCreating = false;
         if (res?.code === 200) {
@@ -579,7 +576,7 @@ export class WishesComponent implements OnInit {
     }
 
     // 後端上線後使用：
-    const url = `http://localhost:8080/gogobuy/wish/follow_wish?id=${wish.id}&userId=${this.userId}`;
+    const url = `${this.http.BASE_URL}/gogobuy/wish/follow_wish?id=${wish.id}&userId=${this.userId}`;
     this.http.postApi(url, {}).subscribe((res: any) => {
       if (res?.code === 200) {
         if (idx > -1) {
@@ -698,7 +695,7 @@ export class WishesComponent implements OnInit {
       if (!r.isConfirmed) return;
 
       // 後端上線後使用：
-      const url = `http://localhost:8080/gogobuy/wish/delete_wish?id=${wish.id}&userId=${this.userId}`;
+      const url = `${this.http.BASE_URL}/gogobuy/wish/delete_wish?id=${wish.id}&userId=${this.userId}`;
       this.http.postApi(url, {}).subscribe((res: any) => {
         if (res?.code === 200) {
           this.toastSuccess('成功', '刪除成功');
@@ -745,14 +742,13 @@ export class WishesComponent implements OnInit {
         title: wish.title,
         anonymous: 'false',
         type: wish.type,
-        location: wish.location,
       };
       this.http
-        .postApi('http://localhost:8080/gogobuy/wish/add_wishes', addPayload)
+        .postApi(`${this.http.BASE_URL}/gogobuy/wish/add_wishes`, addPayload)
         .subscribe((res: any) => {
           if (res?.code === 200) {
             // 刪除原願望
-            const delUrl = `http://localhost:8080/gogobuy/wish/delete_wish?id=${wish.id}&userId=${this.userId}`;
+            const delUrl = `${this.http.BASE_URL}/gogobuy/wish/delete_wish?id=${wish.id}&userId=${this.userId}`;
             this.http.postApi(delUrl, {}).subscribe((del: any) => {
               if (res?.code === 200) {
                 this.toastSuccess('成功', '已刪除原願望');

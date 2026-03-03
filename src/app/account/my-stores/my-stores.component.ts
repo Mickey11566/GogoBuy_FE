@@ -69,7 +69,7 @@ export class MyStoresComponent {
     this.favoriteStores = [];
 
     this.favoriteStoreIds.forEach((id: number) => {
-      this.http.getApi(`http://localhost:8080/gogobuy/store/searchId?id=${id}`).subscribe((store: any) => {
+      this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/searchId?id=${id}`).subscribe((store: any) => {
         if (store.storeList && store.storeList.length > 0) {
           const storeInfo = store.storeList[0];
 
@@ -151,7 +151,7 @@ export class MyStoresComponent {
   // 處理後端
   private syncFavoriteToServer(updatedIds: number[], successMsg: string) {
     const idParams = updatedIds.map(id => `storesList=${id}`).join('&');
-    const url = `http://localhost:8080/gogobuy/updateFavoriteStore?id=${this.userId}${idParams ? '&' + idParams : ''}`;
+    const url = `${this.http.BASE_URL}/gogobuy/updateFavoriteStore?id=${this.userId}${idParams ? '&' + idParams : ''}`;
 
     this.http.postApi(url, {}).subscribe({
       next: () => {
@@ -210,7 +210,7 @@ export class MyStoresComponent {
     const remainingIds = this.favoriteStoreIds.filter(id => !this.selectedStoreIds.includes(id));
     const idParams = remainingIds.map(id => `storesList=${id}`).join('&');
 
-    let url = `http://localhost:8080/gogobuy/updateFavoriteStore?id=${this.userId}`;
+    let url = `${this.http.BASE_URL}/gogobuy/updateFavoriteStore?id=${this.userId}`;
     if (idParams) {
       url += `&${idParams}`;
     } else {
