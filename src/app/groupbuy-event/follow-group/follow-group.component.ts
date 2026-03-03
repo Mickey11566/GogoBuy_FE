@@ -68,7 +68,7 @@ export class FollowGroupComponent implements OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cart: CartService,
-  ) {}
+  ) { }
 
   // =========================
   // 基本狀態
@@ -79,6 +79,8 @@ export class FollowGroupComponent implements OnDestroy {
   groupId = 0; // 團Id
   storeId = 0; // 店家Id
   openedPanels: string[] = []; // 目前展開的 panel value
+
+  orderIsConfirmed = false; // 訂單是否已確認（鎖定修改）
 
   // 團的資料
   group: GroupbuyEvents | null = null;
@@ -434,6 +436,21 @@ export class FollowGroupComponent implements OnDestroy {
     this.hasExistingOrder = true;
     this.existingOrderId = dto?.id ?? null;
     this.personalMemo = dto?.personalMemo ?? '';
+
+    // 判斷是否鎖定（待結單、未付費、已確認、已付款、退款中）
+    const status = dto?.paymentStatus;
+    if (
+      status === 'SUBMITTED' ||
+      status === 'UNPAID' ||
+      status === 'CONFIRMED' ||
+      status === 'PAID' ||
+      status === 'REFUNDED'
+    ) {
+      this.orderIsConfirmed = true;
+    } else {
+      this.orderIsConfirmed = false;
+    }
+
     this.applyOrderToOrderItems(dto);
     console.log('讀取成功，取得既有訂單');
 
@@ -1099,7 +1116,7 @@ export class FollowGroupComponent implements OnDestroy {
       const decoded = atob(String(img));
       if (decoded.startsWith('http://') || decoded.startsWith('https://'))
         return decoded;
-    } catch {}
+    } catch { }
 
     return this.defaultProductCover;
   }
@@ -1197,6 +1214,10 @@ export class FollowGroupComponent implements OnDestroy {
 
   // 卡片上的「+」：能快加就快加；要選就開 dialog
   onPlusClick(product: any): void {
+    if (this.orderIsConfirmed) {
+      this.toastWarn('訂單已確認', '訂單已送出，無法再修改內容');
+      return;
+    }
     if (!this.userId) {
       this.toastWarn('請先登入', '');
       this.router.navigate(['/gogobuy/login']);
@@ -1217,6 +1238,10 @@ export class FollowGroupComponent implements OnDestroy {
 
   // 卡片上的「-」：只針對「快加商品」直減（有規格/選項的先不做卡片直減，避免規格混在一起）
   onMinusClick(product: any): void {
+    if (this.orderIsConfirmed) {
+      this.toastWarn('訂單已確認', '訂單已送出，無法再修改內容');
+      return;
+    }
     if (!this.userId) {
       this.toastWarn('請先登入', '');
       this.router.navigate(['/gogobuy/login']);
@@ -1296,6 +1321,13 @@ export class FollowGroupComponent implements OnDestroy {
       this.router.navigate(['/user/profile']);
       return;
     }
+
+    // 訂單已確認則不可再點餐
+    if (this.orderIsConfirmed) {
+      this.toastWarn('訂單已確認', '訂單已送出，無法再修改內容');
+      return;
+    }
+
     if (!product) return;
 
     this.selectedProduct = product;
@@ -1466,6 +1498,10 @@ export class FollowGroupComponent implements OnDestroy {
 
   // 加入訂單
   addToOrder(): void {
+    if (this.orderIsConfirmed) {
+      this.toastWarn('訂單已確認', '訂單已送出，無法再修改內容');
+      return;
+    }
     if (!this.selectedProduct) return;
 
     // required 單選如果沒選到（理論上 init 已幫必選預選第一個）
@@ -1645,10 +1681,10 @@ export class FollowGroupComponent implements OnDestroy {
       maxSelection: Number(g?.maxSelection ?? 1),
       items: Array.isArray(g?.items)
         ? g.items.map((it: any) => ({
-            id: Number(it?.id),
-            name: String(it?.name ?? ''),
-            extraPrice: Number(it?.extraPrice ?? 0),
-          }))
+          id: Number(it?.id),
+          name: String(it?.name ?? ''),
+          extraPrice: Number(it?.extraPrice ?? 0),
+        }))
         : [],
     }));
   }
