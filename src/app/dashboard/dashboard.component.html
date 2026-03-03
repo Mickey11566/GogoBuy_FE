@@ -128,7 +128,8 @@
                 field="address"></p-sortIcon></th>
             <th class="text-xl!" pSortableColumn="phone" style="width:12%">電話 <p-sortIcon field="phone"></p-sortIcon>
             </th>
-            <th class="text-xl!" pSortableColumn="publish" style="width:10%">狀態 <p-sortIcon field="publish"></p-sortIcon>
+            <th class="text-xl!" pSortableColumn="publish" style="width:10%">狀態 <p-sortIcon
+                field="publish"></p-sortIcon>
             </th>
             <th class="text-xl!" style="width:18%">操作</th>
           </tr>
@@ -254,7 +255,7 @@
                 <span class="font-bold text-gray-900">{{ user.nickname }}</span>
               </div>
             </td>
-            <td class="font-semibold text-gray-700">{{ user.email }}</td>
+            <td class="font-semibold text-gray-700">{{ maskEmail(user.email) }}</td>
             <td>
               @if (user.role === 'admin') {
               <span

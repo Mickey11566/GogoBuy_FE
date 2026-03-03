@@ -392,6 +392,7 @@
             class="bg-white text-slate-500 text-base font-black uppercase tracking-wider border-b border-slate-100">
             <tr>
               <th class="px-6 py-4">成員資訊</th>
+              <th class="px-6 py-4">電話</th>
               <th class="px-6 py-4 text-right whitespace-nowrap">金額明細</th>
               <th class="px-6 py-4 text-center">收款進度</th>
               <th class="px-6 py-4 text-center">領餐進度</th>
@@ -416,6 +417,9 @@
                     <div class="font-bold text-slate-800 text-base">{{ m.userNickname || '匿名成員' }}</div>
                   </div>
                 </div>
+              </td>
+              <td class="px-6 py-5">
+                <div class="text-slate-600 font-bold">{{ m.userPhone || '未提供' }}</div>
               </td>
               <td class="px-6 py-5 text-right">
                 <div class="font-black text-emerald-600">${{ m.totalSum }}</div>

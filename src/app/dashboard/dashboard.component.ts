@@ -441,4 +441,11 @@ export class DashboardComponent {
     // 這裡假設管理者想看公開的活動詳情
     this.router.navigate(['/groupbuy-event/group-follow', event.id]);
   }
+
+  maskEmail(email: string): string {
+    if (!email || !email.includes('@')) return email;
+    const [local, domain] = email.split('@');
+    const maskedLocal = local.length > 4 ? local.substring(0, 4) + '***' : local + '***';
+    return maskedLocal + '@' + domain;
+  }
 }
