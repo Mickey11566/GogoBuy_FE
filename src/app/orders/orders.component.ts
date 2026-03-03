@@ -198,9 +198,13 @@ export class OrdersComponent {
               catchError(() => of({ ...g, isHost: false, eventStatus: 'UNKNOWN' }))
             )
           );
-
           forkJoin(jobs).subscribe(finalList => {
-            this.cartData.set(finalList);
+            const now = new Date().getTime();
+            const filtered = finalList.filter(g => {
+              const eventEndTime = g.endTime ? new Date(g.endTime).getTime() : now + 1;
+              return eventEndTime > now; // 只留下尚未過期的活動
+            });
+            this.cartData.set(filtered);
           });
         },
         error: (err: any) => console.error('getCart failed:', err)
