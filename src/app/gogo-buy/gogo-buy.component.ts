@@ -673,13 +673,37 @@ export class GogoBuyComponent implements OnInit {
   // new Set(['OPEN', 'ONGOING', 'IN_PROGRESS'])
 
   // 篩選開團
+  // readonly filteredEventCards = computed(() => {
+
+  //   // 使用者選到的類別
+  //   const t = this.selectedType();
+
+  //   // 先把 FINISHED / 非 OPEN 的過濾掉
+  //   const activeCards = this.eventCards().filter(c => this.ACTIVE_STATUS.has(this.getEventStatus(c)));
+
+  //   if (t == 'ALL') return activeCards;
+  //   return activeCards.filter(c => this.getEventType(c) == t);
+  // });
+
+  // 篩選開團
   readonly filteredEventCards = computed(() => {
 
     // 使用者選到的類別
     const t = this.selectedType();
+    // 目前時間
+    const now = new Date();
 
-    // 先把 FINISHED / 非 OPEN 的過濾掉
-    const activeCards = this.eventCards().filter(c => this.ACTIVE_STATUS.has(this.getEventStatus(c)));
+    const activeCards = this.eventCards().filter(c => {
+
+      const isOpenStatus = this.ACTIVE_STATUS.has(this.getEventStatus(c));
+
+      if (!c.endTime) return false;
+
+      const end = new Date(c.endTime);
+      const notExpired = !isNaN(end.getTime()) && end > now;
+
+      return isOpenStatus && notExpired;
+    });
 
     if (t == 'ALL') return activeCards;
     return activeCards.filter(c => this.getEventType(c) == t);
