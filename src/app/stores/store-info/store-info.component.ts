@@ -515,13 +515,16 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
 
   isAdmin() {
     const userDate = JSON.parse(this.user);
-    const role = userDate.role;
-    if (!this.userId || !this.user) return false;
-    if (role === 'admin') {
-      return true;
-    } else {
-      return false;
+    if (userDate) {
+      const role = userDate.role;
+      if (!this.userId || !this.user) return false;
+      if (role === 'admin') {
+        return true;
+      } else {
+        return false;
+      }
     }
+    return false;
   }
 
   // 開團按鈕目前只有鎖 未登入 || 今日公休 || fast的休息時間
