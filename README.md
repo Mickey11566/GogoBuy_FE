@@ -1,59 +1,61 @@
-# Gogobuy
+[GogoBuy] - 電子商務前端專案
+📌 專案簡介
+GogoBuy 是一個現代化的電子商務平台前端介面，旨在提供流暢的購物體驗。使用者可以瀏覽商品、加入購物車、管理會員資料，並進行模擬結帳流程。
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.0.5.
+線上演示： 點擊查看 Demo 連結 (若有 Vercel/Netlify 部署請放這)
 
-## Development server
+✨ 核心功能
+商品瀏覽：支援分類篩選、關鍵字搜尋及分頁功能。
 
-To start a local development server, run:
+購物車系統：即時更新商品數量、計算總金額。
 
-```bash
-ng serve
-```
+會員系統：包含註冊、登入、個人資料編輯及訂單歷史查詢。
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+響應式設計 (RWD)：適應手機與桌機螢幕。
 
-## Code scaffolding
+結帳流程：模擬金流表單驗證與訂單生成。
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+🛠 使用技術
+框架：ANGULAR 19+
 
-```bash
-ng generate component component-name
-```
+狀態管理：Redux Toolkit / Pinia / React Context API
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+樣式核心：Tailwind CSS / Styled-components / SCSS
 
-```bash
-ng generate --help
-```
+路由：ANGULAR Router
 
-## Building
+API 串接：Axios (搭配 RESTful API)
 
-To build the project run:
+🚀 快速開始
+前置作業
+請確保你的電腦已安裝 Node.js (建議 v16 以上)。
 
-```bash
-ng build
-```
+安裝步驟
+複製此專案：
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Bash
+git clone https://github.com/Mickey11566/GogoBuy_FE.git
+進入專案目錄：
 
-## Running unit tests
+Bash
+cd GogoBuy_FE
+安裝依賴套件：
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+Bash
+npm install  # 或 yarn install
+啟動開發伺服器：
 
-```bash
-ng test
-```
+Bash
+npm run dev  # 或 npm start
+開啟瀏覽器並造訪 http://localhost:3000
 
-## Running end-to-end tests
+📝 學習筆記 / 挑戰
 
-For end-to-end (e2e) testing, run:
+效能優化：如何處理圖片加載，GOOGLE LH3多次拉取會造成ERROR 429，更改為使用圖床存取圖片，避免出現ERROR 429，使圖片破圖。
 
-```bash
-ng e2e
-```
+狀態同步：解決購物車在多個頁面間資料同步的問題。
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+驗證機制：使用 JWT 進行路由守衛 (Route Guard) 的心得。
 
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+🤝 貢獻指南
+如果你有任何改進建議，歡迎提交 Pull Request 或開 Issue 討論！
