@@ -72,7 +72,8 @@ export interface Store {
   "deleted": boolean,
   "publish": boolean,
   "force_closed": boolean,
-  "created_by": string
+  "created_by": string,
+  "isClosed": boolean,
 }
 
 export interface StoreOperating {
