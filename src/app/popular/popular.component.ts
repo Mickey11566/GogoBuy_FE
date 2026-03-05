@@ -7,7 +7,7 @@ import { Router } from '@angular/router';
 
 interface StatusOption {
   label: string;
-  value: 'ALL' | 'YEAR' | 'MONTHLY' | 'WEEKLY' | 'DAILY';
+  value: 'YEAR' | 'MONTHLY' | 'WEEKLY' | 'DAILY';
 }
 
 interface SalesLeaderboardProjection {
@@ -36,7 +36,7 @@ export class PopularComponent {
   salesDetailList = signal<SalesLeaderboardProjection[]>([]);
 
   // 篩選條件
-  statusFilter = signal<'ALL' | 'YEAR' | 'MONTHLY' | 'WEEKLY' | 'DAILY'>('ALL');
+  statusFilter = signal<'YEAR' | 'MONTHLY' | 'WEEKLY' | 'DAILY'>('YEAR');
 
   // 排行榜資料
   top10List = signal<any[]>([]);
@@ -44,7 +44,6 @@ export class PopularComponent {
   topFive = computed(() => this.salesDetailList().slice(0, 5));
 
   statusOptions: StatusOption[] = [
-    { label: '顯示全部時間', value: 'ALL' },
     { label: '顯示 1 年', value: 'YEAR' },
     { label: '顯示 1 個月', value: 'MONTHLY' },
     { label: '顯示 1 個禮拜', value: 'WEEKLY' },
@@ -55,13 +54,13 @@ export class PopularComponent {
     this.loadTop10();
   }
 
-  onStatusChange(value: 'ALL' | 'YEAR' | 'MONTHLY' | 'WEEKLY' | 'DAILY') {
+  onStatusChange(value: 'YEAR' | 'MONTHLY' | 'WEEKLY' | 'DAILY') {
     this.statusFilter.set(value);
     this.loadTop10();
   }
 
   loadTop10() {
-    const type = this.statusFilter() == 'ALL' ? undefined : this.statusFilter();
+    const type = this.statusFilter();
     this.popularService.getTop10(type).subscribe({
       next: (res: any) => {
         this.salesDetailList.set(res.salesDetailList ?? []);
