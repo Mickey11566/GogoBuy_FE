@@ -405,6 +405,17 @@ export class AppComponent {
     )
   }
 
+  officialTerms() {
+    this.router.navigate(['/support/conditions'],
+      { state: { scrollToBottom: true } }
+    )
+  }
+
+  privacyPolicy() {
+    this.router.navigate(['/support/privacy'],
+      { state: { scrollToBottom: true } }
+    )
+  }
 
   stopNearbyWatch() {
     if (this.watchId != null) {
