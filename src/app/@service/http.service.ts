@@ -5,18 +5,31 @@ import { Injectable } from '@angular/core';
   providedIn: 'root'
 })
 export class HttpService {
+
   // 判斷是否為本地開發環境
   private get isLocalhost(): boolean {
     return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   }
 
-  // 自動切換 API 地址
-  public readonly BASE_URL = this.isLocalhost
-    ? `http://localhost:8080`  // 本地開發：指向本地 Spring Boot
-    : `https://gogobuy.onrender.com`; // 正式環境：指向 Render 後端
+  // 判斷當前是否透過 Tailscale 域名存取
+  private get isTailscale(): boolean {
+    return window.location.hostname.endsWith('.ts.net');
+  }
+
+  // 自動切換 API 地址 (優先權：Local > Tailscale > Render)
+  public get BASE_URL(): string {
+    if (this.isLocalhost) {
+      return `http://localhost:8080`; // 本地開發：指向本地 Spring Boot
+    }
+
+    if (this.isTailscale) {
+      return `https://${window.location.hostname}:8443`; // Tailscale 遠端測試：強制 HTTPS + 8443
+    }
+
+    return `https://gogobuy.onrender.com`; // 正式環境：指向 Render 後端
+  }
 
   constructor(private http: HttpClient) {
-    console.log('當前 API 位置:', this.BASE_URL);
   }
 
   // 讀取
