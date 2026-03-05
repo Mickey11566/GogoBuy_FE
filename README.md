@@ -2,7 +2,7 @@
 專案簡介
 GogoBuy 是一個現代化的電子商務平台前端介面，旨在提供流暢的購物體驗。使用者可以瀏覽商品、加入購物車、管理會員資料，並進行模擬結帳流程。
 
-線上演示： 點擊查看 Demo 連結 (若有 Vercel/Netlify 部署請放這)
+線上演示： 點擊查看 Demo 連結 (若有部署請放這)
 
 核心功能
 商品瀏覽：支援分類篩選、關鍵字搜尋及分頁功能。
@@ -18,13 +18,13 @@ GogoBuy 是一個現代化的電子商務平台前端介面，旨在提供流暢
 🛠 使用技術
 框架：ANGULAR 19+
 
-狀態管理：Redux Toolkit / Pinia / React Context API
+狀態管理：RXJS
 
 樣式核心：Tailwind CSS / Styled-components / SCSS
 
 路由：ANGULAR Router
 
-API 串接：Axios (搭配 RESTful API)
+API 串接：RESTful API
 
 學習筆記 / 挑戰
 
