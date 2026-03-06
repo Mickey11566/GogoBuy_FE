@@ -131,11 +131,11 @@
                 </label>
               </div>
               <div class="flex flex-col lg:flex-row h-full bg-gray-100 rounded-lg">
-                <div class="flex w-full flex-shrink-0 bg-gray-100 overflow-x-auto
-                                lg:flex-col lg:w-30 lg:overflow-x-hidden lg:overflow-y-auto">
+                <div class="flex w-full flex-shrink-0 bg-gray-100 overflow-x-auto max-h-[350px] md:max-h-[450px] lg:max-h-[550px]
+                               lg:w-48 lg:flex-col lg:w-30 lg:overflow-x-hidden lg:overflow-y-auto">
                   @for(cate of menuCategoriesVoList; track $index){
-                    <button class="relative py-4 px-6 transition-all duration-200 rounded-t-xl text-md md:text-lg
-                                        lg:rounded-tr-none lg:rounded-l-xl" (click)="activeTab = cate.id"
+                    <button class="relative py-4 px-6 transition-all duration-200 rounded-t-xl text-md whitespace-nowrap lg:whitespace-normal
+                                  md:text-lg lg:rounded-tr-none lg:rounded-l-xl" (click)="activeTab = cate.id"
                       [class.active-tab]="activeTab === cate.id" [class.text-[#662222]]="activeTab === cate.id"
                       [class.font-bold]="activeTab === cate.id" [class.bg-white]="activeTab === cate.id"
                       [class.border-transparent]="activeTab !== cate.id">

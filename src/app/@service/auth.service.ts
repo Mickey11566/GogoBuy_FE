@@ -169,14 +169,14 @@ export class AuthService {
               icon: 'error',
               text: res.message,
               showConfirmButton: false,
-              timer: 1000
+              timer: 3000
             });
           } else {
             Swal.fire({
               title: '登入失敗',
               text: res.message || '請檢查帳號密碼',
               icon: 'error',
-              timer: 2000
+              timer: 3000
             });
           }
         },
@@ -185,7 +185,7 @@ export class AuthService {
             title: err.message || '連線伺服器失敗',
             icon: 'error',
             showConfirmButton: false,
-            timer: 1000
+            timer: 3000
           });
         },
       });
@@ -542,8 +542,11 @@ export class AuthService {
    * 停權用戶 (後台用)
    * POST gogobuy/ban-user?id={userId}
    */
-  banUser(userId: string) {
-    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/ban-user?id=${userId}`, {});
+  banUser(userId: string, hours?: number, reason?: string) {
+    let url = `${this.https.BASE_URL}/gogobuy/ban-user?id=${userId}`;
+    if (hours) url += `&hours=${hours}`;
+    if (reason) url += `&reason=${encodeURIComponent(reason)}`;
+    return this.https.postApi(url, {});
   }
 
   /**
@@ -552,5 +555,26 @@ export class AuthService {
    */
   activeUser(userId: string) {
     return this.https.postApi(`${this.https.BASE_URL}/gogobuy/active-user?id=${userId}`, {});
+  }
+
+  /**
+   * 提交申訴
+   */
+  addComplaint(payload: { complaintUuid: string, respondentUuid: string, reason: string, eventId: number }) {
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/complaint/add_complaint`, payload);
+  }
+
+  /**
+   * 取得所有申訴 (後台用)
+   */
+  getAllComplaints() {
+    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/complaint/all_complaints`);
+  }
+
+  /**
+   * 變更申訴處理狀態 (後台用)
+   */
+  setComplaintState(complaintId: number) {
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/complaint/set_state?id=${complaintId}`, {});
   }
 }

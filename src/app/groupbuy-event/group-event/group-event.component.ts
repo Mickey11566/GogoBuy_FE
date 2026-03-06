@@ -22,25 +22,6 @@ import { PositionService } from '../../@service/position.service';
 
 
 @Component({
-  template: `
-    <div class="card">
-      <p-tabs value="0" scrollable>
-        <p-tablist>
-          @for (tab of scrollableTabs; track tab.value) {
-            <p-tab [value]="tab.value">
-                {{ tab.title }}
-            </p-tab>
-          }
-        </p-tablist>
-        <p-tabpanels>
-          @for (tab of scrollableTabs; track tab.value) {
-            <p-tabpanel [value]="tab.value">
-                <p class="m-0">{{ tab.content }}</p>
-            </p-tabpanel>
-          }
-        </p-tabpanels>
-      </p-tabs>
-    </div>`,
   standalone: true,
   selector: 'app-group-event',
   imports: [
@@ -1115,40 +1096,40 @@ export class GroupEventComponent {
           Swal.showLoading();
         }
       });
-      this.http.postApi(`${this.http.BASE_URL}/gogobuy/event/update?id=${this.eventId}`, this.req).subscribe({
+      this.http.postApi(`${this.http.BASE_URL}/gogobuy/event/updateEvent`, this.req).subscribe({
         next: (res: any) => {
           console.log(this.req);
           console.log(res);
           if (res && res.code == 200) {
             Swal.close();
             this.router.navigate(['/groupbuy-event/group-follow', this.req.id]);
-          } else if (res && res.code == 400) {
-            const error: string[] = [];
-            error.push("網站出現問題，請稍後再試");
-            if (error.length > 0) {    // Swal 警告
-              const fieldList = error.join('、'); // 將陣列轉為 "欄位A、欄位B"
-              this.showAlert('修改失敗', `${fieldList}`);
-            }
+          } else {
+            const errorMsg = res?.message || "網站出現問題，請稍後再試";
+            this.showAlert('修改失敗', errorMsg);
           }
+        },
+        error: (err) => {
+          Swal.close();
+          this.showAlert('修改失敗', err?.message || '系統連線錯誤');
         }
       });
     }
   }
   agreeDisclaimer() {
-    this.http.postApi(`${this.http.BASE_URL}/gogobuy/event/create`, this.req).subscribe({
+    this.http.postApi(`${this.http.BASE_URL}/gogobuy/event/addEvent`, this.req).subscribe({
       next: (res: any) => {
         console.log(this.req);
         console.log(res);
-        if (res && res.id) {
-          this.router.navigate(['/groupbuy-event/group-follow', res.id]);
-        } else if (res && res.code == 400) {
-          const error: string[] = [];
-          error.push(res.message);
-          if (error.length > 0) {    // Swal 警告
-            const fieldList = error.join('、'); // 將陣列轉為 "欄位A、欄位B"
-            this.showAlert('新增失敗', `${fieldList}`);
-          }
+        if (res && (res.id || res.code == 200)) {
+          const eventId = res.id || this.req.id;
+          this.router.navigate(['/groupbuy-event/group-follow', eventId]);
+        } else {
+          const errorMsg = res?.message || "開團失敗";
+          this.showAlert('新增失敗', errorMsg);
         }
+      },
+      error: (err) => {
+        this.showAlert('新增失敗', err?.message || '系統連線錯誤');
       }
     });
     this.openDisclaimer = false;

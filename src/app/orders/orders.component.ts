@@ -767,4 +767,66 @@ export class OrdersComponent {
     });
   }
 
+  onComplaint(member: any, eventsId: number) {
+    Swal.fire({
+      title: '檢舉成員',
+      html: `
+        <div class="text-left px-2">
+          <div class="mb-4 p-3 bg-red-50 rounded-lg text-red-600 text-sm border border-red-100 font-bold">
+            您正在檢舉成員：<strong>${member.userNickname || '匿名成員'}</strong>
+          </div>
+          <label class="block text-sm font-black text-slate-700 mb-2 underline overline decoration-red-500">檢舉理由 <span class="text-red-500">*</span></label>
+          <textarea id="swal-complaint-reason" rows="4"
+            class="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-2xl focus:border-red-500 focus:ring-0 outline-none transition-all resize-none font-bold text-slate-600"
+            placeholder="請詳細說明檢舉原因..."></textarea>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '提交檢舉',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#94a3b8',
+      customClass: {
+        popup: 'rounded-3xl',
+        confirmButton: 'rounded-xl px-6 py-3 font-black',
+        cancelButton: 'rounded-xl px-6 py-3 font-black'
+      },
+      preConfirm: () => {
+        const reason = (document.getElementById('swal-complaint-reason') as HTMLTextAreaElement).value;
+        if (!reason) {
+          Swal.showValidationMessage('⚠️ 請填寫檢舉理由');
+          return false;
+        }
+        return reason;
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const payload = {
+          complaintUuid: this.userId,
+          respondentUuid: member.userId,
+          reason: result.value,
+          eventId: eventsId
+        };
+
+        this.auth.addComplaint(payload).subscribe({
+          next: () => {
+            Swal.fire({
+              icon: 'success',
+              title: '提交成功',
+              text: '檢舉已送交系統管理員，我們將盡速處理，維護良好的團購環境！',
+              confirmButtonText: '太好了',
+              confirmButtonColor: '#10b981',
+              customClass: {
+                popup: 'rounded-3xl',
+                confirmButton: 'rounded-xl px-8 py-3 font-black'
+              }
+            });
+          },
+          error: (err) => Swal.fire('提交失敗', err?.message || '系統連線錯誤', 'error')
+        });
+      }
+    });
+  }
+
 }

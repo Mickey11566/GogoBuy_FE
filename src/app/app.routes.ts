@@ -100,23 +100,6 @@ export const routes: Routes = [
     // canActivate: [AdminGuard],       // 關鍵：安全性守衛，防止非管理者直接輸入 URL 進入
     title: '管理後台',
     data: { breadcrumb: '管理後台' },
-    //   children: [
-    //     {
-    //       path: '',
-    //       redirectTo: 'dashboard',
-    //       pathMatch: 'full'
-    //     },
-    //     {
-    //       path: 'dashboard',
-    //       component: DashboardComponent,
-    //       data: { breadcrumb: '數據概覽' }
-    //     },
-    //     {
-    //       path: 'users',
-    //       // component: UserManagementComponent,
-    //       data: { breadcrumb: '會員管理' }
-    //     }
-    //   ]
   },
 
   { path: 'active-account', component: VerifyEmailComponent },
