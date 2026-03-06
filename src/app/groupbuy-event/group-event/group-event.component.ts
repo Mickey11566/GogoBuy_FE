@@ -22,25 +22,6 @@ import { PositionService } from '../../@service/position.service';
 
 
 @Component({
-  template: `
-    <div class="card">
-      <p-tabs value="0" scrollable>
-        <p-tablist>
-          @for (tab of scrollableTabs; track tab.value) {
-            <p-tab [value]="tab.value">
-                {{ tab.title }}
-            </p-tab>
-          }
-        </p-tablist>
-        <p-tabpanels>
-          @for (tab of scrollableTabs; track tab.value) {
-            <p-tabpanel [value]="tab.value">
-                <p class="m-0">{{ tab.content }}</p>
-            </p-tabpanel>
-          }
-        </p-tabpanels>
-      </p-tabs>
-    </div>`,
   standalone: true,
   selector: 'app-group-event',
   imports: [
