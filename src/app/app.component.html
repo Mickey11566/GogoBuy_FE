@@ -150,25 +150,83 @@
 </main>
 
 <!-- footer -->
-<footer>
-  <div class="footer-container footer-info">
-    <a class="font-bold cursor-pointer underline decoration-1 hover:text-blue-200" (click)="contactUs()">聯繫我們</a>
-    <p class="font-bold">地址：台南市歸仁區歸仁十三路一段6號</p>
-    <p class="font-bold">電話：(06) 303 2550</p>
-  </div>
-  <div class="footer-bottom">
-    <a class="font-bold text-base">&copy; 2026 GogoBuy</a>
+<footer class="bg-[var(--bg-main)] py-16 px-4">
+  <div class="max-w-7xl mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+      <div
+        class="flex flex-col p-8 bg-[var(--footer-bg)] text-[var(--footer-text)] border border-[var(--brand-primary)] rounded-xl shadow-xl hover:-translate-y-1 hover:border-[var(--accent-orange)] transition-all duration-300">
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold tracking-widest">GogoBuy</h2>
+          <div class="w-10 h-1 bg-[var(--accent-orange)] mt-2"></div>
+        </div>
+        <p class="text-sm opacity-80 leading-relaxed">
+          在地耕耘，提供最溫暖、最專業的購物選擇，讓每一份禮物都充滿意義。
+        </p>
+      </div>
+
+      <div
+        class="flex flex-col p-8 bg-[var(--footer-bg)] text-[var(--footer-text)] border border-[var(--brand-primary)] rounded-xl shadow-xl hover:-translate-y-1 hover:border-[var(--accent-orange)] transition-all duration-300">
+        <h3 class="text-lg font-bold mb-6 flex items-center gap-2 text-[var(--accent-soft)]">
+          <i class="pi pi-map-marker"></i> 聯絡資訊
+        </h3>
+        <ul class="space-y-4 text-sm">
+          <li class="flex items-start gap-3">
+            <span class="font-semibold text-[var(--accent-soft)] w-8">地址</span>
+            <span class="opacity-90">台南市歸仁區歸仁十三路一段6號</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <span class="font-semibold text-[var(--accent-soft)] w-8">電話</span>
+            <span class="opacity-90">(06) 303 2550</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <span class="font-semibold text-[var(--accent-soft)] w-8">信箱</span>
+            <span class="opacity-90">service&#64;gogobuy.com.tw</span>
+          </li>
+        </ul>
+      </div>
+
+      <div
+        class="flex flex-col p-8 bg-[var(--footer-bg)] text-[var(--footer-text)] border border-[var(--brand-primary)] rounded-xl shadow-xl hover:-translate-y-1 hover:border-[var(--accent-orange)] transition-all duration-300">
+        <h3 class="text-lg font-bold mb-6 flex items-center gap-2 text-[var(--accent-soft)]">
+          <i class="pi pi-link"></i> 快速導覽
+        </h3>
+        <div class="flex flex-col gap-4 text-sm">
+          <a (click)="privacyPolicy()"
+            class="flex items-center justify-between cursor-pointer  pb-2 transition-all duration-300 hover:translate-x-2 hover:text-[var(--accent-orange)]">
+            <span>隱私政策</span>
+          </a>
+          <a (click)="officialTerms()"
+            class="flex items-center justify-between cursor-pointer  pb-2 transition-all duration-300 hover:translate-x-2 hover:text-[var(--accent-orange)]">
+            <span>服務條款</span>
+          </a>
+          <a (click)="contactUs()"
+            class="flex items-center justify-between cursor-pointer pb-2 transition-all duration-300 hover:translate-x-2 hover:text-[var(--accent-orange)]">
+            <span>常見問題</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="mt-4 text-center">
+      <p class="text-slate-200 text-xs tracking-[0.3em] uppercase">
+        &copy; 2026 GogoBuy. Crafted with care in Tainan.
+      </p>
+    </div>
   </div>
 </footer>
 
 
 <!-- 常見問題+氣泡 -->
+@if(isMobile){
 @if(!showProblem){
 <button class="question" type="button" balloon-data="有甚麼疑問嗎?點擊這裡" aria-label="常見問題"
   (click)="problemMenu.toggle($event)">
   ?
 </button>
 <p-menu #problemMenu [popup]="true" [model]="problems"></p-menu>
+}
 }
 <!-- 手機 footer 依 router.url 判斷目前頁籤並高亮 -->
 <div class="footer-mobile">

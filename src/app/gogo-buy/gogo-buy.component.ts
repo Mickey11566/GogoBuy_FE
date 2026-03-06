@@ -72,7 +72,8 @@ export interface Store {
   "deleted": boolean,
   "publish": boolean,
   "force_closed": boolean,
-  "created_by": string
+  "created_by": string,
+  "isClosed": boolean,
 }
 
 export interface StoreOperating {
@@ -268,7 +269,7 @@ export class GogoBuyComponent implements OnInit {
       this.storeList = this.storeList.filter(store => !store.deleted && store.publish);  // 未刪除且公開
       this.allStoresBackup = this.storeList;
       this.fastStoreList = this.storeList.filter(store => !store.force_closed && store.category == "fast");
-      console.log(this.fastStoreList);
+      // console.log(this.fastStoreList);
       this.slowStoreList = this.storeList.filter(store => store.category == "slow");  // 只有團購可以顯示未營業，外送不可
       this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
       this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);

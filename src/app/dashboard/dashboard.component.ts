@@ -1,5 +1,5 @@
 import { Router } from '@angular/router';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../@service/auth.service';
 import { TableModule } from 'primeng/table';
@@ -9,7 +9,7 @@ import { RouterLink } from '@angular/router';
 import { Avatar, AvatarModule } from 'primeng/avatar';
 import { MenuModule } from 'primeng/menu';
 import { BadgeModule } from 'primeng/badge';
-import { forkJoin, map } from 'rxjs';
+import { catchError, forkJoin, map, of } from 'rxjs';
 import { MessageService, NotifiMesReq, NotifiCategoryEnum } from '../@service/message.service';
 import { DialogModule } from 'primeng/dialog';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -19,6 +19,7 @@ import { TieredMenu } from 'primeng/tieredmenu';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { StoreService } from '../@service/store.service';
+import { CartService } from '../@service/cart.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -49,18 +50,20 @@ export class DashboardComponent {
   stores: any[] = [];
   events: any[] = [];
   users: any[] = [];
+  complaints: any[] = [];
   loading = false;
   items: any[] | undefined;
   minDate: Date = new Date();
 
 
-  currentView: 'announce' | 'stores' | 'events' | 'users' = 'announce';
+  currentView: 'announce' | 'stores' | 'events' | 'users' | 'complaints' = 'announce';
 
   menuItems = [
     { label: '公告通知管理', icon: 'pi pi-megaphone', id: 'announce' },
     { label: '店家管理', icon: 'pi pi-shop', id: 'stores' },
     { label: '團購活動', icon: 'pi pi-calendar', id: 'events' },
-    { label: '會員管理', icon: 'pi pi-users', id: 'users' }
+    { label: '會員管理', icon: 'pi pi-users', id: 'users' },
+    { label: '申訴單處理', icon: 'pi pi-envelope', id: 'complaints' }
   ];
 
   // 公告相關變數
@@ -75,11 +78,17 @@ export class DashboardComponent {
   };
   announceDate: Date | null = null; // for Calendar binding
 
+  // 管理中心關聯變數
+  displayManageDialog = false;
+  selectedEventForManage: any = null;
+  manageMembersMap = signal<Record<number, any[]>>({});
+
   constructor(
     private authService: AuthService,
     private messageService: MessageService,
-    private router: Router,
+    public router: Router,
     private storeService: StoreService,
+    private cart: CartService,
   ) { }
 
   ngOnInit() {
@@ -147,50 +156,78 @@ export class DashboardComponent {
     this.loading = true;
     const defaultAvatar = '../default_avatar.png';
 
-    // 使用 forkJoin 同時發送多個請求
     forkJoin({
-      stores: this.authService.getallstore(),
-      events: this.authService.getallevent(),
-      users: this.authService.getAllUser()
-    }).pipe(
-      // 這裡給予 res 一個 any 型別，解決 'unknown' 型別問題
-      map((res: { stores: any, events: any, users: any }) => {
-        // 1. 處理 Store 資料
-        const stores = res.stores.storeList || res.stores || [];
-        // 2. 處理 User 資料 (先用map處理頭像對照)
-        const rawUsers = res.users.userList || res.users || [];
-        const processedUsers = rawUsers.map((u: any) => ({
+      stores: this.authService.getallstore().pipe(catchError((err) => { console.warn('Dashboard: Stores API failed', err); return of(null); })),
+      events: this.authService.getallevent().pipe(catchError((err) => { console.warn('Dashboard: Events API failed', err); return of(null); })),
+      users: this.authService.getAllUser().pipe(catchError((err) => { console.warn('Dashboard: Users API failed', err); return of(null); })),
+      complaints: this.authService.getAllComplaints().pipe(catchError((err) => { console.warn('Dashboard: Complaints API failed', err); return of(null); }))
+    }).subscribe({
+      next: (res: any) => {
+        // 1. 處理 Store 資料 (支援多種可能的欄位名)
+        let stores: any[] = [];
+        const rawStores = res.stores;
+        if (Array.isArray(rawStores)) {
+          stores = rawStores;
+        } else if (rawStores) {
+          stores = rawStores.storeList || rawStores.store_list || rawStores.stores || rawStores.data || [];
+        }
+        this.stores = stores;
+
+        // 2. 處理 User 資料
+        let users: any[] = [];
+        const rawUsers = res.users;
+        if (Array.isArray(rawUsers)) {
+          users = rawUsers;
+        } else if (rawUsers) {
+          users = rawUsers.userList || rawUsers.user_list || rawUsers.users || rawUsers.data || [];
+        }
+
+        const processedUsers = users.map((u: any) => ({
           ...u,
-          avatarUrl: u.avatarUrl || defaultAvatar
+          avatarUrl: u?.avatarUrl || u?.avatar_url || defaultAvatar
         }));
+        this.users = processedUsers;
 
-        // 建立一個快速查詢 Map: [userId, avatarUrl]
+        // 3. 處理 Complaint 資料
+        let complaints: any[] = [];
+        const rawComplaints = res.complaints;
+        if (Array.isArray(rawComplaints)) {
+          complaints = rawComplaints;
+        } else if (rawComplaints) {
+          complaints = rawComplaints.complaintList || rawComplaints.complaint_list || rawComplaints.complaints || rawComplaints.data || [];
+        }
+        this.complaints = complaints;
+
+        // 4. 處理 Event 資料 (依賴前面處理好的 processedUsers 與 stores)
         const avatarMap = new Map(processedUsers.map((u: any) => [u.id, u.avatarUrl]));
-
-        // 建立店家查詢 Map: [storeId, storeName]
         const storeMap = new Map(stores.map((s: any) => [s.id, s.name]));
 
-        // 3. 處理 Event 資料 (並將頭像塞入)
-        const rawEvents = Array.isArray(res.events) ? res.events :
-          (res.events.groupsSearchViewList || res.events.groupbuyEvents || res.events.eventList || []);
+        let events: any[] = [];
+        const rawEventsRes = res.events;
+        if (Array.isArray(rawEventsRes)) {
+          events = rawEventsRes;
+        } else if (rawEventsRes) {
+          events = rawEventsRes.groupsSearchViewList || rawEventsRes.groups_search_view_list ||
+            rawEventsRes.groupbuyEvents || rawEventsRes.groupbuy_events ||
+            rawEventsRes.eventList || rawEventsRes.event_list ||
+            rawEventsRes.events || rawEventsRes.data || [];
+        }
 
-        const eventsWithAvatar = rawEvents.map((event: any) => ({
-          ...event,
-          avatarUrl: avatarMap.get(event.hostId) || defaultAvatar,
-          storeName: storeMap.get(event.storeId || event.storesId) || '未知店家'
-        }));
+        this.events = events.map((event: any) => {
+          if (!event) return null;
+          return {
+            ...event,
+            id: event.id || event.eventId || event.event_id,
+            status: event.status || event.eventStatus || event.event_status,
+            avatarUrl: avatarMap.get(event.hostId || event.host_id) || defaultAvatar,
+            storeName: storeMap.get(event.storeId || event.storesId || event.store_id || event.stores_id) || event.storeName || event.store_name || '未知店家'
+          };
+        }).filter(e => e !== null);
 
-        return { stores, processedUsers, eventsWithAvatar };
-      })
-    ).subscribe({
-      next: (finalData) => {
-        this.stores = finalData.stores;
-        this.users = finalData.processedUsers;
-        this.events = finalData.eventsWithAvatar;
         this.loading = false;
       },
       error: (err) => {
-        console.error('Data load failed', err);
+        console.error('Dashboard: Critical data load failure', err);
         this.loading = false;
       }
     });
@@ -388,18 +425,79 @@ export class DashboardComponent {
     }
 
     Swal.fire({
-      title: '確定要停權此用戶?',
-      text: `用戶: ${user.nickname} (${user.email})\n停權後該用戶將無法登入`,
+      title: '<span style="color: #1e293b; font-weight: 800;">停權用戶設定</span>',
+      html: `
+        <div class="text-left px-2" style="font-family: inherit;">
+          <div class="mb-5 p-4 bg-slate-50 rounded-xl border border-slate-100 shadow-sm">
+             <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">受處分帳號</div>
+             <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                  ${user.nickname.charAt(0)}
+                </div>
+                <div>
+                  <div class="text-base font-bold text-slate-800">${user.nickname}</div>
+                  <div class="text-xs text-slate-500">${user.email}</div>
+                </div>
+             </div>
+          </div>
+          
+          <div class="mb-4">
+            <label for="swal-hours" class="block text-sm font-bold text-slate-700 mb-1.5 flex items-center gap-2">
+              <i class="pi pi-clock text-blue-500"></i> 禁用時數設定
+            </label>
+            <input id="swal-hours" type="number" 
+              class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-slate-700" 
+              placeholder="輸入小時，空值或 0 為永久禁用" min="0">
+            <div class="mt-1.5 flex gap-2">
+              <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded cursor-pointer hover:bg-slate-200" onclick="document.getElementById('swal-hours').value=72">3天(72h)</span>
+              <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded cursor-pointer hover:bg-slate-200" onclick="document.getElementById('swal-hours').value=168">7天(168h)</span>
+              <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded cursor-pointer hover:bg-slate-200" onclick="document.getElementById('swal-hours').value=720">30天(720h)</span>
+            </div>
+          </div>
+
+          <div class="mb-1">
+            <label for="swal-reason" class="block text-sm font-bold text-slate-700 mb-1.5 flex items-center gap-2">
+              <i class="pi pi-exclamation-circle text-orange-500"></i> 禁用理由 <span class="text-red-500">*</span>
+            </label>
+            <textarea id="swal-reason" rows="3"
+              class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none text-slate-700" 
+              placeholder="請詳細說明理由，這將顯示給被禁用的用戶看..."></textarea>
+          </div>
+        </div>
+      `,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: '確定停權',
+      confirmButtonText: '確定執行停權',
       cancelButtonText: '取消',
-      confirmButtonColor: '#d33'
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#94a3b8',
+      background: '#ffffff',
+      customClass: {
+        popup: 'rounded-2xl',
+        confirmButton: 'rounded-lg px-6 py-2.5 font-bold',
+        cancelButton: 'rounded-lg px-6 py-2.5 font-bold'
+      },
+      preConfirm: () => {
+        const hours = (document.getElementById('swal-hours') as HTMLInputElement).value;
+        const reason = (document.getElementById('swal-reason') as HTMLTextAreaElement).value;
+        if (!reason) {
+          Swal.showValidationMessage('⚠️ 請務必填寫禁用理由');
+          return false;
+        }
+        return { hours: hours ? parseInt(hours) : null, reason: reason };
+      }
     }).then((result) => {
       if (result.isConfirmed) {
-        this.authService.banUser(user.id).subscribe({
+        const { hours, reason } = result.value;
+        this.authService.banUser(user.id, hours, reason).subscribe({
           next: () => {
-            Swal.fire('已停權', '該用戶已被停權', 'success');
+            Swal.fire({
+              icon: 'success',
+              title: '處分已執行',
+              text: `已成功對 ${user.nickname} 執行停權。`,
+              timer: 2000,
+              showConfirmButton: false
+            });
             this.loadData();
           },
           error: (err) => Swal.fire('操作失敗', err?.message, 'error')
@@ -407,6 +505,7 @@ export class DashboardComponent {
       }
     });
   }
+
 
   /**
    * 恢復用戶帳號
@@ -437,9 +536,249 @@ export class DashboardComponent {
    * 查看活動 (跳轉至跟團頁面)
    */
   onEventView(event: any) {
-    // 您可以根據需求決定跳轉到 "group-event/:id" (開團設定) 或 "group-follow/:id" (跟團頁)
-    // 這裡假設管理者想看公開的活動詳情
     this.router.navigate(['/groupbuy-event/group-follow', event.id]);
+  }
+
+  /**
+   * 打開管理對話框
+   */
+  onEventManage(event: any) {
+    this.selectedEventForManage = event;
+    this.displayManageDialog = true;
+    this.loadManageData(event.id);
+  }
+
+  loadManageData(eventsId: number) {
+    this.cart.getPersonalOrdersByEventId(eventsId).subscribe({
+      next: (res: any) => {
+        if (res.code === 200) {
+          const list = res.personalOrder || [];
+          this.manageMembersMap.update(map => ({
+            ...map,
+            [eventsId]: list
+          }));
+        }
+      },
+      error: (err: any) => console.error(err)
+    });
+  }
+
+  togglePaymentStatus(member: any, eventsId: number) {
+    const isPaid = member.paymentStatus === 'CONFIRMED' || member.paymentStatus === 'PAID';
+    const nextStatus = isPaid ? 'UNPAID' : 'CONFIRMED';
+
+    const payload = {
+      eventsId: eventsId,
+      userId: member.userId,
+      paymentStatus: nextStatus,
+      totalSum: member.totalSum,
+      totalWeight: member.totalWeight,
+      personFee: member.personFee
+    };
+
+    this.cart.updatePersonalOrder(payload).subscribe({
+      next: (res: any) => {
+        if (res.code === 200) {
+          this.loadManageData(eventsId);
+        } else {
+          Swal.fire('更新失敗', res.message, 'error');
+        }
+      },
+      error: (err: any) => {
+        console.error('Update payment status failed:', err);
+        Swal.fire('更新失敗', '系統連線錯誤', 'error');
+      }
+    });
+  }
+
+  togglePickupStatus(member: any, eventsId: number) {
+    const newStatus = (member.pickupStatus === 'PICKED_UP') ? 'NOT_PICKED_UP' : 'PICKED_UP';
+
+    const payload = {
+      eventsId: eventsId,
+      userId: member.userId,
+      pickupStatus: newStatus,
+      totalSum: member.totalSum,
+      totalWeight: member.totalWeight,
+      personFee: member.personFee
+    };
+
+    this.cart.updatePersonalOrder(payload).subscribe({
+      next: (res: any) => {
+        if (res.code === 200) {
+          this.loadManageData(eventsId);
+        } else {
+          Swal.fire('更新失敗', res.message, 'error');
+        }
+      },
+      error: (err: any) => {
+        console.error('Update pickup status failed:', err);
+        Swal.fire('更新失敗', '系統連線錯誤', 'error');
+      }
+    });
+  }
+
+  onComplaint(member: any, eventsId: number) {
+    const currentUserId = localStorage.getItem('user_id') || '';
+    Swal.fire({
+      title: '檢舉成員',
+      input: 'textarea',
+      inputPlaceholder: '請輸入檢舉原因...',
+      inputAttributes: {
+        'aria-label': '請輸入檢舉原因'
+      },
+      showCancelButton: true,
+      confirmButtonText: '提交檢舉',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#ef4444',
+      preConfirm: (reason) => {
+        if (!reason) {
+          Swal.showValidationMessage('請輸入原因！');
+        }
+        return reason;
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const payload = {
+          complaintUuid: currentUserId,
+          respondentUuid: member.userId,
+          reason: result.value,
+          eventId: eventsId
+        };
+
+        this.authService.addComplaint(payload).subscribe({
+          next: () => {
+            Swal.fire('提交成功', '檢舉已送交處理', 'success');
+          },
+          error: () => {
+            Swal.fire('提交失敗', '請稍後再試', 'error');
+          }
+        });
+      }
+    });
+  }
+
+  exportManageCSV(event: any) {
+    this.cart.getOrdersAll(event.id).subscribe({
+      next: (res: any) => {
+        if (res.code === 200 && res.ordersSearchViewList) {
+          const list = res.ordersSearchViewList;
+          const rows = [];
+          rows.push(`"【管理者-團購管理明細報表】"`);
+          rows.push(`"活動名稱：","${event.eventName}"`);
+          rows.push(`"商家：","${event.storeName}"`);
+          rows.push(`"匯出時間：","${new Date().toLocaleString()}"`);
+          rows.push('');
+          const headers = ['成員', '商品名稱', '規格與選項', '單價', '數量', '小計', '個人備註', '領取狀態'];
+          rows.push(headers.join(','));
+
+          list.forEach((order: any) => {
+            const nickname = `"${order.userNickname || '匿名'}"`;
+            const menuName = `"${order.menuName}"`;
+            const options = `"${this.formatSelectedOptionList(order.selectedOptionList)}"`;
+            const unitPrice = order.quantity ? order.subtotal / order.quantity : 0;
+            const qty = order.quantity;
+            const subtotal = order.subtotal;
+            const memo = `"${order.personalMemo || ''}"`;
+            const pickupStatus = order.pickupStatus === 'PICKED_UP' ? '已領取' : '未取餐';
+
+            rows.push([nickname, menuName, options, unitPrice, qty, subtotal, memo, pickupStatus].join(','));
+          });
+
+          const csvContent = "\uFEFF" + rows.join('\n');
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.setAttribute('href', url);
+          link.setAttribute('download', `Manage_${event.eventName}_${new Date().toLocaleDateString()}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      },
+      error: (err: any) => console.error(err)
+    });
+  }
+
+  notifyMembers(event: any) {
+    Swal.fire({
+      title: '發送取貨通知?',
+      text: `將會發送網頁通知給「${event.eventName}」的所有跟團成員。`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '確定發送',
+      cancelButtonText: '取消'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.cart.getPersonalOrdersByEventId(event.id).subscribe({
+          next: (res: any) => {
+            if (res.code === 200) {
+              const list = res.personalOrder || [];
+              if (list.length === 0) {
+                Swal.fire('目前沒有成員下單', '', 'info');
+                return;
+              }
+              const currentUserId = localStorage.getItem('user_id') || '';
+              const req: NotifiMesReq = {
+                category: NotifiCategoryEnum.GROUP_BUY,
+                title: '管理員取貨通知',
+                content: `來自管理員的通知：您參加的團購「${event.eventName}」商品已送達，請儘速取貨！`,
+                eventId: event.id,
+                userId: currentUserId,
+                targetUrl: '/user/orders',
+                expiredAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                userNotificationVoList: list.map((m: any) => ({
+                  userId: m.userId,
+                  email: m.userEmail
+                }))
+              };
+              this.messageService.create(req).subscribe(() => {
+                Swal.fire('成功', '通知已發送', 'success');
+              });
+            }
+          }
+        });
+      }
+    });
+  }
+
+  formatSelectedOptionList(list: any[]): string {
+    if (!Array.isArray(list)) return '';
+    return list
+      .map(o => `${o.optionName}:${o.value}${o.extraPrice ? `(+${o.extraPrice})` : ''}`)
+      .join('、');
+  }
+
+  onComplaintResolve(complaint: any) {
+    const nextText = complaint.completed ? '標記為未處理?' : '標記為已處理?';
+    Swal.fire({
+      title: nextText,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '確定',
+      cancelButtonText: '取消'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.authService.setComplaintState(complaint.id).subscribe({
+          next: () => {
+            Swal.fire({
+              toast: true,
+              position: 'top',
+              icon: 'success',
+              title: '處理狀態已更新',
+              showConfirmButton: false,
+              timer: 1500
+            });
+            this.loadData();
+          },
+          error: (err) => Swal.fire('操作失敗', err?.message, 'error')
+        });
+      }
+    });
+  }
+
+  getComplaintSeverity(completed: boolean) {
+    return completed ? 'success' : 'warn';
   }
 
   maskEmail(email: string): string {

@@ -396,7 +396,7 @@
               <th class="px-6 py-4 text-right whitespace-nowrap">金額明細</th>
               <th class="px-6 py-4 text-center">收款進度</th>
               <th class="px-6 py-4 text-center">領餐進度</th>
-              <!-- <th class="px-6 py-4 text-center">操作</th> -->
+              <th class="px-6 py-4 text-center">操作</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -453,9 +453,14 @@
                   </button>
                 </div>
               </td>
-              <!-- <td class="px-6 py-5">
+              <td class="px-6 py-5">
                 <div class="flex justify-center gap-2">
                   <button type="button"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer"
+                    title="申訴成員" (click)="onComplaint(m, item.eventsId)">
+                    <i class="pi pi-exclamation-triangle text-sm"></i>
+                  </button>
+                  <!-- <button type="button"
                     class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-sky-500 hover:bg-sky-50 transition-colors cursor-pointer"
                     title="修改成員訂單" (click)="editMemberOrder(m, item.eventsId)">
                     <i class="pi pi-pencil text-sm"></i>
@@ -464,9 +469,9 @@
                     class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer"
                     title="刪除成員訂單" (click)="deleteMemberOrder(m, item.eventsId, item.eventName)">
                     <i class="pi pi-trash text-sm"></i>
-                  </button>
+                  </button> -->
                 </div>
-              </td> -->
+              </td>
             </tr>
             } @empty {
             <tr>
