@@ -52,10 +52,13 @@ export class SseService {
     this.disconnect();
     this.connectedUserId = userId;
 
-    this.es = new EventSource(`${this.https.BASE_URL}/api/sse/subscribe/${userId}`);
+    const url = `${this.https.BASE_URL}/api/sse/subscribe/${userId}`;
+    console.log('[SSE] Attempting to connect to:', url);
+
+    this.es = new EventSource(url, { withCredentials: true });
 
     this.es.onopen = () => {
-      this.zone.run(() => console.log('[SSE] connected'));
+      this.zone.run(() => console.log('[SSE] Connection opened successfully'));
     };
 
     // 監聽所有事件的 Debug 邏輯
@@ -71,6 +74,7 @@ export class SseService {
 
     // 公告（SYSTEM_NOTICE）
     this.es.addEventListener('SYSTEM_NOTICE', (event: any) => {
+      console.log('[SSE] SYSTEM_NOTICE received:', event.data);
       this.zone.run(() => {
         this.addSystemNotice(event.data);
       });
@@ -79,6 +83,7 @@ export class SseService {
 
     // 一般通知（message）
     this.es.addEventListener('message', (event: any) => {
+      console.log('[SSE] message received:', event.data);
       this.zone.run(() => {
         const item = this.toUiNotification(event.data);
         this.addNotification(item);
@@ -87,6 +92,7 @@ export class SseService {
 
     // 團購通知（GROUP_BUY）
     this.es.addEventListener('GROUP_BUY', (event: any) => {
+      console.log('[SSE] GROUP_BUY received:', event.data);
       this.zone.run(() => {
         const item = this.toUiNotification(event.data);
         this.addNotification(item);
@@ -95,6 +101,7 @@ export class SseService {
 
     // 系統通知（SYSTEM）
     this.es.addEventListener('SYSTEM', (event: any) => {
+      console.log('[SSE] SYSTEM received:', event.data);
       this.zone.run(() => {
         const item = this.toUiNotification(event.data);
         this.addNotification(item);
@@ -103,10 +110,17 @@ export class SseService {
 
     // 許願通知（WISH）
     this.es.addEventListener('WISH', (event: any) => {
+      console.log('[SSE] WISH received:', event.data);
       this.zone.run(() => {
         const item = this.toUiNotification(event.data);
         this.addNotification(item);
       });
+    });
+
+    // 心跳監聽
+    this.es.addEventListener('heartbeat', (event: any) => {
+      // 僅紀錄但不處理，維持連線用
+      // console.log('[SSE] heartbeat received');
     });
 
     // 不要 observer.error，讓 EventSource 有機會自動重連

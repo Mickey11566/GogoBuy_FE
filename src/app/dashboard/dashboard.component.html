@@ -121,19 +121,22 @@
         styleClass="p-datatable-striped" [tableStyle]="{ 'min-width': '50rem' }">
         <ng-template pTemplate="header">
           <tr>
-            <th class="text-xl!" pSortableColumn="id" style="width:10%">ID <p-sortIcon field="id"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="name" style="width:20%">店家名稱 <p-sortIcon field="name"></p-sortIcon>
+            <th class="text-xl!" pSortableColumn="id" style="width:8%">ID <p-sortIcon field="id"></p-sortIcon></th>
+            <th class="text-xl!" pSortableColumn="name" style="width:15%">店家名稱 <p-sortIcon field="name"></p-sortIcon>
             </th>
             <th class="text-xl!" pSortableColumn="category" style="width:10%">分類 <p-sortIcon
                 field="category"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="address" style="width:20%">地址 <p-sortIcon
+            <th class="text-xl!" pSortableColumn="address" style="width:17%">地址 <p-sortIcon
                 field="address"></p-sortIcon></th>
             <th class="text-xl!" pSortableColumn="phone" style="width:12%">電話 <p-sortIcon field="phone"></p-sortIcon>
             </th>
-            <th class="text-xl!" pSortableColumn="publish" style="width:10%">狀態 <p-sortIcon
+            <th class="text-xl!" pSortableColumn="publish" style="width:10%">公開狀態 <p-sortIcon
                 field="publish"></p-sortIcon>
             </th>
-            <th class="text-xl!" style="width:18%">操作</th>
+            <th class="text-xl!" pSortableColumn="deleted" style="width:10%">刪除狀態 <p-sortIcon
+                field="deleted"></p-sortIcon>
+            </th>
+            <th class="text-xl! text-center!" style="width:18%">操作</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-store>
@@ -150,6 +153,11 @@
             <td>
               <p-tag class="text-base!" [value]="store.publish ? '公開' : '隱藏'"
                 [severity]="getPublishSeverity(store.publish)" [rounded]="true">
+              </p-tag>
+            </td>
+            <td>
+              <p-tag class="text-base!" [value]="store.deleted ? '已刪除' : '正常'"
+                [severity]="store.deleted ? 'danger' : 'success'" [rounded]="true">
               </p-tag>
             </td>
             <td>
@@ -187,7 +195,7 @@
                 field="nickname"></p-sortIcon></th>
             <th class="text-xl!" pSortableColumn="status" style="width:15%">狀態 <p-sortIcon field="status"></p-sortIcon>
             </th>
-            <th class="text-xl!" style="width:25%">操作</th>
+            <th class="text-xl! text-center!" style="width:25%">操作</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-event>
@@ -242,7 +250,7 @@
                 field="provider"></p-sortIcon></th>
             <th class="text-xl!" pSortableColumn="status" style="width:15%">狀態 <p-sortIcon field="status"></p-sortIcon>
             </th>
-            <th class="text-xl!" style="width:15%">操作</th>
+            <th class="text-xl! text-center!" style="width:15%">操作</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-user>
@@ -297,6 +305,14 @@
               }
             </td>
             <td>
+              @if(user.role === 'user'){
+              <p-button label="晉升管理員" icon="pi pi-crown" (onClick)="onUserRoleChange(user, 'admin')"
+                styleClass="p-button-text p-button-base p-button-rounded p-button-success"></p-button>
+              } @else {
+              <p-button label="降為一般戶" icon="pi pi-user" (onClick)="onUserRoleChange(user, 'user')"
+                styleClass="p-button-text p-button-base p-button-rounded p-button-secondary"></p-button>
+              }
+
               @if(user.status !== "banned"){
               <p-button label="禁用" icon="pi pi-ban" (onClick)="onUserBan(user)"
                 styleClass="p-button-text p-button-base p-button-rounded p-button-danger"></p-button>
@@ -326,7 +342,7 @@
         <div class="px-8 py-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
           <div>
             <h2 class="text-2xl font-black text-slate-800">申訴內容管理</h2>
-            <p class="text-slate-400 text-sm font-bold">查看與處理用戶提交的檢舉與申訴單</p>
+            <p class="text-slate-400 text-base font-bold">查看與處理用戶提交的檢舉與申訴單</p>
           </div>
         </div>
 

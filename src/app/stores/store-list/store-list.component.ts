@@ -1,3 +1,4 @@
+import { filter } from 'rxjs/operators';
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import { Component, computed, effect, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -247,10 +248,14 @@ export class StoreListComponent {
         const list = res?.storeList ?? [];
         console.log('storeList raw =', list);
 
-        const processedList = list.map((s: any) => ({
-          ...s,
-          type: s.type || (s.category == 'fast' ? '外送' : '團購')
-        }));
+        const processedList = list
+          .filter((s: any) =>
+            s.deleted != true
+          )
+          .map((s: any) => ({
+            ...s,
+            type: s.type || (s.category == 'fast' ? '外送' : '團購')
+          }));
 
         this.stores.set(processedList);
 

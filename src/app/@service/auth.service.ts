@@ -558,6 +558,14 @@ export class AuthService {
   }
 
   /**
+   * 更新角色 (後台用)
+   * POST gogobuy/update-user-role?id={userId}&role={role}
+   */
+  updateUserRole(userId: string, role: string) {
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/update-user-role?id=${userId}&role=${role}`, {});
+  }
+
+  /**
    * 提交申訴
    */
   addComplaint(payload: { complaintUuid: string, respondentUuid: string, reason: string, eventId: number }) {

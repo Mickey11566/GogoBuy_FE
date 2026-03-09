@@ -215,7 +215,8 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
         `${this.http.BASE_URL}/gogobuy/event/getGroupbuyEventByStoresId?stores_id=${storeId}`,
       )
       .subscribe((res: any) => {
-        this.event = res.groupbuyEvents.filter((o: any) => o.status === 'OPEN');
+        const list = res?.groupbuyEvents || [];
+        this.event = list.filter((o: any) => o.status === 'OPEN');
         if (this.event.length > 0) {
           this.isGroupOpening = true;
         } else {

@@ -533,6 +533,32 @@ export class DashboardComponent {
   }
 
   /**
+   * 變更用戶角色
+   */
+  onUserRoleChange(user: any, newRole: string) {
+    const roleText = newRole === 'admin' ? '管理員' : '一般用戶';
+    Swal.fire({
+      title: `確定要將「${user.nickname}」調整為${roleText}嗎？`,
+      text: '這將會改變該用戶的操作權限',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '確定調整',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#3085d6'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.authService.updateUserRole(user.id, newRole).subscribe({
+          next: () => {
+            Swal.fire('已更新', `該用戶角色已更新為${roleText}`, 'success');
+            this.loadData();
+          },
+          error: (err) => Swal.fire('操作失敗', err?.message, 'error')
+        });
+      }
+    });
+  }
+
+  /**
    * 查看活動 (跳轉至跟團頁面)
    */
   onEventView(event: any) {
