@@ -661,9 +661,16 @@ export class WishesComponent implements OnInit {
     }
 
     const wishId = this.selectedWish.id;
-    const wishTitle = encodeURIComponent(this.selectedWish.title || '');
+    const wishTitle = this.selectedWish.title || '';
     sessionStorage.removeItem('temp_order_info');
-    window.location.href = `/management/store_upsert?wish_id=${wishId}&wish_title=${wishTitle}`;
+    
+    // 使用 Angular Router 導向，避免 Hash 模式下跳回首頁
+    this.router.navigate(['/management/store_upsert'], {
+      queryParams: {
+        wish_id: wishId,
+        wish_title: wishTitle
+      }
+    });
   }
 
   // =========================

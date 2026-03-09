@@ -881,6 +881,7 @@ export class GroupEventComponent {
 
 
   get uniqueTabs() {
+    this.selectedItems = this.selectedItems.filter(i => i.id !== 'BOTTOM_PADDING' && i.id !== 'SOURCE_PADDING');
     const uniqueIds = [...new Set(this.selectedItems.map(item => item.categoryId))];
     return uniqueIds.map(catId => {
       const category = this.menuCategoriesVoList.find(cat => cat.id === catId);
