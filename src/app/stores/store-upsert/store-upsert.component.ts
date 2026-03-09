@@ -699,7 +699,7 @@ export class StoreUpsertComponent {
       return;
     }
 
-    if (this.isPhoneUsed || !this.phoneRegex.test(this.storeData.phone)) {
+    if ((this.isPhoneUsed || !this.phoneRegex.test(this.storeData.phone)) && !this.id) {
       this.displayPhoneUsedDialog = true;
       return;
     }

@@ -98,7 +98,7 @@
       <small class="text-red-600 text-xs">
         請輸入正確電話號碼不含連字號(格式：061234567 / 0912345678)
       </small>
-      }@else if (isPhoneUsed) {
+      }@else if (isPhoneUsed && !id) {
       <small class="text-red-600 text-xs">此電話號碼已使用過</small>
       }
     </div>
