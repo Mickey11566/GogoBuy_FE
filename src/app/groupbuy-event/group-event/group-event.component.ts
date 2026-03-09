@@ -961,7 +961,7 @@ export class GroupEventComponent {
     if (!this.eventName) missingFields.push('開團名稱');
     // if (!this.choice) missingFields.push('運費拆帳方式');
     // if (!this.isConfirmed) missingFields.push('同意拆帳規則');
-    if (!this.tempMenu) missingFields.push('菜單品項')
+    if (this.tempMenu.length == 0) missingFields.push('菜單品項')
     if (this.limitation && this.limitation < 1) {
       missingFields.push('成團門檻金額至少為1');
     } else if (!this.limitation) {
