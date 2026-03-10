@@ -156,9 +156,7 @@ export class LoginComponent {
             title: "註冊成功",
             text: "已發送驗證信至您的信箱，請開通後再登入",
             icon: "success",
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
+            showConfirmButton: true,
           }).then(() => window.location.reload());
         } else {
           Swal.fire({
@@ -298,12 +296,12 @@ export class LoginComponent {
           <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border-left: 4px solid #7f1d1d; margin-bottom: 15px;">
             歡迎您註冊本團購電商平台。為提供<strong>下單、付款交易、物流配送、客服支援及行銷通知</strong>等服務，我們將蒐集您的姓名、電郵、電話及付款資訊等必要資料。
           </div>
-          
+
           <p style="margin-bottom: 12px;">
             <span style="color: #7f1d1d; font-weight: 800;">● 使用範圍：</span>
             您的資料僅於提供服務、會員管理及統計分析範圍內使用。我們將採取嚴格安全措施防止資料竄改或非法存取。
           </p>
-          
+
           <p style="margin-bottom: 12px;">
             <span style="color: #7f1d1d; font-weight: 800;">● 使用者權利：</span>
             您得依法請求查詢、更正、刪除個人資料。若不同意提供必要資料，可能影響註冊或訂單服務。
@@ -328,7 +326,7 @@ export class LoginComponent {
           <p style="font-weight: 800; color: #0f172a; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; pb-2;">
             感謝您參與 GogoBuy 團購，請詳閱支付規範：
           </p>
-          
+
           <div style="margin-bottom: 15px; background: #f0f9ff; padding: 12px; border-radius: 10px; border-left: 4px solid #0ea5e9;">
             <p style="font-weight: 800; color: #0369a1; margin-bottom: 4px;">1. 運費平分機制</p>
             <p>總運費依配送距離計算。結單時按<strong>「最終實際參與人數」</strong>平均分攤，確保公平性。</p>

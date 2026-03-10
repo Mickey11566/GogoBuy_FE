@@ -109,7 +109,7 @@ export class PersonInfoEditComponent {
         icon: 'error',
         title: `只能上傳圖片檔喔!`,
         showConfirmButton: false,
-        timer: 2000,
+        timer: 3000,
       });
       input.value = '';
       return;
@@ -124,7 +124,7 @@ export class PersonInfoEditComponent {
         icon: 'error',
         title: `圖片太大了(${sizeMB}MB)，請上傳 2MB 以下的圖片!`,
         showConfirmButton: false,
-        timer: 2000,
+        timer: 5000,
       });
       input.value = '';
       return;
@@ -185,7 +185,7 @@ export class PersonInfoEditComponent {
         title: '資料未變更',
         text: '您尚未修改任何內容喔！',
         icon: 'info',
-        timer: 1500,
+        timer: 4000,
         showConfirmButton: false
       });
       return; // 結束執行，不發送請求
@@ -211,7 +211,7 @@ export class PersonInfoEditComponent {
           Swal.fire({
             title: '儲存成功...返回個人頁面中',
             icon: 'success',
-            timer: 2000,
+            timer: 3000,
             showConfirmButton: false,
             timerProgressBar: true,
           }).then(() => {
@@ -323,7 +323,7 @@ export class PersonInfoEditComponent {
               title: '成功',
               text: 'Email 已更新，請重新登入',
               showConfirmButton: false,
-              timer: 2000,
+              timer: 4000,
               timerProgressBar: true,
             });
 

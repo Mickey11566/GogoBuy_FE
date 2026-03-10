@@ -114,4 +114,9 @@ export class CartService {
     const url = `${this.https.BASE_URL}/gogobuy/event/hostCloseEvent?id=${eventsId}&host_id=${encodeURIComponent(hostId)}`;
     return this.https.postApi<BasicRes>(url, null);
   }
+
+  // 加入黑名單
+  addBlacklist(payload: any) {
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/blacklist/add`, payload);
+  }
 }

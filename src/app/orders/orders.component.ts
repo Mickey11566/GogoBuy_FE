@@ -221,7 +221,7 @@ export class OrdersComponent {
               code: item.orderCode,
               storeName: item.storeName || '未知店家',
               createdAt: new Date(item.createdAt),
-              statusLabel: item.statusLabel,
+              statusLabel: (item.paymentStatus === 'CONFIRMED' || item.paymentStatus === 'PAID') && item.pickupStatus === 'PICKED_UP' ? '已完成' : '進行中',
               personFee: item.personFee,
               total: item.totalAmount + item.personFee,
               receiverName: item.receiverName,
@@ -469,75 +469,107 @@ export class OrdersComponent {
 
   togglePaymentStatus(member: any, eventsId: number) {
     const isPaid = member.paymentStatus === 'CONFIRMED' || member.paymentStatus === 'PAID';
-    const nextStatus = isPaid ? 'UNPAID' : 'CONFIRMED';
 
-    const payload = {
-      eventsId: eventsId,
-      userId: member.userId,
-      paymentStatus: nextStatus,
-      totalSum: member.totalSum,
-      totalWeight: member.totalWeight,
-      personFee: member.personFee
-    };
+    // 如果已經是已支付狀態，則不允許變更
+    if (isPaid) return;
 
-    this.cart.updatePersonalOrder(payload).subscribe({
-      next: (res: any) => {
-        if (res.code === 200) {
-          member.paymentStatus = nextStatus;
-          Swal.fire({
-            toast: true,
-            position: 'top',
-            icon: 'success',
-            title: '付款狀態已更新',
-            showConfirmButton: false,
-            timer: 1500
-          });
-          // 同步更新歷史訂單 (始終刷新目前使用者的歷史)
-          this.fetchHistoryOrders(this.userId);
-          this.loadCartData();
-        }
-      },
-      error: (err: any) => {
-        console.error(err);
-        Swal.fire('更新失敗', '', 'error');
+    Swal.fire({
+      title: '確認收款?',
+      text: `確認已收到「${member.userNickname || '成員'}」的款項嗎？此操作不可撤回。`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '確定',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#94a3b8'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const nextStatus = 'CONFIRMED';
+        const payload = {
+          eventsId: eventsId,
+          userId: member.userId,
+          paymentStatus: nextStatus,
+          totalSum: member.totalSum,
+          totalWeight: member.totalWeight,
+          personFee: member.personFee
+        };
+
+        this.cart.updatePersonalOrder(payload).subscribe({
+          next: (res: any) => {
+            if (res.code === 200) {
+              member.paymentStatus = nextStatus;
+              Swal.fire({
+                toast: true,
+                position: 'top',
+                icon: 'success',
+                title: '付款狀態已更新',
+                showConfirmButton: false,
+                timer: 1500
+              });
+              // 同步更新歷史訂單 (始終刷新目前使用者的歷史)
+              this.fetchHistoryOrders(this.userId);
+              this.loadCartData();
+            }
+          },
+          error: (err: any) => {
+            console.error(err);
+            Swal.fire('更新失敗', '', 'error');
+          }
+        });
       }
     });
   }
 
   togglePickupStatus(member: any, eventsId: number) {
     const isPickedUp = member.pickupStatus === 'PICKED_UP';
-    const nextStatus = isPickedUp ? 'NOT_PICKED_UP' : 'PICKED_UP';
 
-    const payload = {
-      eventsId: eventsId,
-      userId: member.userId,
-      pickupStatus: nextStatus, // 會同步更新到 orders 表
-      paymentStatus: member.paymentStatus,
-      totalSum: member.totalSum,
-      totalWeight: member.totalWeight,
-      personFee: member.personFee
-    };
+    // 如果已經是已領取狀態，則不允許變更
+    if (isPickedUp) return;
 
-    this.cart.updatePersonalOrder(payload).subscribe({
-      next: (res: any) => {
-        if (res.code === 200) {
-          member.pickupStatus = nextStatus;
-          Swal.fire({
-            toast: true,
-            position: 'top',
-            icon: 'success',
-            title: '取餐狀態已更新',
-            showConfirmButton: false,
-            timer: 1500
-          });
-          // 同步更新資訊 (始終刷新目前使用者的歷史)
-          this.fetchHistoryOrders(this.userId);
-          this.loadCartData();
-        }
-      },
-      error: (err: any) => {
-        console.error(err);
-        Swal.fire('更新失敗', '', 'error');
+    Swal.fire({
+      title: '確認取餐?',
+      text: `確認「${member.userNickname || '成員'}」已領取餐點嗎？此操作不可撤回。`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '確定',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#1e293b',
+      cancelButtonColor: '#94a3b8'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const nextStatus = 'PICKED_UP';
+        const payload = {
+          eventsId: eventsId,
+          userId: member.userId,
+          pickupStatus: nextStatus,
+          paymentStatus: member.paymentStatus,
+          totalSum: member.totalSum,
+          totalWeight: member.totalWeight,
+          personFee: member.personFee
+        };
+
+        this.cart.updatePersonalOrder(payload).subscribe({
+          next: (res: any) => {
+            if (res.code === 200) {
+              member.pickupStatus = nextStatus;
+              Swal.fire({
+                toast: true,
+                position: 'top',
+                icon: 'success',
+                title: '取餐狀態已更新',
+                showConfirmButton: false,
+                timer: 1500
+              });
+              // 同步更新資訊 (始終刷新目前使用者的歷史)
+              this.fetchHistoryOrders(this.userId);
+              this.loadCartData();
+            }
+          },
+          error: (err: any) => {
+            console.error(err);
+            Swal.fire('更新失敗', '', 'error');
+          }
+        });
       }
     });
   }
@@ -829,4 +861,52 @@ export class OrdersComponent {
     });
   }
 
+  onBlacklist(member: any, eventsId: number) {
+    Swal.fire({
+      title: '確定要加入黑名單嗎？',
+      text: `將「${member.userNickname || '匿名成員'}」加入黑名單後，該成員將無法看見您未來開立的任何團購活動！`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '確定加入黑名單',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#94a3b8',
+      customClass: {
+        popup: 'rounded-3xl',
+        confirmButton: 'rounded-xl px-6 py-3 font-black',
+        cancelButton: 'rounded-xl px-6 py-3 font-black'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const payload = {
+          userId: this.userId,
+          blockedUserId: member.userId
+        };
+
+        this.cart.addBlacklist(payload).subscribe({
+          next: (res: any) => {
+            if (res.code === 200) {
+              Swal.fire({
+                icon: 'success',
+                title: '已加入黑名單',
+                text: `「${member.userNickname || '匿名成員'}」已無法參與您的團購`,
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 2000
+              });
+            } else {
+              Swal.fire('加入失敗', res.message || '發生未知錯誤', 'error');
+            }
+          },
+          error: (err: any) => {
+            console.error('Blacklist failed:', err);
+            Swal.fire('加入失敗', '系統連線錯誤', 'error');
+          }
+        });
+      }
+    });
+  }
+
 }
+

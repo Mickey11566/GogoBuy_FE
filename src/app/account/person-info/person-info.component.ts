@@ -96,14 +96,14 @@ export class PersonInfoComponent {
                 title: '帳戶已停用',
                 text: '您的帳戶已成功停用。正在將您登出...',
                 showConfirmButton: false,
-                timer: 2000
+                timer: 5000
               });
 
               // 登出並清除資料
               setTimeout(() => {
                 this.auth.logout();
                 this.router.navigate(['/']);
-              }, 2000);
+              }, 5000);
             } else {
               Swal.fire({
                 icon: 'error',

@@ -248,9 +248,17 @@ export class StoreComponent {
           console.log('res', res);
 
           if (res.storeList && res.storeList.length > 0) {
-            this.storeData.menuCategoriesVoList = res.menuCategoriesVoList;
-            this.storeData.productOptionGroupsVoList = res.productOptionGroupsVoList;
+            this.storeData.menuCategoriesVoList = (res.menuCategoriesVoList || []).map((c: any) => ({
+              ...c,
+              id: Number(c.id)
+            }));
+            this.storeData.productOptionGroupsVoList = (res.productOptionGroupsVoList || []).map((g: any) => ({
+              ...g,
+              id: Number(g.id)
+            }));
             this.storeData.menuVoList = res.menuVoList.map((product: any) => {
+              product.id = Number(product.id);
+              product.categoryId = Number(product.categoryId);
               if (Array.isArray(product.unusual) && product.unusual.length > 0) {
                 // 將 [{124: '湯頭'}, {125: '麵條'}] 合併成 {124: '湯頭', 125: '麵條'}
                 product.unusual = product.unusual.reduce((acc: any, curr: any) => {
@@ -263,9 +271,6 @@ export class StoreComponent {
             });
             this.rebuildApplicableCategoryIds();
             this.filteredProducts = [...this.storeData.menuVoList];
-            this.newPId = this.storeData.menuVoList.length + 1;
-            this.newSpecId = this.storeData.productOptionGroupsVoList.length + 1;
-            this.newCateId = this.storeData.menuCategoriesVoList.length + 1;
           }
 
           this.syncIdCounters();
@@ -278,6 +283,13 @@ export class StoreComponent {
         ...this.storeData,
         ...source,
         memo: source.memo ?? '',
+      }
+      // 確保從 service 拿回來的 ID 也是 Number
+      if (this.storeData.menuVoList) {
+        this.storeData.menuVoList.forEach(p => {
+          p.id = Number(p.id);
+          p.categoryId = Number(p.categoryId);
+        });
       }
     }
 
@@ -925,7 +937,8 @@ export class StoreComponent {
     }
 
     // 若未符合 p.id === this.currentProduct.id ， 那 index = -1
-    const index = this.storeData.menuVoList.findIndex(p => p.id === this.currentProduct.id);
+    // 使用 Number() 確保比較時型別一致，避免產生重複商品
+    const index = this.storeData.menuVoList.findIndex(p => Number(p.id) === Number(this.currentProduct.id));
 
     this.currentProduct.unusual = this.currentProduct.unusual ? { ...this.currentProduct.unusual } : {};
 
@@ -1074,7 +1087,7 @@ export class StoreComponent {
           menuCategoriesVoList: this.storeData.menuCategoriesVoList.map(category => ({
             name: category.name,
             priceLevel: category.priceLevel,
-            menuVo: this.storeData.menuVoList.filter(item => item.categoryId === category.id)
+            menuVo: this.storeData.menuVoList.filter(item => Number(item.categoryId) === Number(category.id))
               .map(product => ({
                 ...product,
                 unusual: transformUnusual(product.unusual)
@@ -1182,7 +1195,7 @@ export class StoreComponent {
       menuCategoriesVoList: this.storeData.menuCategoriesVoList.map(category => ({
         name: category.name,
         priceLevel: category.priceLevel,
-        menuVo: this.storeData.menuVoList.filter(item => item.categoryId === category.id)
+        menuVo: this.storeData.menuVoList.filter(item => Number(item.categoryId) === Number(category.id))
           .map(product => ({
             ...product,
             unusual: (Array.isArray(product.unusual) || !product.unusual || Object.keys(product.unusual).length === 0)

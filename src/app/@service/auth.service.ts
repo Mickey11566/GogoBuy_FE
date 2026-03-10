@@ -21,7 +21,9 @@ export class AuthService {
   constructor(
     public https: HttpService,
     private router: Router,
-    private route: ActivatedRoute,) { }
+    private route: ActivatedRoute,) {
+    this.loadUserFromStorage();
+  }
   user: any = null;
 
   // userSubject 用來讓「畫面上的 component」可以訂閱 user 變化（不用一直去讀 localStorage）
@@ -433,14 +435,22 @@ export class AuthService {
   // 查詢開團者暱稱搜尋團
   getGroupbuyEventByName(hostNickname: string) {
     const encoded = encodeURIComponent(hostNickname);
-    return this.https.getApi(
-      `${this.https.BASE_URL}/gogobuy/event/getGroupbuyEventByNickname?host_nickname=${encoded}`
-    );
+    const uid = this.user?.id || localStorage.getItem('user_id');
+    let url = `${this.https.BASE_URL}/gogobuy/event/getGroupbuyEventByNickname?host_nickname=${encoded}`;
+    if (uid && uid !== 'null') {
+      url += `&current_user_id=${uid}`;
+    }
+    return this.https.getApi(url);
   }
 
   // 查詢全部開團
   getallevent() {
-    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/event/getAll`);
+    let url = `${this.https.BASE_URL}/gogobuy/event/getAll`;
+    const uid = this.user?.id || localStorage.getItem('user_id');
+    if (uid && uid !== 'null') {
+      url += `?current_user_id=${uid}`;
+    }
+    return this.https.getApi(url);
   }
 
   // 查詢全部user

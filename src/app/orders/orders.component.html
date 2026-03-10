@@ -428,10 +428,11 @@
               <td class="px-6 py-5">
                 <div class="flex justify-center">
                   <button type="button"
-                    class="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-xl text-xs font-bold transition-all border cursor-pointer min-w-[90px]"
+                    [disabled]="m.paymentStatus === 'CONFIRMED' || m.paymentStatus === 'PAID'"
+                    class="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-xl text-xs font-bold transition-all border min-w-[90px]"
                     [ngClass]="m.paymentStatus === 'CONFIRMED' || m.paymentStatus === 'PAID'
-                                  ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-100'
-                                  : 'bg-white border-slate-200 text-slate-400 hover:border-orange-200 hover:text-orange-500'"
+                                  ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-100 cursor-not-allowed'
+                                  : 'bg-white border-slate-200 text-slate-400 hover:border-orange-200 hover:text-orange-500 cursor-pointer'"
                     (click)="togglePaymentStatus(m, item.eventsId)">
                     <i class="pi"
                       [ngClass]="m.paymentStatus === 'CONFIRMED' || m.paymentStatus === 'PAID' ? 'pi-check-circle' : 'pi-clock'"></i>
@@ -442,10 +443,11 @@
               <td class="px-6 py-5">
                 <div class="flex justify-center">
                   <button type="button"
-                    class="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-xl text-xs font-bold transition-all border cursor-pointer min-w-[90px]"
+                    [disabled]="m.pickupStatus === 'PICKED_UP'"
+                    class="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-xl text-xs font-bold transition-all border min-w-[90px]"
                     [ngClass]="m.pickupStatus === 'PICKED_UP'
-                                  ? 'bg-slate-800 border-slate-800 text-white shadow-md shadow-slate-200 font-black'
-                                  : 'bg-white border-slate-200 text-slate-400 hover:border-sky-200 hover:text-sky-500'"
+                                  ? 'bg-slate-800 border-slate-800 text-white shadow-md shadow-slate-200 font-black cursor-not-allowed'
+                                  : 'bg-white border-slate-200 text-slate-400 hover:border-sky-200 hover:text-sky-500 cursor-pointer'"
                     (click)="togglePickupStatus(m, item.eventsId)">
                     <i class="pi"
                       [ngClass]="m.pickupStatus === 'PICKED_UP' ? 'pi-shopping-bag' : 'pi-shopping-cart'"></i>
@@ -456,20 +458,15 @@
               <td class="px-6 py-5">
                 <div class="flex justify-center gap-2">
                   <button type="button"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                    title="加入黑名單" (click)="onBlacklist(m, item.eventsId)">
+                    <i class="pi pi-user-minus text-sm"></i>
+                  </button>
+                  <button type="button"
                     class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer"
                     title="申訴成員" (click)="onComplaint(m, item.eventsId)">
                     <i class="pi pi-exclamation-triangle text-sm"></i>
                   </button>
-                  <!-- <button type="button"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-sky-500 hover:bg-sky-50 transition-colors cursor-pointer"
-                    title="修改成員訂單" (click)="editMemberOrder(m, item.eventsId)">
-                    <i class="pi pi-pencil text-sm"></i>
-                  </button>
-                  <button type="button"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer"
-                    title="刪除成員訂單" (click)="deleteMemberOrder(m, item.eventsId, item.eventName)">
-                    <i class="pi pi-trash text-sm"></i>
-                  </button> -->
                 </div>
               </td>
             </tr>

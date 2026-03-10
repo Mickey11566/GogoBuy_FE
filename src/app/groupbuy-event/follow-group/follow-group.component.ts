@@ -525,9 +525,11 @@ export class FollowGroupComponent implements OnDestroy {
 
     // =============================================
     // GROUP（後端上線後使用）
+    const uid = this.userId || localStorage.getItem('user_id');
+    const url = `${this.http.BASE_URL}/gogobuy/event/getEventsByEventsId?id=${id}&current_user_id=${uid}`;
     this.http
       .getApi(
-        `${this.http.BASE_URL}/gogobuy/event/getEventsByEventsId?id=${id}`,
+        url,
         { withCredentials: true }
       )
       .subscribe((res: any) => {
@@ -723,7 +725,8 @@ export class FollowGroupComponent implements OnDestroy {
   }
 
   refreshGroupAmount(): void {
-    const url = `${this.http.BASE_URL}/gogobuy/event/getEventsByEventsId?id=${this.groupId}`;
+    const uid = this.userId || localStorage.getItem('user_id');
+    const url = `${this.http.BASE_URL}/gogobuy/event/getEventsByEventsId?id=${this.groupId}&current_user_id=${uid}`;
 
     this.http.getApi(url).subscribe({
       next: (res: any) => {
