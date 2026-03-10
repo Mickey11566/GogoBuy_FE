@@ -244,7 +244,8 @@ export class StoreListComponent {
   loadStores() {
     this.auths.getallstore().subscribe({
       next: (res: any) => {
-        const list = res?.storeList ?? [];
+        const list = (res?.storeList ?? []).filter((s: any) => s.publish === true);
+
         console.log('storeList raw =', list);
 
         const processedList = list.map((s: any) => ({
