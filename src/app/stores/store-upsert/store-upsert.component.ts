@@ -26,7 +26,7 @@ import { BlockUIModule } from 'primeng/blockui';
     InputTextModule, DatePickerModule,
     SelectModule, FloatLabelModule,
     DatePickerModule, FormsModule, FluidModule,
-    FormsModule, CheckboxModule, InputNumber,
+    FormsModule, CheckboxModule,
     DialogModule, AutoCompleteModule, BlockUIModule
   ],
   templateUrl: './store-upsert.component.html',
