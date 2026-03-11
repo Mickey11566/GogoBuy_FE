@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -41,7 +41,7 @@ export class WishesComponent implements OnInit {
     private messageService: MessageService,
     private route: ActivatedRoute,
     private router: Router,
-  ) { }
+  ) {}
 
   // =========================
   // 用戶資料(ngOnInt注入)
@@ -53,7 +53,7 @@ export class WishesComponent implements OnInit {
   // =========================
   // UI 狀態
   // =========================
-  isLoading = true; 
+  isLoading = true;
   activeTab = 0; // 0: all, 1: followed, 2: mine
   myFilter: MyFilter = 'all';
   foFilter: FoFilter = 'all';
@@ -65,7 +65,7 @@ export class WishesComponent implements OnInit {
     title: '',
     type: '手搖店',
     location: '',
-    anonymous: false
+    anonymous: false,
   };
 
   // 分頁（每個 tab 各自一套，避免互相干擾）
@@ -119,12 +119,61 @@ export class WishesComponent implements OnInit {
     });
     // 刷新資料
     this.auth.refreshUser();
-
+    // 先依目前螢幕設定 pageSize
+    this.updatePageSize();
     this.loadWishes();
   }
 
   isUser() {
     return this.role === 'user';
+  }
+
+  updatePageSize(): void {
+    const width = window.innerWidth;
+
+    // 對應你的 grid：
+    // grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5
+    if (width >= 1536) {
+      // 2xl：一排 5 張，兩排 = 10
+      this.pageSize = 10;
+    } else if (width >= 1024) {
+      // lg：一排 4 張，兩排 = 8
+      this.pageSize = 8;
+    } else if (width >= 640) {
+      // sm：一排 2 張，兩排 = 4
+      this.pageSize = 4;
+    } else {
+      // 手機：一排 1 張，照你的需求固定 10
+      this.pageSize = 10;
+    }
+
+    this.fixCurrentPages();
+  }
+
+  // 避免縮放後目前頁碼超出範圍
+  fixCurrentPages(): void {
+    const maxAllPage = Math.max(
+      0,
+      Math.ceil(this.getAllTabList().length / this.pageSize) - 1,
+    );
+    const maxFollowedPage = Math.max(
+      0,
+      Math.ceil(this.getFollowedTabList().length / this.pageSize) - 1,
+    );
+    const maxMinePage = Math.max(
+      0,
+      Math.ceil(this.getMineTabList().length / this.pageSize) - 1,
+    );
+
+    if (this.pageAll > maxAllPage) this.pageAll = maxAllPage;
+    if (this.pageFollowed > maxFollowedPage)
+      this.pageFollowed = maxFollowedPage;
+    if (this.pageMine > maxMinePage) this.pageMine = maxMinePage;
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.updatePageSize();
   }
 
   // =========================
@@ -144,9 +193,9 @@ export class WishesComponent implements OnInit {
 
       this.pendingFilter =
         filter === 'all' ||
-          filter === 'active' ||
-          filter === 'finished' ||
-          filter === 'expired'
+        filter === 'active' ||
+        filter === 'finished' ||
+        filter === 'expired'
           ? filter
           : null;
 
@@ -543,7 +592,7 @@ export class WishesComponent implements OnInit {
             // 刷新使用者資料以獲取最新剩餘次數
             this.auth.refreshUser();
             this.closeCreateDialog();
-            this.loadWishes(); 
+            this.loadWishes();
           } else {
             this.toastWarn('失敗', res?.message || '創建失敗');
           }
@@ -552,13 +601,16 @@ export class WishesComponent implements OnInit {
           this.isCreating = false;
           this.toastWarn('系統錯誤', '許願時發生異常，請稍後再試');
           console.error('[Wish] add_wish error:', err);
-        }
+        },
       });
   }
 
   // =========================
   // 跟願 / 取消跟願（同 API）
   // =========================
+  // 跟願時 loading
+  loading = false;
+
   onToggleFollow(wish: any): void {
     if (!this.userId) {
       this.toastWarn('請先登入', '登入後才可以跟願');
@@ -569,6 +621,7 @@ export class WishesComponent implements OnInit {
       this.toastWarn('提醒', '自己的願望不能跟願喔！');
       return;
     }
+    this.loading = true;
 
     const followers: string[] = wish.followers || [];
     const idx = followers.indexOf(this.userId);
@@ -580,17 +633,21 @@ export class WishesComponent implements OnInit {
           if (idx > -1) {
             followers.splice(idx, 1);
             this.toastInfo('已取消', '已取消跟願');
+            this.loading = false;
           } else {
             followers.push(this.userId);
             this.toastSuccess('成功', '跟願成功！');
+            this.loading = false;
           }
         } else {
           this.toastWarn('失敗', res?.message || '請重新操作');
+          this.loading = false;
         }
       },
       error: (err: any) => {
         this.toastWarn('錯誤', '操作失敗，請檢查網路連線');
-      }
+        this.loading = false;
+      },
     });
   }
 
@@ -663,13 +720,13 @@ export class WishesComponent implements OnInit {
     const wishId = this.selectedWish.id;
     const wishTitle = this.selectedWish.title || '';
     sessionStorage.removeItem('temp_order_info');
-    
+
     // 使用 Angular Router 導向，避免 Hash 模式下跳回首頁
     this.router.navigate(['/management/store_upsert'], {
       queryParams: {
         wish_id: wishId,
-        wish_title: wishTitle
-      }
+        wish_title: wishTitle,
+      },
     });
   }
 
