@@ -223,17 +223,11 @@ export class StoreComponent {
   }
 
   private syncIdCounters() {
-    this.newCateId = this.storeData.menuCategoriesVoList?.length
-      ? Math.max(...this.storeData.menuCategoriesVoList.map(c => c.id || 0))
-      : 0;
-
-    this.newSpecId = this.storeData.productOptionGroupsVoList?.length
-      ? Math.max(...this.storeData.productOptionGroupsVoList.map(g => g.id || 0))
-      : 0;
-
-    this.newPId = this.storeData.menuVoList?.length
-      ? Math.max(...this.storeData.menuVoList.map(p => p.id || 0))
-      : 0;
+    // 使用負數計數器策略：新增項目從 0 遞減 (-1, -2, ...)
+    // 真實 DB ID 都是正數，不會衝突
+    this.newCateId = 0;
+    this.newSpecId = 0;
+    this.newPId = 0;
   }
 
   ngOnInit() {
@@ -297,24 +291,10 @@ export class StoreComponent {
     const savedData = sessionStorage.getItem('temp_order_info');
     if (savedData) {
       this.storeData = JSON.parse(savedData);
-      if (this.storeData.menuCategoriesVoList && this.storeData.menuCategoriesVoList.length > 0) {
-        const maxId = Math.max(...this.storeData.menuCategoriesVoList.map((c: any) => c.id || 0));
-        this.newCateId = maxId;
-      } else {
-        this.newCateId = 0;
-      }
-      if (this.storeData.productOptionGroupsVoList && this.storeData.productOptionGroupsVoList.length > 0) {
-        const maxId = Math.max(...this.storeData.productOptionGroupsVoList.map((c: any) => c.id || 0));
-        this.newSpecId = maxId;
-      } else {
-        this.newSpecId = 0;
-      }
-      if (this.storeData.menuVoList && this.storeData.menuVoList.length > 0) {
-        const maxId = Math.max(...this.storeData.menuVoList.map((c: any) => c.id || 0));
-        this.newPId = maxId;
-      } else {
-        this.newPId = 0;
-      }
+      // 重置計數器到 0，讓新增項目使用負數 ID 策略
+      this.newCateId = 0;
+      this.newSpecId = 0;
+      this.newPId = 0;
     }
     this.applyFilters();
     this.rebuildApplicableCategoryIds();
@@ -469,11 +449,13 @@ export class StoreComponent {
     if (this.isEditMode && this.editingIndex !== -1) {
       this.storeData.menuCategoriesVoList[this.editingIndex] = { ...this.currentCategories };
     } else {
-      this.newCateId++;
+      // 用負數作為新增分類的暫時 ID，避免與真實 DB ID 衝突
+      // 送出 payload 時再轉回 0，讓後端識別為「新增」
+      this.newCateId--;
 
       const newCategory = {
         ...this.currentCategories,
-        id: this.newCateId
+        id: this.newCateId  // 負數 tempId
       };
 
       this.storeData.menuCategoriesVoList.push(newCategory);
@@ -936,18 +918,19 @@ export class StoreComponent {
       return;
     }
 
-    // 若未符合 p.id === this.currentProduct.id ， 那 index = -1
-    // 使用 Number() 確保比較時型別一致，避免產生重複商品
+    // 用 Number 比較確保型別一致
     const index = this.storeData.menuVoList.findIndex(p => Number(p.id) === Number(this.currentProduct.id));
 
     this.currentProduct.unusual = this.currentProduct.unusual ? { ...this.currentProduct.unusual } : {};
 
     if (index > -1) {
+      // 編輯現有商品（包含真實 DB 商品和尚未儲存的新商品）
       this.storeData.menuVoList = this.storeData.menuVoList.map((p, i) =>
         i === index ? { ...this.currentProduct } : p
       );
     } else {
-      this.newPId++;
+      // 新增商品：使用負數暫時 ID，送出時轉回 0 讓後端識別為「新增」
+      this.newPId--;
       const newProduct = { ...this.currentProduct, id: this.newPId, storesId: this.storeData.id };
       this.storeData.menuVoList = [...this.storeData.menuVoList, newProduct];
     }
@@ -1180,8 +1163,11 @@ export class StoreComponent {
   }
 
   updateStore() {
+    // 將負數tempId轉換為0，讓後端識別為「新增」操作
+    // 正數ID代表已在DB中的記錄，保持不變讓後端執行「更新」
     const payload = {
-      ...this.storeData, storesname: this.storeData.name,
+      ...this.storeData,
+      storesname: this.storeData.name,
       phone: this.storeData.phone,
       address: this.storeData.address,
       category: this.storeData.category,
@@ -1193,17 +1179,21 @@ export class StoreComponent {
       operatingHoursVoList: this.normalizeOperatingHours(),
       fee_description: this.storeData.feeDescription,
       menuCategoriesVoList: this.storeData.menuCategoriesVoList.map(category => ({
+        id: category.id < 0 ? 0 : category.id,  // 負數tempId -> 0 (新增) | 正數 -> 更新
         name: category.name,
         priceLevel: category.priceLevel,
-        menuVo: this.storeData.menuVoList.filter(item => Number(item.categoryId) === Number(category.id))
+        menuVo: this.storeData.menuVoList
+          .filter(item => Number(item.categoryId) === Number(category.id))
           .map(product => ({
             ...product,
+            id: (product.id ?? 0) < 0 ? 0 : (product.id ?? 0),  // 負數tempId -> 0 (新增)
+            categoryId: category.id < 0 ? 0 : category.id,  // 若分類是新增，product的categoryId也要清0
             unusual: (Array.isArray(product.unusual) || !product.unusual || Object.keys(product.unusual).length === 0)
               ? null : [product.unusual]
           }))
       })),
       productOptionGroupsVoList: this.storeData.productOptionGroupsVoList
-    }
+    };
     console.log("payload(update):", payload);
 
     this.http.postApi(`${this.http.BASE_URL}/gogobuy/store/update?id=${this.storeData.id}`, payload)

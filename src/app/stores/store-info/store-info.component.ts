@@ -112,7 +112,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
 
     // 載入資料
     this.loadStoreById(this.storeId);
-    // this.loadPopular(this.storeId);
+    this.loadPopular(this.storeId);
     this.isEventOpen(this.storeId);
   }
 
@@ -169,30 +169,30 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
 
   popular: any[] = [];
   // 取得熱門餐點
-  // loadPopular(storeId: number) {
-  //   this.http
-  //     .getApi(
-  //       `${this.http.BASE_URL}/gogobuy/salesStats/top10/${storeId}?type=YEAR`,
-  //     )
-  //     .subscribe({
-  //       next: (res: any) => {
-  //         console.log(res);
-  //         if (res?.code === 200) {
-  //           const pop = res.salesDetailList || [];
-  //           if (pop && pop.length > 0) {
-  //             // map只會取key值不重複的
-  //             this.popular = Array.from(
-  //               new Map(pop.map((item: any) => [item.menuId, item])).values(),
-  //             ).slice(0, 3); // 取最多3個但少於也不會報錯
-  //           }
-  //           console.log(this.popular);
-  //         }
-  //       },
-  //       error: () => {
-  //         console.log('熱門產品取得失敗');
-  //       },
-  //     });
-  // }
+  loadPopular(storeId: number) {
+    this.http
+      .getApi(
+        `${this.http.BASE_URL}/gogobuy/salesStats/top10/${storeId}?type=YEAR`,
+      )
+      .subscribe({
+        next: (res: any) => {
+          console.log(res);
+          if (res?.code === 200) {
+            const pop = res.salesDetailList || [];
+            if (pop && pop.length > 0) {
+              // map只會取key值不重複的
+              this.popular = Array.from(
+                new Map(pop.map((item: any) => [item.menuId, item])).values(),
+              ).slice(0, 3); // 取最多3個但少於也不會報錯
+            }
+            console.log(this.popular);
+          }
+        },
+        error: () => {
+          console.log('熱門產品取得失敗');
+        },
+      });
+  }
   // 判斷是不是熱門商品
   isPopular(menuId: number) {
     return this.popular.some((i) => i.menuId === menuId);
@@ -212,11 +212,10 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
   isEventOpen(storeId: number) {
     this.http
       .getApi(
-        `${this.http.BASE_URL}/gogobuy/event/getGroupbuyEventByStoresId?stores_id=${storeId}&current_user_id=${this.userId}`,
+        `${this.http.BASE_URL}/gogobuy/event/getGroupbuyEventByStoresId?stores_id=${storeId}`,
       )
       .subscribe((res: any) => {
-        const list = res?.groupbuyEvents || [];
-        this.event = list.filter((o: any) => o.status === 'OPEN');
+        this.event = res.groupbuyEvents.filter((o: any) => o.status === 'OPEN');
         if (this.event.length > 0) {
           this.isGroupOpening = true;
         } else {
@@ -516,16 +515,13 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
 
   isAdmin() {
     const userDate = JSON.parse(this.user);
-    if (userDate) {
-      const role = userDate.role;
-      if (!this.userId || !this.user) return false;
-      if (role === 'admin') {
-        return true;
-      } else {
-        return false;
-      }
+    const role = userDate.role;
+    if (!this.userId || !this.user) return false;
+    if (role === 'admin') {
+      return true;
+    } else {
+      return false;
     }
-    return false;
   }
 
   // 開團按鈕目前只有鎖 未登入 || 今日公休 || fast的休息時間
@@ -554,15 +550,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
   // =========================
   buildMenuGroups(): void {
     const categories: any[] = this.store?.menuCategoriesVoList || [];
-    const rawItems: any[] = this.store?.menuVoList || [];
-
-    // 去重：確保同一個 ID 的商品不會重複出現（以最後一個出現的為準）
-    const itemsMap = new Map<number, any>();
-    rawItems.forEach((m) => {
-      const id = Number(m.id || 0);
-      itemsMap.set(id, m);
-    });
-    const items = Array.from(itemsMap.values());
+    const items: any[] = this.store?.menuVoList || [];
 
     // 做一個 map：categoryId -> name
     const catMap = new Map<number, string>();
@@ -652,6 +640,16 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
     return soldOutByUnusual || soldOutByAvailable;
   }
 
+  shouldHide(p: any): boolean {
+    return this.isSoldOut(p);
+  }
+
+  // 取得「沒售完」的商品列表
+  getVisibleItems(items: any[] | undefined): any[] {
+    if (!items) return [];
+    // 回傳所有「非售完」的商品
+    return items.filter(item => !this.isSoldOut(item));
+  }
   // 打開商品詳情（純瀏覽）
   selectedPriceLevel: any = null;
   // groupId -> itemId[]
@@ -834,7 +832,6 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
     // 菜單：categoryId / unusual 物件
     const menuVoList = (res?.menuVoList || []).map((m: any) => ({
       ...m,
-      id: Number(m.id),
       categoryId: Number(m.categoryId),
       // sortOrder 你這包沒給就先不動
     }));
