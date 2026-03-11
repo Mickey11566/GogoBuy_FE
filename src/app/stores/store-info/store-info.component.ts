@@ -289,7 +289,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
       .subscribe((res: any) => {
         const normalized = this.normalizeStoreResponse(res);
         this.store = normalized;
-        console.log(JSON.stringify(this.store, null, 2));
+        // console.log(JSON.stringify(this.store, null, 2));
         // 判斷是否全部售完
         this.allSoldOut();
         this.afterLoaded();
