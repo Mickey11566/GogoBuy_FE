@@ -342,6 +342,15 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
     this.isLoading = false;
   }
 
+  isFast(category: string) {
+    let c = this.getCategoryName(category);
+    if (c === '外送') {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   // =========================
   // 進入時回上一頁
   // =========================
