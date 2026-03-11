@@ -162,33 +162,46 @@ export class GogoBuyComponent implements OnInit {
     { label: '營業中', value: 'OPEN' },
     { label: '休息中', value: 'CLOSED' }
   ];
-  visibleStores = computed(() => {
-    const allStores = this.auths.store();
-    const operating = this.operatingStores();
-    const status = this.statusFilter();
+visibleStores = computed(() => {
+  const allStores = this.auths.store() as Stores[];
+  const operating = this.operatingStores(); // 這是 API 回傳的「營業中」清單
+  const status = this.statusFilter();
 
-    // 建立一個包含所有營業中 ID 的 Set
-    const operatingIds = new Set(operating.map(s => s.id));
+  // 將 API 回傳的資料轉為 Map，方便查找該店的營業時間
+  const operatingMap = new Map(operating.map(s => [s.id, s]));
 
-    // 先處理全部店家，並標註狀態
-    const processedStores = allStores.map(store => ({
+  const processedStores = allStores.map(store => {
+    // 1. 從 API 回傳資料中找到該店的營業時間資訊
+    const opInfo = operatingMap.get(store.id);
+
+    // 執行二次校驗：
+    // 如果 API 沒回傳該店 -> 休息
+    // 如果 API 有回傳，但前端 checkIfStoreOpen 判定時間未到 -> 休息
+    // 如果後端 force_closed 為 true -> 休息
+    const isActuallyOpen = opInfo
+      ? this.checkIfStoreOpen(opInfo.open_time, opInfo.close_time)
+      : false;
+
+    const isClosed = store.force_closed || !isActuallyOpen;
+
+    return {
       ...store,
-      isClosed: !operatingIds.has(store.id)
-    }));
-
-    // 根據選單狀態進行過濾
-    let filtered = processedStores;
-    if (status === 'OPEN') {
-      filtered = processedStores.filter(s => !s.isClosed);
-    } else if (status === 'CLOSED') {
-      filtered = processedStores.filter(s => s.isClosed);
-    }
-
-    const sorted = [...filtered].sort((a, b) => Number(a.isClosed) - Number(b.isClosed));
-
-    // 回傳前 5 筆
-    return sorted.slice(0, this.storeInitial);
+      isClosed: isClosed
+    };
   });
+
+  // 根據選單狀態過濾
+  let filtered = processedStores;
+  if (status === 'OPEN') {
+    filtered = processedStores.filter(s => !s.isClosed);
+  } else if (status === 'CLOSED') {
+    filtered = processedStores.filter(s => s.isClosed);
+  }
+
+  // 排序並取前 5 筆
+  const sorted = [...filtered].sort((a, b) => Number(a.isClosed) - Number(b.isClosed));
+  return sorted.slice(0, this.storeInitial);
+});
   storeCountLabel = computed(() => {
     const status = this.statusFilter();
     if (status == 'OPEN') return `${this.operatingStores().length} 間營業中`;
@@ -252,16 +265,19 @@ export class GogoBuyComponent implements OnInit {
       this.storeList = rawData.map((store: any) => {
         let parsedFees: FeeDescriptionVoList[] = [];
         // 檢查是否有值且為字串，才進行解析
-        if (store.feeDescription && typeof store.feeDescription == 'string') {
-          try {
-            parsedFees = JSON.parse(store.feeDescription);
-          } catch (e) {
-            console.error('解析運費失敗:', e, store.feeDescription);
-            parsedFees = []; // 解析失敗給空陣列
-          }
-        } else if (Array.isArray(store.feeDescription)) {
-          parsedFees = store.feeDescription; // 如果已經是物件就直接賦值
-        }
+if (store.feeDescription && store.feeDescription !== 'null') {
+  if (typeof store.feeDescription === 'string') {
+    try {
+      const parsed = JSON.parse(store.feeDescription);
+      parsedFees = Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.error('解析運費失敗:', e, store.feeDescription);
+      parsedFees = [];
+    }
+  } else if (Array.isArray(store.feeDescription)) {
+    parsedFees = store.feeDescription;
+  }
+}
 
         return {
           ...store,
@@ -314,8 +330,8 @@ export class GogoBuyComponent implements OnInit {
               // 使用展開運算子 [...] 進行淺拷貝，避免與原陣列產生參照關聯
               this.allStoresBackup = [...mergedData.sort((a, b) => Number(a.isClosed) - Number(b.isClosed))];
             }
-            this.fastStoreList = this.allStoresBackup.filter(store => !store.force_closed && store.category == "fast");
-            this.slowStoreList = this.allStoresBackup.filter(store => !store.force_closed && store.category == "slow");
+this.fastStoreList = this.allStoresBackup.filter(store => store.category == "fast");
+this.slowStoreList = this.allStoresBackup.filter(store => store.category == "slow");
           }
         },
         error: (err) => console.error(`抓取 ${listType} 營業中店家失敗:`, err)
