@@ -68,7 +68,7 @@ export class FollowGroupComponent implements OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cart: CartService,
-  ) { }
+  ) {}
 
   // =========================
   // 基本狀態
@@ -84,6 +84,7 @@ export class FollowGroupComponent implements OnDestroy {
 
   // 團的資料
   group: GroupbuyEvents | null = null;
+  hostId = ''; // 團長Id
 
   // 店家資料(要先解析過)
   store: any = null;
@@ -527,33 +528,28 @@ export class FollowGroupComponent implements OnDestroy {
     // GROUP（後端上線後使用）
     const uid = this.userId || localStorage.getItem('user_id');
     const url = `${this.http.BASE_URL}/gogobuy/event/getEventsByEventsId?id=${id}&current_user_id=${uid}`;
-    this.http
-      .getApi(
-        url,
-        { withCredentials: true }
-      )
-      .subscribe((res: any) => {
-        const g = res?.groupbuyEvents?.[0] as GroupbuyEvents | undefined;
-        if (!g) {
-          this.toastWarn('錯誤', '找不到團資料');
-          this.goBack();
+    this.http.getApi(url, { withCredentials: true }).subscribe((res: any) => {
+      const g = res?.groupbuyEvents?.[0] as GroupbuyEvents | undefined;
+      if (!g) {
+        this.toastWarn('錯誤', '找不到團資料');
+        this.goBack();
+        return;
+      } else {
+        // 現在時間
+        const now = new Date();
+        const target = new Date(g.endTime);
+        if (now.getTime() > target.getTime()) {
+          this.toastWarn('超時', '此團已過期');
+          this.router.navigate(['/gogobuy/home']);
           return;
-        } else {
-          // 現在時間
-          const now = new Date();
-          const target = new Date(g.endTime);
-          if (now.getTime() > target.getTime()) {
-            this.toastWarn('超時', '此團已過期');
-            this.router.navigate(['/gogobuy/home']);
-            return;
-          }
         }
-        console.log(g);
-        this.isHost(g.hostId);
-        this.applyGroup(g);
-        this.loadStoreById(g.storeId);
-        this.loadPopular(g.storeId);
-      });
+      }
+      console.log(g);
+      this.isHost(g.hostId);
+      this.applyGroup(g);
+      this.loadStoreById(g.storeId);
+      this.loadPopular(g.storeId);
+    });
   }
 
   userIsHost = false;
@@ -592,6 +588,7 @@ export class FollowGroupComponent implements OnDestroy {
   // 套用團資料：解析 tempMenuList / recommendList + 基本防呆
   applyGroup(g: GroupbuyEvents): void {
     this.group = g;
+    this.hostId = g.hostId;
     this.storeId = Number(g.storeId);
 
     if (g.deleted === true) {
@@ -894,7 +891,21 @@ export class FollowGroupComponent implements OnDestroy {
         // 送出成功
         this.loading = false;
         this.toastSuccess('送出成功', '訂單已送給團長');
-        this.router.navigate(['/user/orders']);
+        if (this.userIsHost) {
+          this.router.navigate(['/user/orders/info'], {
+            queryParams: {
+              events_id: this.groupId,
+              mode: 'host',
+            },
+          });
+        } else {
+          this.router.navigate(['/user/orders/info'], {
+            queryParams: {
+              events_id: this.groupId,
+              mode: 'member',
+            },
+          });
+        }
       },
       error: (err) => {
         console.error('addOrders error:', err);
@@ -1120,7 +1131,7 @@ export class FollowGroupComponent implements OnDestroy {
       const decoded = atob(String(img));
       if (decoded.startsWith('http://') || decoded.startsWith('https://'))
         return decoded;
-    } catch { }
+    } catch {}
 
     return this.defaultProductCover;
   }
@@ -1685,10 +1696,10 @@ export class FollowGroupComponent implements OnDestroy {
       maxSelection: Number(g?.maxSelection ?? 1),
       items: Array.isArray(g?.items)
         ? g.items.map((it: any) => ({
-          id: Number(it?.id),
-          name: String(it?.name ?? ''),
-          extraPrice: Number(it?.extraPrice ?? 0),
-        }))
+            id: Number(it?.id),
+            name: String(it?.name ?? ''),
+            extraPrice: Number(it?.extraPrice ?? 0),
+          }))
         : [],
     }));
   }
