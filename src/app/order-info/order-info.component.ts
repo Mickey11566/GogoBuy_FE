@@ -129,13 +129,13 @@ export class OrderInfoComponent implements OnInit {
     this.route.queryParamMap.subscribe(params => {
       this.mode = (params.get('mode') == 'host') ? 'host' : 'member';
       this.eventsId = Number(params.get('events_id') || 0);
-      this.loadOrders();
+      // this.loadOrders();
       if (this.eventsId) {
         this.loadEventInfo();
       }
     });
   }
-
+  checkEventStatus!: boolean;
   private loadEventInfo() {
     this.cart.getEventsByEventsId(this.eventsId).subscribe({
       next: (res: any) => {
@@ -143,6 +143,23 @@ export class OrderInfoComponent implements OnInit {
 
         const event = res.groupbuyEvents?.[0];
         if (!event) return;
+        if (event.eventStatus != "OPEN") {
+          this.checkEventStatus = false;
+          Swal.fire({
+            icon: 'warning',
+            title: '該團已結單',
+            text: '即將返回首頁',
+            width: 600,
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+          }).then(() => {
+            this.router.navigate(['/gogobuy/home']);
+          });
+          return;
+        } else {
+          this.loadOrders();
+        }
 
         // 取得欄位
         this.latestOrderTime = event.latestOrderTime ?? '';
