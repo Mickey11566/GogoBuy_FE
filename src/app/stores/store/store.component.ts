@@ -736,7 +736,6 @@ export class StoreComponent {
       icon: 'warning',
       title,
       text,
-      timer: 1200,
       showConfirmButton: false,
       didOpen: () => {
         const c = document.querySelector(
@@ -1008,6 +1007,7 @@ export class StoreComponent {
 
   // 最下面按鈕 ---------------------------------------------------------
   goBack() {
+    this.storeService.storeData = this.storeData;
     if (this.id && this.id !== 0) {
       this.router.navigate(['/management/store_upsert', this.id]);
     } else {
