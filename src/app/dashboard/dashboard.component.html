@@ -161,14 +161,14 @@
               </p-tag>
             </td>
             @if(!store.deleted){
-              <td>
-                <div class="flex gap-2">
-                  <p-button label="詳情" icon="pi pi-file-edit" styleClass="p-button-text p-button-base p-button-rounded"
-                    [routerLink]="['/management/store_upsert', store.id]"></p-button>
-                  <p-button label="刪除" icon="pi pi-trash" styleClass="p-button-text p-button-danger p-button-rounded"
-                    (onClick)="onStoreDelete(store)"></p-button>
-                </div>
-              </td>
+            <td>
+              <div class="flex gap-2">
+                <p-button label="詳情" icon="pi pi-file-edit" styleClass="p-button-text p-button-base p-button-rounded"
+                  [routerLink]="['/management/store_upsert', store.id]"></p-button>
+                <p-button label="刪除" icon="pi pi-trash" styleClass="p-button-text p-button-danger p-button-rounded"
+                  (onClick)="onStoreDelete(store)"></p-button>
+              </div>
+            </td>
             }
           </tr>
         </ng-template>
@@ -307,7 +307,9 @@
               }
             </td>
             <td>
-              @if(user.role === 'user'){
+              @if (user.id !== currentAdminId) {
+
+              @if (user.role === 'user') {
               <p-button label="晉升管理員" icon="pi pi-crown" (onClick)="onUserRoleChange(user, 'admin')"
                 styleClass="p-button-text p-button-base p-button-rounded p-button-success"></p-button>
               } @else {
@@ -315,14 +317,18 @@
                 styleClass="p-button-text p-button-base p-button-rounded p-button-secondary"></p-button>
               }
 
-              @if(user.status !== "banned"){
+              @if (user.status === 'active') {
               <p-button label="禁用" icon="pi pi-ban" (onClick)="onUserBan(user)"
                 styleClass="p-button-text p-button-base p-button-rounded p-button-danger"></p-button>
-              }
-              @if(user.status === "banned" || user.status === "self_suspended"){
+              } @else if (user.status === 'banned' || user.status === 'self_suspended') {
               <p-button label="恢復" icon="pi pi-refresh" (onClick)="onUserActive(user)"
                 styleClass="p-button-text p-button-base p-button-rounded p-button-info"></p-button>
               }
+
+              } @else {
+              <span class="p-tag p-tag-info text-base">這是你自己</span>
+              }
+
             </td>
           </tr>
         </ng-template>
@@ -458,10 +464,10 @@
           (onClick)="exportManageCSV(selectedEventForManage)"></p-button>
         <p-button label="發送取貨通知" icon="pi pi-bell" severity="warn"
           (onClick)="notifyMembers(selectedEventForManage)"></p-button>
-        <!-- <p-button label="查看購物明細" icon="pi pi-list" [outlined]="true"
-          (onClick)="router.navigate(['/user/orders/info'], { queryParams: { events_id: selectedEventForManage?.id, mode: 'host' } })"></p-button> -->
       </div>
     </div>
+
+
 
     <p-table [value]="manageMembersMap()[selectedEventForManage?.id] || []" [rowHover]="true"
       styleClass="p-datatable-sm p-datatable-striped">
@@ -523,4 +529,30 @@
       </ng-template>
     </p-table>
   </div>
+</p-dialog>
+
+
+<p-dialog [(visible)]="displayNotifyDialog" [modal]="true" header="確認發送通知" [style]="{ width: '450px' }" [closable]="!isSending">
+
+  @if (isSending) {
+    <div class="flex flex-col items-center justify-center py-8">
+      <p-progressSpinner styleClass="w-16 h-16" strokeWidth="4" animationDuration=".5s"></p-progressSpinner>
+      <p class="mt-4 text-slate-600 font-medium">正在發送通知與信件，請稍候...</p>
+    </div>
+  } @else {
+    <div class="flex items-center justify-center py-6">
+      <i class="pi pi-exclamation-triangle text-yellow-500 mr-4" style="font-size: 2.5rem"></i>
+      <span *ngIf="selectedEventForNotify">
+        確定要發送通知給<b>「{{selectedEventForNotify.eventName}}」</b>的所有成員嗎？
+      </span>
+    </div>
+  }
+
+  <ng-template pTemplate="footer">
+    <p-button label="取消" icon="pi pi-times" styleClass="p-button-text"
+      (onClick)="displayNotifyDialog = false" [disabled]="isSending"></p-button>
+
+    <p-button label="確定發送" icon="pi pi-check" severity="warn"
+      (onClick)="confirmSendNotification()" [loading]="isSending"></p-button>
+  </ng-template>
 </p-dialog>
