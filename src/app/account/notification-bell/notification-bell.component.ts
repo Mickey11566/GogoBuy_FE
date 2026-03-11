@@ -4,13 +4,14 @@ import {
   ViewChild,
   HostListener,
   OnInit,
-  inject
+  inject,
 } from '@angular/core';
 import { AsyncPipe } from '@angular/common';
 import { PopoverModule, Popover } from 'primeng/popover';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, NavigationStart } from '@angular/router';
 import { SseService } from '../../@service/sse.service';
 import { Observable } from 'rxjs/internal/Observable';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-notification-bell',
@@ -32,10 +33,19 @@ export class NotificationBellComponent implements OnInit {
   notifications$ = this.sse.notifications$;
   unreadCount$ = this.sse.unreadCount$;
 
-
-  constructor(private router: Router) { }
+  constructor(private router: Router) {}
 
   ngOnInit() {
+    // 監聽路由事件
+    this.router.events
+      .pipe(
+        // 只過濾出「導航開始」的事件
+        filter((event) => event instanceof NavigationStart),
+      )
+      .subscribe(() => {
+        // 當點擊連結開始跳轉時，關閉通知彈窗
+        this.pop?.hide();
+      });
   }
 
   markAllRead() {
