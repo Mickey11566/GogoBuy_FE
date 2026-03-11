@@ -652,6 +652,16 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
     return soldOutByUnusual || soldOutByAvailable;
   }
 
+  shouldHide(p: any): boolean {
+    return this.isSoldOut(p);
+  }
+
+  // 取得「沒售完」的商品列表
+  getVisibleItems(items: any[] | undefined): any[] {
+    if (!items) return [];
+    // 回傳所有「非售完」的商品
+    return items.filter(item => !this.isSoldOut(item));
+  }
   // 打開商品詳情（純瀏覽）
   selectedPriceLevel: any = null;
   // groupId -> itemId[]
