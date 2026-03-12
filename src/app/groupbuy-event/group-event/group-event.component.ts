@@ -380,7 +380,15 @@ export class GroupEventComponent {
     if (this.storeList) {
       this.type = this.storeList.type;
     }
-    this.menuVoList = res.menuVoList.filter((item: any) => item.available) || [];
+    const allMenu = res.menuCategoriesVoList;
+    allMenu.map((cate: any) => {
+      cate.menuVo.filter((item: any) => {
+        if (item.available) {
+          this.menuVoList.push(item);
+        }
+      });
+    })
+    // this.menuVoList = res.menuVoList.filter((item: any) => item.available) || [];
     this.menuCategoriesVoList = res.menuCategoriesVoList || [];
     if (this.menuCategoriesVoList?.length > 0) {
       const categoryMap = new Map(
