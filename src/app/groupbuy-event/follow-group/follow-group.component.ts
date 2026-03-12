@@ -1845,11 +1845,12 @@ export class FollowGroupComponent implements OnDestroy {
     window.history.back();
   }
 
-  // 解析收到的店家 Response
+  // 解析收到的Response ===============================================
   normalizeStoreResponse(res: any): any {
     const base = res?.storeList?.[0] ?? null;
     if (!base) return null;
 
+    // 統一欄位命名：把後端 week/openTime/closeTime 轉成前端用
     const operatingHoursVoList = (res?.operatingHoursVoList || [])
       .map((h: any) => ({
         dayOfWeek: Number(h.week),
@@ -1859,6 +1860,7 @@ export class FollowGroupComponent implements OnDestroy {
       }))
       .filter((h: any) => !h.closed);
 
+    // 運費
     const feeDescriptionVoList = (res?.feeDescriptionVoList || []).map(
       (f: any) => ({
         distance: Number(f.km),
@@ -1866,19 +1868,42 @@ export class FollowGroupComponent implements OnDestroy {
       }),
     );
 
-    const menuCategoriesVoList = (res?.menuCategoriesVoList || []).map(
-      (c: any) => ({
-        categoryId: Number(c.id),
-        name: String(c.name || '未分類'),
-        priceLevel: c.priceLevel || [],
-      }),
-    );
+    // 分類原始資料
+    const rawCategories = res?.menuCategoriesVoList || [];
 
-    const menuVoList = (res?.menuVoList || []).map((m: any) => ({
-      ...m,
-      categoryId: Number(m.categoryId),
+    // 分類
+    const menuCategoriesVoList = rawCategories.map((c: any) => ({
+      categoryId: Number(c.id),
+      name: String(c.name || '未分類'),
+      priceLevel: c.priceLevel || [],
     }));
 
+    // 舊格式：menu 在 res.menuVoList
+    const oldMenuList = (res?.menuVoList || []).map((m: any) => ({
+      ...m,
+      categoryId: Number(m.categoryId),
+      storesId: Number(m.storesId || base?.id || 0),
+      basePrice: Number(m.basePrice || 0),
+    }));
+
+    // 新格式：menu 在 category.menuVo
+    const newMenuList = rawCategories.flatMap((c: any) => {
+      const categoryId = Number(c.id);
+
+      return (c.menuVo || []).map((m: any) => ({
+        ...m,
+        categoryId: Number(m.categoryId || categoryId),
+        storesId: Number(m.storesId || base?.id || 0),
+        basePrice: Number(m.basePrice || 0),
+      }));
+    });
+
+    // 優先吃新格式，沒有才退回舊格式
+    const rawMenuVoList = newMenuList.length ? newMenuList : oldMenuList;
+
+    const menuVoList = this.dedupeMenuVersions(rawMenuVoList);
+
+    // 商品選項群組
     const productOptionGroupsVoList = res?.productOptionGroupsVoList || [];
 
     return {
@@ -1889,6 +1914,59 @@ export class FollowGroupComponent implements OnDestroy {
       menuVoList,
       productOptionGroupsVoList,
     };
+  }
+
+  // 把同商品的歷史版本去重，只保留畫面該顯示的一筆
+  private dedupeMenuVersions(list: any[]): any[] {
+    if (!Array.isArray(list)) return [];
+
+    const grouped = new Map<string, any[]>();
+
+    list.forEach((item) => {
+      const key = this.getMenuVersionKey(item);
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+      grouped.get(key)!.push(item);
+    });
+
+    const result: any[] = [];
+
+    grouped.forEach((items) => {
+      // 1. 先找 available === true 的版本
+      const availableItems = items.filter((i) => i?.available === true);
+
+      if (availableItems.length > 0) {
+        // 2. available 裡面挑 id 最大的
+        const best = availableItems.sort(
+          (a, b) => Number(b?.id || 0) - Number(a?.id || 0),
+        )[0];
+        result.push(best);
+        return;
+      }
+
+      // 3. 如果全部都 unavailable，就挑 id 最大的留一筆
+      const fallback = items.sort(
+        (a, b) => Number(b?.id || 0) - Number(a?.id || 0),
+      )[0];
+      result.push(fallback);
+    });
+
+    return result;
+  }
+
+  // 組合出「同一商品」的判斷 key
+  private getMenuVersionKey(item: any): string {
+    const name = String(item?.name || '')
+      .trim()
+      .toLowerCase();
+    const desc = String(item?.description || '')
+      .trim()
+      .toLowerCase();
+    const price = Number(item?.basePrice || 0);
+    const storeId = Number(item?.storesId || 0);
+
+    return `${storeId}__${name}__${desc}__${price}`;
   }
 
   // 這邊是防止 dialog 開啟但畫面可滾 ----------------------------
