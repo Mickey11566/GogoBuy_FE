@@ -13,6 +13,7 @@ import { catchError, forkJoin, map, of } from 'rxjs';
 import { MessageService, NotifiMesReq, NotifiCategoryEnum } from '../@service/message.service';
 import { DialogModule } from 'primeng/dialog';
 import { DatePickerModule } from 'primeng/datepicker';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TieredMenu } from 'primeng/tieredmenu';
@@ -40,7 +41,9 @@ import { CartService } from '../@service/cart.service';
     InputTextModule,
     TextareaModule,
     TieredMenu,
+    ProgressSpinnerModule,
     FormsModule
+
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
@@ -55,6 +58,7 @@ export class DashboardComponent {
   items: any[] | undefined;
   minDate: Date = new Date();
 
+  currentAdminId: string | null = null;
 
   currentView: 'announce' | 'stores' | 'events' | 'users' | 'complaints' = 'announce';
 
@@ -92,6 +96,8 @@ export class DashboardComponent {
   ) { }
 
   ngOnInit() {
+
+    this.currentAdminId = localStorage.getItem('user_id');
 
     this.items = [
       {
@@ -440,13 +446,13 @@ export class DashboardComponent {
                 </div>
              </div>
           </div>
-          
+
           <div class="mb-4">
             <label for="swal-hours" class="block text-sm font-bold text-slate-700 mb-1.5 flex items-center gap-2">
               <i class="pi pi-clock text-blue-500"></i> 禁用時數設定
             </label>
-            <input id="swal-hours" type="number" 
-              class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-slate-700" 
+            <input id="swal-hours" type="number"
+              class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-slate-700"
               placeholder="輸入小時，空值或 0 為永久禁用" min="0">
             <div class="mt-1.5 flex gap-2">
               <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded cursor-pointer hover:bg-slate-200" onclick="document.getElementById('swal-hours').value=72">3天(72h)</span>
@@ -460,7 +466,7 @@ export class DashboardComponent {
               <i class="pi pi-exclamation-circle text-orange-500"></i> 禁用理由 <span class="text-red-500">*</span>
             </label>
             <textarea id="swal-reason" rows="3"
-              class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none text-slate-700" 
+              class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none text-slate-700"
               placeholder="請詳細說明理由，這將顯示給被禁用的用戶看..."></textarea>
           </div>
         </div>
@@ -726,45 +732,82 @@ export class DashboardComponent {
     });
   }
 
+  // 1. 新增 loading 狀態變數
+  isSending: boolean = false;
+  displayNotifyDialog: boolean = false;
+  selectedEventForNotify: any = null;
+
   notifyMembers(event: any) {
-    Swal.fire({
-      title: '發送取貨通知?',
-      text: `將會發送網頁通知給「${event.eventName}」的所有跟團成員。`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: '確定發送',
-      cancelButtonText: '取消'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        this.cart.getPersonalOrdersByEventId(event.id).subscribe({
-          next: (res: any) => {
-            if (res.code === 200) {
-              const list = res.personalOrder || [];
-              if (list.length === 0) {
-                Swal.fire('目前沒有成員下單', '', 'info');
-                return;
-              }
-              const currentUserId = localStorage.getItem('user_id') || '';
-              const req: NotifiMesReq = {
-                category: NotifiCategoryEnum.GROUP_BUY,
-                title: '管理員取貨通知',
-                content: `來自管理員的通知：您參加的團購「${event.eventName}」商品已送達，請儘速取貨！`,
-                eventId: event.id,
-                userId: currentUserId,
-                targetUrl: '/user/orders',
-                expiredAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                userNotificationVoList: list.map((m: any) => ({
-                  userId: m.userId,
-                  email: m.userEmail
-                }))
-              };
-              this.messageService.create(req).subscribe(() => {
-                Swal.fire('成功', '通知已發送', 'success');
-              });
-            }
+    this.selectedEventForNotify = event;
+    this.displayNotifyDialog = true;
+  }
+
+  readonly Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 10000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+      toast.addEventListener('mouseenter', Swal.stopTimer)
+      toast.addEventListener('mouseleave', Swal.resumeTimer)
+    }
+  });
+
+  confirmSendNotification() {
+    // 2. 開始執行時開啟 Loading
+    this.isSending = true;
+    const event = this.selectedEventForNotify;
+
+    this.cart.getPersonalOrdersByEventId(event.id).subscribe({
+      next: (res: any) => {
+        if (res.code === 200) {
+          const list = res.personalOrder || [];
+          if (list.length === 0) {
+            this.isSending = false; // 沒人下單也要關閉 loading
+            this.displayNotifyDialog = false;
+            this.Toast.fire({ icon: 'info', title: '目前沒有成員下單' });
+            return;
           }
-        });
-      }
+
+          const currentUserId = localStorage.getItem('user_id') || '';
+          const req: NotifiMesReq = {
+            // ... 你的 req 設定保持不變 ...
+            category: NotifiCategoryEnum.GROUP_BUY,
+            title: '管理員取貨通知',
+            content: `來自管理員的通知：您參加的團購「${event.eventName}」商品已送達，請儘速取貨！`,
+            eventId: event.id,
+            userId: currentUserId,
+            targetUrl: '/user/orders',
+            expiredAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            userNotificationVoList: list.map((m: any) => ({
+              userId: m.userId,
+              email: m.userEmail
+            }))
+          };
+
+          this.messageService.create(req).subscribe({
+            next: () => {
+              // 3. 成功後關閉所有狀態
+              this.isSending = false;
+              this.displayNotifyDialog = false;
+              this.Toast.fire({
+                icon: 'success',
+                title: '通知已成功發送',
+                text: `已寄送給 ${list.length} 位成員`
+              });
+            },
+            error: () => {
+              // 4. 若失敗也要關閉 loading 以免畫面卡死
+              this.isSending = false;
+              this.Toast.fire({ icon: 'error', title: '網路連線異常' });
+            }
+          });
+        } else {
+          this.isSending = false;
+        }
+      },
+      error: () => { this.isSending = false; }
     });
   }
 

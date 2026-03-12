@@ -628,12 +628,14 @@ export class FollowGroupComponent implements OnDestroy {
   }
 
   increaseLineQty(index: number): void {
+    if (this.orderIsConfirmed) return;
     if (index < 0 || index >= this.orderItems.length) return;
     this.orderItems[index].quantity += 1;
   }
 
   // -1
   async decreaseLineQty(index: number): Promise<void> {
+    if (this.orderIsConfirmed) return;
     if (index < 0 || index >= this.orderItems.length) return;
 
     const item = this.orderItems[index];
@@ -665,6 +667,7 @@ export class FollowGroupComponent implements OnDestroy {
 
   // 移除餐點
   async removeLine(index: number): Promise<void> {
+    if (this.orderIsConfirmed) return;
     if (index < 0 || index >= this.orderItems.length) return;
 
     const item = this.orderItems[index];
