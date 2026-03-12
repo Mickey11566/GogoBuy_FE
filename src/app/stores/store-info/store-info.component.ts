@@ -84,7 +84,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
     private http: HttpService,
     private auth: AuthService,
     private messageService: MessageService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // userId（測試塞假id）
@@ -632,7 +632,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
       const decoded = atob(String(img));
       if (decoded.startsWith('http://') || decoded.startsWith('https://'))
         return decoded;
-    } catch {}
+    } catch { }
 
     return this.defaultProductCover;
   }

@@ -250,7 +250,7 @@ export class StoreComponent {
               ...g,
               id: Number(g.id)
             }));
-            this.storeData.menuVoList = res.menuVoList.map((product: any) => {
+            this.storeData.menuVoList = (res.menuVoList || []).map((product: any) => {
               product.id = Number(product.id);
               product.categoryId = Number(product.categoryId);
               if (Array.isArray(product.unusual) && product.unusual.length > 0) {
