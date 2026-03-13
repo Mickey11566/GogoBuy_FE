@@ -84,7 +84,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
     private http: HttpService,
     private auth: AuthService,
     private messageService: MessageService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // userId（測試塞假id）
@@ -289,6 +289,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
       .subscribe((res: any) => {
         const normalized = this.normalizeStoreResponse(res);
         this.store = normalized;
+        // console.log(this.store);
         console.log(JSON.stringify(this.store, null, 2));
         // 判斷是否全部售完
         this.allSoldOut();
@@ -340,6 +341,15 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
     this.buildMenuGroups();
 
     this.isLoading = false;
+  }
+
+  isFast(category: string) {
+    let c = this.getCategoryName(category);
+    if (c === '外送') {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   // =========================
@@ -623,7 +633,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
       const decoded = atob(String(img));
       if (decoded.startsWith('http://') || decoded.startsWith('https://'))
         return decoded;
-    } catch {}
+    } catch { }
 
     return this.defaultProductCover;
   }
@@ -702,7 +712,8 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
   getVisibleItems(items: any[] | undefined): any[] {
     if (!items) return [];
     // 回傳所有「非售完」的商品
-    return items.filter((item) => !this.isSoldOut(item));
+    // return items.filter((item) => !this.isSoldOut(item));
+    return items;
   }
 
   // 打開商品詳情（純瀏覽）
@@ -859,52 +870,59 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
     // 統一欄位命名：把後端 week/openTime/closeTime 轉成前端用
     const operatingHoursVoList = (res?.operatingHoursVoList || [])
       .map((h: any) => ({
-        dayOfWeek: Number(h.week), // 後端叫 week
-        startTime: this.toHHmm(h.openTime), // 後端是 "18:00:00"
-        endTime: this.toHHmm(h.closeTime), // 後端是 "02:00:00"
+        dayOfWeek: Number(h.week),
+        startTime: this.toHHmm(h.openTime),
+        endTime: this.toHHmm(h.closeTime),
         closed: !!h.closed,
       }))
-      // 如果後端有 closed=true 的要排除
       .filter((h: any) => !h.closed);
 
-    // 運費：用 feeDescriptionVoList
+    // 運費
     const feeDescriptionVoList = (res?.feeDescriptionVoList || []).map(
       (f: any) => ({
-        distance: Number(f.km), // 我們頁面用 distance
+        distance: Number(f.km),
         fee: Number(f.fee),
       }),
     );
 
-    // 分類：後端用 id，這裡統一叫 categoryId
-    const menuCategoriesVoList = (res?.menuCategoriesVoList || []).map(
-      (c: any) => ({
-        categoryId: Number(c.id),
-        name: String(c.name || '未分類'),
-        priceLevel: c.priceLevel || [],
-      }),
-    );
+    // 分類原始資料
+    const rawCategories = res?.menuCategoriesVoList || [];
 
-    // 菜單：categoryId / unusual 物件
-    // const menuVoList = (res?.menuVoList || []).map((m: any) => ({
-    //   ...m,
-    //   id: Number(m.id),
-    //   categoryId: Number(m.categoryId),
-    //   // sortOrder 你這包沒給就先不動
-    // }));
+    // 分類
+    const menuCategoriesVoList = rawCategories.map((c: any) => ({
+      categoryId: Number(c.id),
+      name: String(c.name || '未分類'),
+      priceLevel: c.priceLevel || [],
+    }));
 
-    const rawMenuVoList = (res?.menuVoList || []).map((m: any) => ({
+    // 舊格式：menu 在 res.menuVoList
+    const oldMenuList = (res?.menuVoList || []).map((m: any) => ({
       ...m,
       categoryId: Number(m.categoryId),
-      storesId: Number(m.storesId),
+      storesId: Number(m.storesId || base?.id || 0),
       basePrice: Number(m.basePrice || 0),
     }));
 
+    // 新格式：menu 在 category.menuVo
+    const newMenuList = rawCategories.flatMap((c: any) => {
+      const categoryId = Number(c.id);
+
+      return (c.menuVo || []).map((m: any) => ({
+        ...m,
+        categoryId: Number(m.categoryId || categoryId),
+        storesId: Number(m.storesId || base?.id || 0),
+        basePrice: Number(m.basePrice || 0),
+      }));
+    });
+
+    // 優先吃新格式，沒有才退回舊格式
+    const rawMenuVoList = newMenuList.length ? newMenuList : oldMenuList;
+
     const menuVoList = this.dedupeMenuVersions(rawMenuVoList);
 
-    // 商品選項群組：這頁只是瀏覽，先留著，之後商品詳情 dialog 可以用
+    // 商品選項群組
     const productOptionGroupsVoList = res?.productOptionGroupsVoList || [];
 
-    // 最終組合成「這頁想用的 store」
     return {
       ...base,
       operatingHoursVoList,

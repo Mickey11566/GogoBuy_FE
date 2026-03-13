@@ -644,7 +644,7 @@ export class OrderInfoComponent implements OnInit {
 
   submitOrder() {
     const title = this.mode === 'host' ? "確定確認全團並送出?" : "確定確認個人訂單?";
-    const text = this.mode === 'host' ? "確認後該團將結算並關閉，不可再修改內容!" : "確認後您的訂單將轉為已確認狀態!";
+    const text = this.mode === 'host' ? "確認後該團將結算並關閉，不可再修改內容!" : "確認後您的訂單將轉為已確認狀態，不可再修改內容!";
 
     Swal.fire({
       title,

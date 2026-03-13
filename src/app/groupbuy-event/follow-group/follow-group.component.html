@@ -1281,17 +1281,10 @@
 
                 <!-- 右側操作 -->
                 <div class="shrink-0 flex flex-col items-end gap-2">
-                  <!-- <button
-                    type="button"
-                    class="cursor-pointer px-3 py-2 rounded-full bg-gray-100 font-extrabold active:scale-95 transition"
-                    (click)="editLine($index)"
-                  >
-                    修改
-                  </button> -->
-
                   <button
                     type="button"
-                    class="cursor-pointer px-3 py-2 rounded-full bg-red-900 text-white font-extrabold active:scale-95 transition"
+                    class="cursor-pointer px-3 py-2 rounded-full bg-red-900 text-white font-extrabold active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    [disabled]="orderIsConfirmed"
                     (click)="removeLine($index)"
                   >
                     移除
@@ -1306,7 +1299,8 @@
                 <div class="flex items-center gap-2">
                   <button
                     type="button"
-                    class="cursor-pointer w-10 h-10 rounded-full bg-gray-100 font-extrabold active:scale-95 transition"
+                    class="cursor-pointer w-10 h-10 rounded-full bg-gray-100 font-extrabold active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    [disabled]="orderIsConfirmed"
                     (click)="decreaseLineQty($index)"
                   >
                     -
@@ -1318,7 +1312,8 @@
 
                   <button
                     type="button"
-                    class="cursor-pointer w-10 h-10 rounded-full bg-gray-100 font-extrabold active:scale-95 transition"
+                    class="cursor-pointer w-10 h-10 rounded-full bg-gray-100 font-extrabold active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    [disabled]="orderIsConfirmed"
                     (click)="increaseLineQty($index)"
                   >
                     +
@@ -1338,9 +1333,10 @@
           備註（personalMemo）
         </div>
         <textarea
-          class="w-full min-h-[90px] rounded-xl border border-black/10 p-3 outline-none focus:border-red-900/40 bg-white"
+          class="w-full min-h-[90px] rounded-xl border border-black/10 p-3 outline-none focus:border-red-900/40 bg-white disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
           placeholder="例如：要吸管 / 不要香菜 / 晚點取..."
           [(ngModel)]="personalMemo"
+          [disabled]="orderIsConfirmed"
         ></textarea>
         <div class="mt-2 text-sm text-gray-500">
           ※ 備註會保留，回到點餐頁再新增餐點也不會消失

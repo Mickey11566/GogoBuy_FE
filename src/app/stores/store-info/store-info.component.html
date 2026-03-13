@@ -6,7 +6,8 @@
   載入中...
 </div>
 } @else {
-<div class="min-h-screen bg-[#F4E7E1]">
+<div class="min-h-screen"
+[ngClass]="isFast(store?.category) ? 'bg-[#F4E7E1]' : 'bg-[#e1eef4]'">
   <div class="max-w-[1200px] mx-auto px-4 md:px-8 py-4 md:py-4">
     <!-- 最外層 -->
     <!-- ===================== -->

@@ -254,7 +254,15 @@ export class StoreComponent {
               ...g,
               id: Number(g.id)
             }));
-            this.storeData.menuVoList = res.menuVoList.map((product: any) => {
+            // 優先吃新格式 (嵌套在類別裡)，沒有才退回舊格式
+            const rawCategories = res.menuCategoriesVoList || [];
+            
+            const oldMenuList = res.menuVoList || [];
+            const newMenuList = rawCategories.flatMap((c: any) => c.menuVo || []);
+            
+            const rawMenuVoList = newMenuList.length ? newMenuList : oldMenuList;
+
+            this.storeData.menuVoList = rawMenuVoList.map((product: any) => {
               product.id = Number(product.id);
               product.categoryId = Number(product.categoryId);
               if (Array.isArray(product.unusual) && product.unusual.length > 0) {
@@ -267,6 +275,7 @@ export class StoreComponent {
               }
               return product;
             });
+
             this.rebuildApplicableCategoryIds();
             this.filteredProducts = [...this.storeData.menuVoList];
           }
