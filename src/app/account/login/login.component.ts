@@ -3,12 +3,16 @@ import { Component, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpService } from '../../@service/http.service';
+import { DialogModule } from 'primeng/dialog';
 import Swal from 'sweetalert2';
 import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-login',
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    DialogModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -18,6 +22,8 @@ export class LoginComponent {
     public auth: AuthService,
     private route: ActivatedRoute,
     public router: Router,) { }
+
+  loading = false;
 
   // 模式: 登入 | 註冊
   pageMode: 'login' | 'register' = 'login';
@@ -141,6 +147,8 @@ export class LoginComponent {
 
   // 註冊API
   register() {
+    this.loading = true;
+
     const payload = {
       nickname: this.user.nickname,
       email: this.user.email,
@@ -150,6 +158,7 @@ export class LoginComponent {
 
     this.auth.register(payload).subscribe({
       next: (res: any) => {
+        this.loading = false;
         if (res.code == 200) {
           localStorage.setItem('user_session', payload.email);
           Swal.fire({
@@ -167,6 +176,7 @@ export class LoginComponent {
         }
       },
       error: (err: any) => {
+        this.loading = false;
         console.log(err?.message);
         Swal.fire({
           icon: 'warning',
