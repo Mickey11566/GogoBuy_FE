@@ -53,6 +53,8 @@ type OrderVM = {
   userId?: string;
   eventId: number;
   personalMemo?: string;
+  paymentStatus?: string;
+  pickupStatus?: string;
 };
 
 type OrderGroupVM = {
@@ -101,6 +103,7 @@ export class OrderInfoComponent implements OnInit {
   hostEmail = '';
   hostNickname = '';
   isLoading = false;
+  memberPaymentStatus = '';
 
 
   constructor(
@@ -190,6 +193,7 @@ export class OrderInfoComponent implements OnInit {
       subtotal: dto.subtotal ?? 0,
       weight: dto.weight ?? 0,
       deleted: dto.deleted ?? dto.is_deleted ?? false,
+      paymentStatus: dto.paymentStatus ?? dto.payment_status,
     };
 
     const menuList = Array.isArray(dto.menuList) ? dto.menuList : [];
@@ -225,6 +229,7 @@ export class OrderInfoComponent implements OnInit {
       parsedOptions,
       menuName: o.menuName ?? null,
       userEmail: o.email ?? o.userEmail ?? o.user_email ?? '',
+      paymentStatus: o.paymentStatus ?? o.payment_status,
     };
   }
 
@@ -245,6 +250,11 @@ export class OrderInfoComponent implements OnInit {
     const n = this.host?.length ?? 0;
     if (n <= 1) return 0;
     return this.activeIndex / (n - 1); // 0~1
+  }
+
+  get isMemberConfirmed(): boolean {
+    if (this.mode !== 'member') return false;
+    return this.memberPaymentStatus === 'SUBMITTED' || this.memberPaymentStatus === 'PAID';
   }
 
   clear() {
@@ -570,12 +580,29 @@ export class OrderInfoComponent implements OnInit {
   }
   private loadOrders() {
     if (!this.eventsId) return;
-    const orders$ = this.cart.getOrdersAll(this.eventsId);
 
-    orders$.pipe(
-      tap((x: any) => console.log('[RAW ordersRes]', x)),
-      map((ordersRes: any) => {
+    const orders$ = this.cart.getOrdersAll(this.eventsId);
+    const personalOrders$ = this.cart.getPersonalOrdersByEventId(this.eventsId).pipe(
+      catchError(() => of({ personalOrder: [] }))
+    );
+
+    forkJoin({
+      ordersRes: orders$,
+      personalRes: personalOrders$
+    }).pipe(
+      tap(({ ordersRes, personalRes }: any) => console.log('[RAW ordersRes]', ordersRes, '[RAW personalRes]', personalRes)),
+      map(({ ordersRes, personalRes }: any) => {
         const raw: any = ordersRes;
+        const personalList = personalRes.personalOrder || [];
+        const myUserId = this.userId || this.auth.user?.id;
+
+        // 找尋當前使用者的個人訂單狀態
+        if (this.mode === 'member' && myUserId) {
+          const myPersonalOrder = personalList.find((p: any) => p.userId === myUserId);
+          if (myPersonalOrder) {
+            this.memberPaymentStatus = myPersonalOrder.paymentStatus || '';
+          }
+        }
 
         const listFromHost = Array.isArray(raw.ordersSearchViewList)
           ? raw.ordersSearchViewList.map((o: any) => this.normalizeOrder(o))
@@ -587,17 +614,13 @@ export class OrderInfoComponent implements OnInit {
 
         let orders = listFromHost.length > 0 ? listFromHost : listFromMember;
 
-        if (this.mode == 'member') {
-          const myUserId = this.userId || this.auth.user?.id;
-          if (myUserId) {
-            orders = orders.filter((o: any) => o.userId == myUserId);
-          }
+        if (this.mode == 'member' && myUserId) {
+          orders = orders.filter((o: any) => o.userId == myUserId);
         }
 
-        return { code: 200, message: 'ok', orders: orders };
-      }),
-      switchMap((data: any) => {
-        // 3. 抓取頭像與暱稱 (這部分邏輯保留，因為 getOrdersView 通常不包含 Avatar URL)
+        const data = { code: 200, message: 'ok', orders: orders };
+
+        // 3. 抓取頭像與暱稱
         const userIds: string[] = Array.from(
           new Set(
             (data.orders ?? [])
@@ -605,6 +628,10 @@ export class OrderInfoComponent implements OnInit {
               .filter((id: any): id is string => typeof id == 'string' && id.trim().length > 0)
           )
         );
+
+        return { data, userIds };
+      }),
+      switchMap(({ data, userIds }) => {
         if (userIds.length == 0) return of(data);
 
         const needFetch = userIds.filter(id => !this.avatarMap[id]);

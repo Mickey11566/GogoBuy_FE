@@ -141,12 +141,14 @@
 
                 <div class="flex flex-col items-end gap-2 shrink-0">
                   <div class="font-bold text-lg text-slate-900">${{ order.subtotal }}</div>
-                  <!-- 只有自己的訂單或是主揪可以刪除 -->
+                  <!-- 只有自己的訂單或是主揪可以刪除，且成員尚未確認時才能刪除 -->
+                  @if (mode === 'host' || !isMemberConfirmed) {
                   <button type="button"
                     class="w-8 h-8 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 cursor-pointer flex items-center justify-center transition-colors focus:ring-2 focus:ring-red-200 outline-none"
                     (click)="removeorder(order.id)" title="刪除項目">
                     <i class="pi pi-trash"></i>
                   </button>
+                  }
                 </div>
               </li>
               }
@@ -166,6 +168,7 @@
         }
 
 
+        @if (!isMemberConfirmed) {
         <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
           <button type="button"
             class="w-full cursor-pointer sm:w-auto px-6 py-3 rounded-xl border-2 border-[#769902] text-[#769902] font-bold hover:bg-[#769902] hover:text-white transition-colors active:scale-95 flex items-center justify-center gap-2"
@@ -173,6 +176,7 @@
             <i class="pi pi-plus-circle"></i> 繼續加購
           </button>
         </div>
+        }
 
         @if (mode == 'host') {
         <div class="mt-6 flex justify-center">
@@ -314,6 +318,7 @@
             [ngClass]="isLoading ? 'pi-spin pi-spinner' : ((mode === 'host' ? activeIndex < 2 : activeIndex < 1) ? 'pi-arrow-right' : 'pi-check-circle')"></i>
         </button>
         } @else {
+        @if (!isMemberConfirmed) {
         <button type="button" [disabled]="isLoading"
           class="w-full sm:w-64 py-4 md:py-3.5 rounded-2xl bg-[#769902] text-white font-bold hover:bg-[#658302] shadow-xl shadow-[#769902]/20 transition-all active:scale-95 flex items-center justify-center gap-3 cursor-pointer"
           [ngClass]="{'opacity-50 cursor-not-allowed': isLoading}"
@@ -327,6 +332,11 @@
           </span>
           <i class="pi text-xl md:text-lg" [ngClass]="isLoading ? 'pi-spin pi-spinner' : ((activeIndex < 1) ? 'pi-arrow-right' : 'pi-check-circle')"></i>
         </button>
+        } @else {
+        <div class="px-6 py-3 rounded-2xl bg-emerald-50 text-emerald-600 font-bold border border-emerald-200 flex items-center gap-2">
+          <i class="pi pi-check-circle"></i> 訂單已確認
+        </div>
+        }
         }
       </div>
     </div>
