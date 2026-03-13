@@ -863,10 +863,38 @@ export class OrdersComponent {
 
   onBlacklist(member: any, eventsId: number) {
     Swal.fire({
-      title: '確定要加入黑名單嗎？',
-      text: `將「${member.userNickname || '匿名成員'}」加入黑名單後，該成員將無法看見您未來開立的任何團購活動！`,
+      title: '🚫 確定加入黑名單？',
+      html: `
+      <div class="text-left leading-relaxed space-y-2">
+        <p>
+          您即將把 <b class="text-rose-600">「${member.userNickname || '匿名成員'}」</b> 加入黑名單。
+        </p>
+
+        <div class="bg-rose-50 border border-rose-200 rounded-xl p-3 text-sm">
+          <p class="font-bold text-rose-600 mb-1">⚠️ 重要影響</p>
+          <ul class="list-disc pl-5 space-y-1 text-gray-700">
+            <li>該成員將 <b>無法看到</b> 您未來開立的任何團購活動</li>
+            <li>該成員將 <b>無法參與</b> 您建立的所有團購</li>
+            <li>此操作可能影響未來互動</li>
+          </ul>
+        </div>
+
+        <div class="bg-gray-50 border rounded-xl p-3 text-sm">
+          <p class="font-bold text-gray-700">📌 注意</p>
+          <p class="text-gray-600">
+            加入黑名單後將 <b class="text-red-600">無法立即恢復</b>，
+            若要解除需透過後台或額外設定。
+          </p>
+        </div>
+
+        <p class="text-sm text-gray-500 mt-2">
+          請確認是否要繼續此操作。
+        </p>
+      </div>
+    `,
       icon: 'warning',
       showCancelButton: true,
+      focusCancel: true,
       confirmButtonText: '確定加入黑名單',
       cancelButtonText: '取消',
       confirmButtonColor: '#e11d48',
@@ -878,6 +906,7 @@ export class OrdersComponent {
       }
     }).then((result) => {
       if (result.isConfirmed) {
+
         const payload = {
           userId: this.userId,
           blockedUserId: member.userId
@@ -886,15 +915,20 @@ export class OrdersComponent {
         this.cart.addBlacklist(payload).subscribe({
           next: (res: any) => {
             if (res.code === 200) {
+
               Swal.fire({
                 icon: 'success',
-                title: '已加入黑名單',
-                text: `「${member.userNickname || '匿名成員'}」已無法參與您的團購`,
+                title: '🚫 已加入黑名單',
+                html: `
+                <b class="text-rose-600">「${member.userNickname || '匿名成員'}」</b>
+                已無法參與或查看您未來的團購活動
+              `,
                 toast: true,
                 position: 'top',
                 showConfirmButton: false,
                 timer: 2000
               });
+
             } else {
               Swal.fire('加入失敗', res.message || '發生未知錯誤', 'error');
             }
@@ -904,6 +938,7 @@ export class OrdersComponent {
             Swal.fire('加入失敗', '系統連線錯誤', 'error');
           }
         });
+
       }
     });
   }

@@ -100,6 +100,7 @@ export class OrderInfoComponent implements OnInit {
   hostId = '';
   hostEmail = '';
   hostNickname = '';
+  isLoading = false;
 
 
   constructor(
@@ -657,6 +658,17 @@ export class OrderInfoComponent implements OnInit {
       cancelButtonText: "取消"
     }).then((result) => {
       if (result.isConfirmed) {
+        this.isLoading = true;
+        Swal.fire({
+          title: "處理中...",
+          text: "正在送出確認請求，請稍候",
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
         const submitUserId = this.userId || this.auth.user?.id || '';
 
         // 根據身分呼叫不同 API
@@ -667,6 +679,7 @@ export class OrderInfoComponent implements OnInit {
         request$.subscribe({
           next: (res: any) => {
             if (res.code == 200) {
+              this.isLoading = false;
               // --- SSE 通知邏輯 ---
               if (this.mode === 'host') {
                 // 團長結單：通知所有成員
@@ -741,10 +754,12 @@ export class OrderInfoComponent implements OnInit {
                 });
               }
             } else {
+              this.isLoading = false;
               Swal.fire("錯誤", res.message || "作業失敗", "error");
             }
           },
           error: (err: any) => {
+            this.isLoading = false;
             Swal.fire("系統異常", "無法送出確認請求", "error");
           }
         });

@@ -326,7 +326,7 @@
               }
 
               } @else {
-              <span class="p-tag p-tag-info text-base">這是你自己</span>
+              <span class="p-tag p-tag-info text-xl ">這是你自己</span>
               }
 
             </td>
@@ -532,27 +532,28 @@
 </p-dialog>
 
 
-<p-dialog [(visible)]="displayNotifyDialog" [modal]="true" header="確認發送通知" [style]="{ width: '450px' }" [closable]="!isSending">
+<p-dialog [(visible)]="displayNotifyDialog" [modal]="true" header="確認發送通知" [style]="{ width: '450px' }"
+  [closable]="!isSending">
 
   @if (isSending) {
-    <div class="flex flex-col items-center justify-center py-8">
-      <p-progressSpinner styleClass="w-16 h-16" strokeWidth="4" animationDuration=".5s"></p-progressSpinner>
-      <p class="mt-4 text-slate-600 font-medium">正在發送通知與信件，請稍候...</p>
-    </div>
+  <div class="flex flex-col items-center justify-center py-8">
+    <p-progressSpinner styleClass="w-16 h-16" strokeWidth="4" animationDuration=".5s"></p-progressSpinner>
+    <p class="mt-4 text-slate-600 font-medium">正在發送通知與信件，請稍候...</p>
+  </div>
   } @else {
-    <div class="flex items-center justify-center py-6">
-      <i class="pi pi-exclamation-triangle text-yellow-500 mr-4" style="font-size: 2.5rem"></i>
-      <span *ngIf="selectedEventForNotify">
-        確定要發送通知給<b>「{{selectedEventForNotify.eventName}}」</b>的所有成員嗎？
-      </span>
-    </div>
+  <div class="flex items-center justify-center py-6">
+    <i class="pi pi-exclamation-triangle text-yellow-500 mr-4" style="font-size: 2.5rem"></i>
+    <span *ngIf="selectedEventForNotify">
+      確定要發送通知給<b>「{{selectedEventForNotify.eventName}}」</b>的所有成員嗎？
+    </span>
+  </div>
   }
 
   <ng-template pTemplate="footer">
-    <p-button label="取消" icon="pi pi-times" styleClass="p-button-text"
-      (onClick)="displayNotifyDialog = false" [disabled]="isSending"></p-button>
+    <p-button label="取消" icon="pi pi-times" styleClass="p-button-text" (onClick)="displayNotifyDialog = false"
+      [disabled]="isSending"></p-button>
 
-    <p-button label="確定發送" icon="pi pi-check" severity="warn"
-      (onClick)="confirmSendNotification()" [loading]="isSending"></p-button>
+    <p-button label="確定發送" icon="pi pi-check" severity="warn" (onClick)="confirmSendNotification()"
+      [loading]="isSending"></p-button>
   </ng-template>
 </p-dialog>
