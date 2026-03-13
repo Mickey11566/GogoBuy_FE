@@ -2,6 +2,46 @@ p {
   margin: 10px 0px;
 }
 
+.checkboxBtn {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #fff;
+  cursor: pointer;
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #662222;
+    background-color: rgba(102, 34, 34, 0.05);
+  }
+
+  &:checked {
+    background-color: #662222;
+    border-color: #662222;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 2px;
+      width: 5px;
+      height: 10px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+  }
+  &:focus {
+    outline: none;
+  }
+}
+
 body.p-overflow-hidden {
   overflow: hidden !important;
   touch-action: none;
@@ -53,38 +93,68 @@ input {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 // 強制覆蓋瀏覽器自動填充的樣式 -----------------------------------------------------------------
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
-  /* 文字顏色改為你的品牌色 */
   -webkit-text-fill-color: #662222 !important;
   transition: background-color 5000s ease-in-out 0s;
   box-shadow: 0 0 0px 1000px white inset !important;
 }
 
-.p-floatlabel input:-webkit-autofill ~ label {
+.p-floatlabel input:-webkit-autofill~label {
   color: #662222 !important;
 }
 
 /* 修改下拉選單「選中項目」的背景與文字顏色 */
 :host ::ng-deep .p-select-option.p-selected {
-  background: rgba(102, 34, 34, 0.1) !important; /* #662222 的 10% 透明度 */
+  background: rgba(102, 34, 34, 0.1) !important;
   color: #662222 !important;
 }
 
 /* 修改滑鼠游標「懸停」在項目上的顏色 */
 :host ::ng-deep .p-select-option:not(.p-selected):not(.p-disabled).p-focus {
-  background: #f5f5f5; /* 輕微灰 */
+  background: #f5f5f5;
   color: #662222;
 }
 
 // 下拉選單外框在 Focus 時的顏色 -----------------------------------------------------------------
 :host ::ng-deep .p-select:not(.p-disabled).p-focus {
   border-color: #662222 !important;
+}
+
+/* 正在被拖拽的卡片樣式 */
+.cdk-drag-preview {
+  padding: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  background-color: white;
+  opacity: 0.9;
+  border: 1px solid #66222230;
+}
+
+/* 當其他卡片因為位移而「讓位」時，增加平滑動畫 */
+.cdk-drop-list-dragging .cdk-drag {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* 正在放下的那張卡片的動畫 */
+.cdk-drag-animating {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.3;
+  background: #f3f4f6;
+  border: 2px dashed #66222230;
+  border-radius: 12px;
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
