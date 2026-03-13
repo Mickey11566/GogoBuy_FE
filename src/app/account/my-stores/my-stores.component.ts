@@ -145,7 +145,7 @@ export class MyStoresComponent {
   // 未收藏 -> 收藏
   executeAddFavorite(storeId: number) {
     const updatedIds = [...this.favoriteStoreIds, storeId];
-    this.syncFavoriteToServer(updatedIds, '已加入最愛喵！');
+    this.syncFavoriteToServer(updatedIds, '已加入最愛！');
   }
 
   // 處理後端

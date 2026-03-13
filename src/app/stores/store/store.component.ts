@@ -29,6 +29,8 @@ import { FileUploadModule } from 'primeng/fileupload';
 import { ToastModule } from 'primeng/toast';
 import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { ChangeDetectorRef } from '@angular/core';
+import { DragDropModule } from '@angular/cdk/drag-drop';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
 @Component({
   selector: 'app-store',
@@ -38,7 +40,7 @@ import { ChangeDetectorRef } from '@angular/core';
     ImageModule, ButtonModule,
     InputTextModule, ScrollPanelModule,
     TableModule, SelectButtonModule, CommonModule,
-    DialogModule, ButtonModule,
+    DialogModule, ButtonModule, DragDropModule,
     InputGroupModule, InputGroupAddonModule, FloatLabelModule,
     InputNumberModule, SelectModule, InputTextModule,
     IconFieldModule, InputIconModule, CheckboxModule,
@@ -80,8 +82,10 @@ export class StoreComponent {
   displayPublishConfirm = false
   displaySaveFailedDialog = false;
   displaySureUpdateDialog = false;
+  displayDelSelectedPDialog = false;
 
   selectedProduct!: MenuVoList;
+  selectedProductId: number[] = [];
   selectedCategoryId: number | null = null;
   selectedIndex: number = -1;
 
@@ -478,7 +482,14 @@ export class StoreComponent {
     this.applyFilters();
   }
 
-
+  dropCategory(event: CdkDragDrop<any[]>) {
+    // 直接對 storeData 中的陣列進行排序
+    moveItemInArray(
+      this.storeData.menuCategoriesVoList,
+      event.previousIndex,
+      event.currentIndex
+    );
+  }
 
   // 規格 ---------------------------------------------------------
   addSpecs() {
@@ -631,6 +642,14 @@ export class StoreComponent {
   getApplicableSpecsForCategory(categoryId: number): ProductOptionGroupsVoList[] {
     return this.storeData.productOptionGroupsVoList.filter(group =>
       group.applicableCategoryIds?.includes(categoryId)
+    );
+  }
+
+  dropSpec(event: CdkDragDrop<any[]>) {
+    moveItemInArray(
+      this.storeData.productOptionGroupsVoList,
+      event.previousIndex,
+      event.currentIndex
     );
   }
 
@@ -934,7 +953,6 @@ export class StoreComponent {
       this.storeData.menuVoList = [...this.storeData.menuVoList, newProduct];
     }
 
-    this.sortProduct();
     this.displayProductDialog = false;
     this.submitted = false;
   }
@@ -944,15 +962,53 @@ export class StoreComponent {
     this.isEditMode = true;
     this.currentProduct = { ...product };
 
-    console.log('currentProduct(上)', this.currentProduct);
     this.currentProduct.unusual = this.currentProduct.unusual ? { ...this.currentProduct.unusual } : {};
 
     this.displayProductDialog = true;
   }
 
-
-
   // 刪除商品 ---------------------------------------------------------
+  get isAllProductSelected(): boolean {
+    const listLength = this.storeData.menuVoList.length;
+    return listLength > 0 && listLength == this.selectedProductId.length;
+  }
+
+  toggleSelectAllProduct(event: any) {
+    if (event.target.checked) {
+      this.selectedProductId = this.storeData.menuVoList.map(p => p.id);
+    } else {
+      this.selectedProductId = [];
+    }
+  }
+
+  isProductSelected(productId: number): boolean {
+    return this.selectedProductId.includes(productId);
+  }
+
+  toggleProductSelection(productId: number) {
+    const index = this.selectedProductId.indexOf(productId);
+    if (index > -1) {
+      this.selectedProductId.splice(index, 1);
+    } else {
+      this.selectedProductId.push(productId);
+    }
+  }
+
+  deleteSelectedProducts() {
+    if (this.selectedProductId.length === 0) return;
+    this.displayDelSelectedPDialog = true;
+  }
+
+  delSelectedProduct() {
+    this.storeData.menuVoList = this.storeData.menuVoList.filter(
+      product => !this.selectedProductId.includes(product.id)
+    );
+
+    this.displayDelSelectedPDialog = false;
+    this.selectedProductId = [];
+    this.applyFilters();
+  }
+
   openDeleteProduct(traget: MenuVoList, index: number) {
     this.tempProductTarget = traget;
     this.tempProductIndex = index;
@@ -978,7 +1034,7 @@ export class StoreComponent {
     this.tempProductIndex = -1;
   }
 
-  // 商品分類滾動效果
+  // 商品分類滾動效果 ---------------------------------------------(
   @ViewChild('categoryNav') categoryNav!: ElementRef;
   scrollNav(distance: number) {
     this.categoryNav.nativeElement.scrollBy({
@@ -1005,15 +1061,21 @@ export class StoreComponent {
     this.applyFilters();
   }
 
+  // drag and drop ---------------------------------------------
+  dropProduct(event: CdkDragDrop<any[]>) {
+    moveItemInArray(this.filteredProducts, event.previousIndex, event.currentIndex);
+  }
+
   // 最下面按鈕 ---------------------------------------------------------
   goBack() {
+    console.log('this.storeService.storeData', this.storeService.storeData);
+
     this.storeService.storeData = this.storeData;
     if (this.id && this.id !== 0) {
       this.router.navigate(['/management/store_upsert', this.id]);
     } else {
       this.router.navigate(['/management/store_upsert']);
     }
-
   }
 
   openPublic() { // 無使用
@@ -1024,6 +1086,7 @@ export class StoreComponent {
     }
   }
 
+  // 公開不公開店家 ---------------------------------------------------------
   nonPublishStore() {
     this.storeData.publish = false;
     this.onSaveAll();
@@ -1148,7 +1211,7 @@ export class StoreComponent {
     // }
   }
 
-  // 更新店家資訊並刪正在開的團
+  // 更新店家資訊並刪正在開的團 -----------------------------------------------
   deleteEvent() {
     this.displaySureUpdateDialog = false;
     let deleteEventIdList: any[] = [];
