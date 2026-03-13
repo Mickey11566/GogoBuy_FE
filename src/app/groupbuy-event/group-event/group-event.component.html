@@ -22,8 +22,9 @@
   </div>
 }@else if(isExist && storeList) {
   <div class="area">
-    <div class="mt-[20px] area-block flex flex-col md:flex-row items-stretch bg-[#F5F0EB] rounded-lg
-            md:max-h-[200px] lg:max-h-[300px] lg:py-6">
+    <div class="mt-[20px] area-block flex flex-col md:flex-row items-stretch bg-[#F4E7E1]/50 rounded-lg
+            md:max-h-[200px] lg:max-h-[300px] lg:py-6"
+            [class.bg-[#e1eef491]]="storeList.category=='slow'">
       <div class="w-auto shrink-0 md:flex md:justify-center md:items-center md:basis-3/7 md:w-full">
         <img [src]="storeList?.image ? storeList?.image : 'no-product-image.jpg'"
             (error)="$any($event.target).src = 'no-product-image.jpg'"
@@ -60,7 +61,7 @@
   </div>
   @if(!isPreview){
     <div class="area">
-      <div class="my-[20px] area-block">
+      <div class="my-[20px] area-block bg-[#F4E7E1]/50" [class.bg-[#e1eef491]]="storeList.category=='slow'">
         <div class="w-full px-4 lg:pl-8">
           <div class="text-[#662222] font-bold text-2xl
                           lg:text-3xl event-div">開團資料設定</div>
@@ -132,7 +133,7 @@
               </div>
               <div class="flex flex-col lg:flex-row h-full bg-gray-100 rounded-lg">
                 <div class="flex w-full flex-shrink-0 bg-gray-100 overflow-x-auto max-h-[350px] md:max-h-[450px] lg:max-h-[550px]
-                               lg:w-48 lg:flex-col lg:w-30 lg:overflow-x-hidden lg:overflow-y-auto">
+                               lg:w-48 lg:flex-col lg:w-30 lg:overflow-x-hidden lg:overflow-y-auto rounded-lg">
                   @for(cate of menuCategoriesVoList; track $index){
                     <button class="relative py-4 px-6 transition-all duration-200 rounded-t-xl text-md whitespace-nowrap lg:whitespace-normal
                                   md:text-lg lg:rounded-tr-none lg:rounded-l-xl" (click)="activeTab = cate.id"
@@ -419,12 +420,18 @@
       </div>
     </div>
     <div class="event-div each-div pb-4 sm:pb-6 md:pb-8 flex justify-around text-md md:text-lg">
-      <button (click)="cancel()" class="Btn cursor-pointer"><i class="pi pi-arrow-left mr-1"></i>取消返回</button>
-      <button (click)="goCheck()" class="Btn cursor-pointer">送出預覽<i class="pi pi-arrow-right ml-1"></i></button>
+      <button (click)="cancel()" class="Btn cursor-pointer bg-[#F4E7E1]/50"
+      [ngClass]="{'bg-[#e1eef491] hover:bg-[#c4e0ed91]': storeList.category == 'slow',
+                  'bg-[#F4E7E1]/50 hover:bg-[#662222]/20': storeList.category != 'slow'
+                  }"><i class="pi pi-arrow-left mr-1"></i>取消返回</button>
+      <button (click)="goCheck()" class="Btn cursor-pointer bg-[#F4E7E1]/50"
+      [ngClass]="{'bg-[#e1eef491] hover:bg-[#c4e0ed91]': storeList.category == 'slow',
+                  'bg-[#F4E7E1]/50 hover:bg-[#662222]/20': storeList.category != 'slow'
+                  }">送出預覽<i class="pi pi-arrow-right ml-1"></i></button>
     </div>
   }@else if(isPreview) {
     <div class="area">
-      <div class="my-[20px] area-block">
+      <div class="my-[20px] area-block bg-[#F4E7E1]/50" [class.bg-[#e1eef491]]="storeList.category=='slow'">
         <div class="w-full px-4 lg:pl-8">
           <div class="text-[#662222] font-bold text-2xl
                           lg:text-3xl event-div">開團資料確認</div>
@@ -546,8 +553,14 @@
       </div>
     </div>
     <div class="event-div each-div pb-4 sm:pb-6 md:pb-8 flex justify-around text-md md:text-lg">
-      <button (click)="revise()" class="Btn cursor-pointer"><i class="pi pi-arrow-left mr-1"></i>返回修改</button>
-      <button (click)="addEvent()" class="Btn cursor-pointer">確認儲存<i class="pi pi-arrow-right ml-1"></i></button>
+      <button (click)="revise()" class="Btn cursor-pointer bg-[#F4E7E1]/50"
+      [ngClass]="{'bg-[#e1eef491] hover:bg-[#c4e0ed91]': storeList.category == 'slow',
+                  'bg-[#F4E7E1]/50 hover:bg-[#662222]/20': storeList.category != 'slow'
+                  }"><i class="pi pi-arrow-left mr-1"></i>返回修改</button>
+      <button (click)="addEvent()" class="Btn cursor-pointer bg-[#F4E7E1]/50"
+      [ngClass]="{'bg-[#e1eef491] hover:bg-[#c4e0ed91]': storeList.category == 'slow',
+                  'bg-[#F4E7E1]/50 hover:bg-[#662222]/20': storeList.category != 'slow'
+                  }">確認儲存<i class="pi pi-arrow-right ml-1"></i></button>
     </div>
   }
 }
