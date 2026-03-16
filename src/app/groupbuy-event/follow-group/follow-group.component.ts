@@ -68,7 +68,7 @@ export class FollowGroupComponent implements OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cart: CartService,
-  ) {}
+  ) { }
 
   // =========================
   // 基本狀態
@@ -165,7 +165,7 @@ export class FollowGroupComponent implements OnDestroy {
   }
   // 預設圖
   readonly defaultStoreCover = '/Store Default Cover Image2.webp';
-  readonly defaultProductCover = '/Default Product Image.webp';
+  readonly defaultProductCover = '/Default_Product_Image.webp';
 
   // =========================
   // 營業狀態計算（修正跨日/凌晨問題）
@@ -1134,7 +1134,7 @@ export class FollowGroupComponent implements OnDestroy {
       const decoded = atob(String(img));
       if (decoded.startsWith('http://') || decoded.startsWith('https://'))
         return decoded;
-    } catch {}
+    } catch { }
 
     return this.defaultProductCover;
   }
@@ -1699,10 +1699,10 @@ export class FollowGroupComponent implements OnDestroy {
       maxSelection: Number(g?.maxSelection ?? 1),
       items: Array.isArray(g?.items)
         ? g.items.map((it: any) => ({
-            id: Number(it?.id),
-            name: String(it?.name ?? ''),
-            extraPrice: Number(it?.extraPrice ?? 0),
-          }))
+          id: Number(it?.id),
+          name: String(it?.name ?? ''),
+          extraPrice: Number(it?.extraPrice ?? 0),
+        }))
         : [],
     }));
   }

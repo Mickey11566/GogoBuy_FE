@@ -89,14 +89,10 @@
 
           <!-- Title Overlay -->
           <div
-            class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/70 to-transparent p-6 flex flex-col justify-end pointer-events-none">
-            <h3 class="text-lg font-bold text-white drop-shadow-md pr-8">
-              {{ event.eventName }}
+            class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/70 to-transparent p-6 flex flex-col   pointer-events-none">
+            <h3 class="text-lg h-full flex flex-col justify-evenly font-bold text-white drop-shadow-md pr-8">
               <br />
-              <br />
-              {{ event.announcement }}
-              <br />
-              <!-- {{ event.recommendDescription }} -->
+              <p class="text-xl">{{ event.eventName }}</p>
             </h3>
 
             <!-- Arrow Icon (Moved Back Inside Image) -->

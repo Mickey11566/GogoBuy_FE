@@ -76,7 +76,7 @@ export class StoreInfoComponent implements OnInit, OnDestroy {
 
   // 預設圖
   readonly defaultStoreCover = '/Store Default Cover Image2.webp';
-  readonly defaultProductCover = '/Default Product Image.webp';
+  readonly defaultProductCover = '/Default_Product_Image.webp';
 
   constructor(
     private route: ActivatedRoute,

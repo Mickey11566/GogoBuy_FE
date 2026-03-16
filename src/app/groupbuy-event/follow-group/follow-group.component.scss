@@ -1,5 +1,6 @@
 :host ::ng-deep .follow-group-accordion .p-accordion-header-link {
-  align-items: flex-start; /* 讓 icon 可以貼上去 */
+  align-items: flex-start;
+  /* 讓 icon 可以貼上去 */
 }
 
 /* PrimeNG 的 toggle icon：推到最右邊並貼上方 */
@@ -40,7 +41,85 @@
   0% {
     transform: translateX(0);
   }
+
   100% {
     transform: translateX(-100%);
+  }
+}
+
+
+.announcement {
+  color: #333;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 12px;
+  /* 為波浪預留空間 */
+}
+
+
+/* 建立波浪層 */
+.announcement::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 20px;
+  /* 波浪高度 */
+  width: 0;
+  /* 初始寬度為 0 (由動畫控制) */
+
+  /* 製作波浪紋理 */
+  background-image: radial-gradient(circle at 50% 100%, transparent 3px, #ff0000 3.5px, #ff0000 4.5px, transparent 5px);
+  background-repeat: repeat-x;
+  background-size: 15px 10px;
+
+  /* 動畫組合：
+     wave-typing: 控制波浪「長度」增加 (打字感)
+     wave-flow: 控制波浪「內部」向右流動
+     breathe: 整體呼吸感
+  */
+  animation:
+    wave-typing 4s steps(20) infinite,
+    wave-flow 1s linear infinite,
+    // breathe 2s ease-in-out infinite alternate;
+}
+
+/* 1. 波浪打字效果：控制偽元素的寬度 */
+@keyframes wave-typing {
+
+  0%,
+  10% {
+    width: 0;
+  }
+
+  60%,
+  100% {
+    width: 100%;
+  }
+
+  /* 到 60% 時長滿，停頓一下再循環 */
+}
+
+/* 2. 波浪向右流動效果 */
+@keyframes wave-flow {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 15px 0;
+  }
+}
+
+/* 3. 呼吸感：讓波浪顏色深淺變化 */
+@keyframes breathe {
+  from {
+    opacity: 0.4;
+    transform: scaleY(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleY(1.1);
   }
 }
