@@ -256,10 +256,10 @@ export class StoreComponent {
             }));
             // 優先吃新格式 (嵌套在類別裡)，沒有才退回舊格式
             const rawCategories = res.menuCategoriesVoList || [];
-            
+
             const oldMenuList = res.menuVoList || [];
             const newMenuList = rawCategories.flatMap((c: any) => c.menuVo || []);
-            
+
             const rawMenuVoList = newMenuList.length ? newMenuList : oldMenuList;
 
             this.storeData.menuVoList = rawMenuVoList.map((product: any) => {
@@ -679,8 +679,6 @@ export class StoreComponent {
     }
 
     this.filteredProducts = results;
-    console.log('filteredProducts', this.filteredProducts);
-
   }
 
   // 新增商品 ---------------------------------------------------------
@@ -699,7 +697,7 @@ export class StoreComponent {
   // 商品圖片
   onFileSelected(event: any) {
     const input = event.target as HTMLInputElement;
-    const file = event.target.files[0];
+    const file = input.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -935,7 +933,6 @@ export class StoreComponent {
   }
 
   saveProduct() {
-    console.log(this.currentProduct.categoryId);
     this.submitted = true;
     const isNameValid = !!this.currentProduct.name?.trim();
     const isCategoryValid = !!this.currentProduct.categoryId;
@@ -961,7 +958,7 @@ export class StoreComponent {
       const newProduct = { ...this.currentProduct, id: this.newPId, storesId: this.storeData.id };
       this.storeData.menuVoList = [...this.storeData.menuVoList, newProduct];
     }
-
+    this.applyFilters();
     this.displayProductDialog = false;
     this.submitted = false;
   }

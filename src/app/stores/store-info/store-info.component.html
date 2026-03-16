@@ -73,7 +73,7 @@
                   class="cursor-pointer px-5 py-2 rounded-full text-[17px] font-extrabold border transition bg-white text-red-900 border-red-900 hover:brightness-95">
                   <i class="pi pi-info-circle"></i>
                   <div class="text-center leading-tight">
-                    <span>詳細</span>
+                    <span>詳情</span>
                   </div>
                 </button>
 
@@ -267,9 +267,7 @@
 <!-- ===================== -->
 <p-dialog [blockScroll]="true" appendTo="body" (onShow)="disableScroll()" (onHide)="enableScroll()"
   [(visible)]="detailVisible" [modal]="true" [dismissableMask]="true" [draggable]="false" [resizable]="false"
-  styleClass="max-w-[90vw] min-h-[500px]
-              md:w-[550px] md:max-w-[300vw] h-[72vh] md:min-h-[780px]
-              store-detail-dialog">
+  [style]="{ width: '35rem' }">
   <!-- ===== Header ===== -->
   <ng-template pTemplate="header">
     <div class="text-[20px] font-extrabold text-red-900">店家詳細資訊</div>
