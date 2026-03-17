@@ -89,7 +89,13 @@
 
           <!-- Title Overlay -->
           <div
-            class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/70 to-transparent p-6 flex flex-col   pointer-events-none">
+            class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/70 to-transparent p-6 flex flex-col pointer-events-none">
+            <!-- 轉換object並取得顯示店家名稱 -->
+            <!-- 加上背景讓文字更好讀取 -->
+            <h3
+              class="text-lg w-fit inline-flex flex-row justify-end font-bold bg-white/50 backdrop-blur-sm rounded-lg px-2 py-1 text-gray-900 drop-shadow-md">
+              {{ event.store.name }}
+            </h3>
             <h3 class="text-lg h-full flex flex-col justify-evenly font-bold text-white drop-shadow-md pr-8">
               <br />
               <p class="text-xl">{{ event.eventName }}</p>
