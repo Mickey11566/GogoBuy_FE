@@ -23,7 +23,7 @@ export const authGuard: CanActivateFn = (route, state) => {
   // 如果路由有設定權限需求
   if (expectedRole) {
     if (role !== expectedRole) {
-      const redirectPath = role === 'admin' ? '/admin-dashboard' : '/gogobuy';
+      const redirectPath = role === 'admin' ? '/admin' : '/gogobuy';
       router.navigate([redirectPath]);
       return false;
     }

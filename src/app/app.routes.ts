@@ -99,24 +99,7 @@ export const routes: Routes = [
     component: DashboardComponent, // 關鍵：這是一個有側邊欄的後台專用版型
     // canActivate: [AdminGuard],       // 關鍵：安全性守衛，防止非管理者直接輸入 URL 進入
     title: '管理後台',
-    data: { breadcrumb: '管理後台' },
-    //   children: [
-    //     {
-    //       path: '',
-    //       redirectTo: 'dashboard',
-    //       pathMatch: 'full'
-    //     },
-    //     {
-    //       path: 'dashboard',
-    //       component: DashboardComponent,
-    //       data: { breadcrumb: '數據概覽' }
-    //     },
-    //     {
-    //       path: 'users',
-    //       // component: UserManagementComponent,
-    //       data: { breadcrumb: '會員管理' }
-    //     }
-    //   ]
+    data: { breadcrumb: '管理後台', expectedRole: 'admin' }, canActivate: [authGuard]
   },
 
   { path: 'active-account', component: VerifyEmailComponent },

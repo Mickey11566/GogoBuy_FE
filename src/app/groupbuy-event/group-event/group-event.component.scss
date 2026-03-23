@@ -4,7 +4,7 @@
   @apply flex justify-center items-center;
 
   .area-block {
-    @apply flex flex-col w-[90vw] rounded-lg h-fit bg-[#F4E7E1]/50 md:flex-row md:h-fit md:mt-[30px];
+    @apply flex flex-col w-[90vw] rounded-lg h-fit shadow-md md:flex-row md:h-fit md:mt-[30px];
     /* @media (min-width: 768px) {
       @apply flex-row h-fit mt-[30px];
     } */
@@ -26,19 +26,22 @@
 }
 
 .store-table {
-  @apply max-w-[295px] mt-[5px] ml-[10px] md:w-[100%] md:max-w-none md:mt-[10px];
+  @apply max-w-[295px] mt-[5px] ml-[10px] md:w-[100%] md:max-w-none md:mt-[3px] lg:mt-[10px];
+
   /* @media (min-width: 768px) {
     @apply max-w-none !w-[100%] mt-[10px];
   } */
   tr {
     @apply w-[100vw];
   }
+
   .td-icon {
     @apply text-lg pr-2 md:text-xl;
     /* @media (min-width: 768px) {
       @apply text-xl;
     } */
   }
+
   td {
     @apply text-lg md:text-xl;
     /* @media (min-width: 768px) {
@@ -90,9 +93,47 @@
 }
 
 .Btn {
-  @apply w-[13vw] bg-[#F4E7E1] text-[#662222] border-1 border-[#662222] rounded-3xl h-[7vh] min-w-[100px] font-bold transition-all
-         hover:bg-[#662222]/20 hover:text-[#662222] hover:border-[#662222] hover:scale-[1.05]
-         active:bg-white active:text-[#662222] active:scale-[0.85];
+  @apply w-[13vw] text-[#662222] border-1 border-[#662222] rounded-3xl h-[7vh] min-w-[100px] font-bold transition-all hover:scale-[1.05] active:bg-white active:text-[#662222] active:scale-[0.85];
+}
+
+/* 1. 讀取中的快速左右反轉動畫 */
+@keyframes fast-flip {
+  0%, 100% {
+    transform: scaleX(1);
+  }
+
+  50% {
+    transform: scaleX(-1);
+  }
+}
+
+.flipping {
+  /* 0.4s 快速翻轉，增加「搜尋中」的急迫感 */
+  animation: fast-flip 1s infinite linear;
+  background-color: #cc7a5c !important;
+  /* 確保讀取時背景不變透明 */
+  color: white !important;
+}
+
+/* 2. 原本的未定位彈跳動畫 (維持你之前的需求) */
+@keyframes mega-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+.super-bounce {
+  animation: mega-bounce 0.8s infinite ease-in-out;
+}
+
+/* 確保圖示置中 */
+.pi-map-marker {
+  /* 有些版本圖示位置稍微偏上，微調它 */
+  transform: translateY(-1px);
 }
 
 
@@ -102,6 +143,7 @@
   align-items: stretch !important;
   /* 強制左右兩箱高度永遠齊平 */
 }
+
 /* 2. 針對左右兩個區域的包裹層 */
 :host ::ng-deep .responsive-picklist .p-picklist-list-wrapper {
   display: flex !important;
@@ -109,6 +151,7 @@
   flex: 1 1 50% !important;
   /* 確保左右各佔一半 */
 }
+
 /* 3. 針對灰色線框 (ul) 所在的容器：這是最容易縮放的地方 */
 :host ::ng-deep .responsive-picklist .p-picklist-list {
   /* 捨棄 height: 100%，改用 flex-grow 強制填滿 wrapper 的剩餘空間 */
@@ -116,43 +159,53 @@
   flex-shrink: 0 !important;
   /* 必須設為 100% 才能讓內部的 li:last-child 偵測到「剩餘空間」 */
   height: 100% !important;
-  overflow-y: hidden !important; /* 既然要自動填滿，通常不需要滾動軸 */
+  overflow-y: hidden !important;
+  /* 既然要自動填滿，通常不需要滾動軸 */
   box-sizing: border-box !important;
   display: flex !important;
   flex-direction: column !important;
 }
+
 :host ::ng-deep .p-listbox-list-container {
   /* 確保內部列表也填滿父容器 */
   box-sizing: border-box !important;
 }
+
 /* 4. 關鍵：防止 PrimeNG 的內建樣式在拖曳時干擾佈局 */
 :host ::ng-deep .p-dataview-content,
 :host ::ng-deep .p-picklist-item {
   box-sizing: border-box !important;
 }
+
 :host ::ng-deep .responsive-picklist .p-picklist-list li:has(.dynamic-padding) {
   flex-grow: 1 !important;
   display: flex !important;
   align-items: stretch !important;
 }
+
 :host ::ng-deep .responsive-picklist .p-picklist-list li:last-child {
   /* 移除原本可能限制高度的屬性 */
   flex: 1 1 auto !important;
   display: flex !important;
-  min-height: 0 !important; /* 重要：防止內容溢出觸發滾動軸 */
+  min-height: 0 !important;
+  /* 重要：防止內容溢出觸發滾動軸 */
 }
+
 /* 目標區初始墊片 */
-.dynamic-targetPadding.can-hover{
+.dynamic-targetPadding.can-hover {
   color: #3b82f6;
 }
+
 /* 墊片縮放 */
 .dynamic-targetPadding {
   width: 100%;
-  transition: height 0.3s ease; /* 增加縮放平滑感 */
+  transition: height 0.3s ease;
+  /* 增加縮放平滑感 */
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 /* 來源墊片專屬：自動填滿並置中 */
 .dynamic-sourcePadding {
   width: 100%;
@@ -160,6 +213,7 @@
   align-items: center !important;
   justify-content: center !important;
 }
+
 .product-item {
   position: relative;
   width: 100%;
@@ -171,15 +225,19 @@
   flex-shrink: 0;
   font-size: 18px;
 }
+
 @media (max-width: 523px) {
   :host ::ng-deep .p-listbox-list-container {
-    height: 310px !important; /* 改用 height 固定整體，而非 max-height */
+    height: 310px !important;
+    /* 改用 height 固定整體，而非 max-height */
   }
+
   /* 只有在目標區「只有一個墊片」時才給高度，否則讓 flex-grow 處理 */
   .dynamic-targetPadding.can-hover {
     height: 100% !important;
     min-height: 280px;
   }
+
   .product-item {
     flex-direction: column !important;
     /* 強制轉向 */
@@ -191,29 +249,35 @@
     font-size: 16px;
   }
 }
+
 @media (min-width: 524px) and (max-width: 1023px) {
   :host ::ng-deep .p-listbox-list-container {
     height: 410px !important;
   }
+
   .dynamic-targetPadding.can-hover {
     height: 100% !important;
     min-height: 380px;
   }
+
   .product-item {
     flex-direction: row !important;
     align-items: center !important;
     height: fit-content !important;
   }
 }
-@media (min-width:1024px){
+
+@media (min-width:1024px) {
   :host ::ng-deep .p-listbox-list-container {
     height: 510px !important;
   }
+
   .dynamic-targetPadding.can-hover {
     height: 100% !important;
     min-height: 480px;
   }
 }
+
 .remove-badge {
   position: absolute;
   /* 往外推 */
@@ -232,24 +296,29 @@
   z-index: 0;
   box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.2);
 }
+
 /* 移除 PickList 預設選中時的藍框，避免干擾紅按鈕視覺 */
 :host ::ng-deep .p-picklist-item.p-highlight {
   background: #f8f9fa !important;
   color: #495057 !important;
 }
+
 /* 讓 PickList 容器變成 Flex 佈局 */
 :host ::ng-deep .responsive-picklist .p-picklist {
   display: flex;
   gap: 1rem;
   /* 左右/上下區域的間距 */
 }
+
 /* --- 手機、平板版 RWD (螢幕寬度 < 1024px) --- */
 @media screen and (max-width: 1023px) {
+
   /* 1. 確保排版為垂直：來源在上、目標在下 */
-  :host ::ng-deep .responsive-picklist > .p-picklist {
+  :host ::ng-deep .responsive-picklist>.p-picklist {
     display: flex !important;
     flex-direction: column !important;
   }
+
   /* 2. 按鈕容器橫向排列 */
   :host ::ng-deep .responsive-picklist .p-picklist-controls {
     display: flex !important;
@@ -258,29 +327,29 @@
     gap: 12px;
     padding: 10px 0 !important;
   }
+
   /* 3. 修正 SVG 轉向數值 */
   /* 指向目標 (原向右) -> 旋轉 90 度向下 */
   :host::ng-deep.responsive-picklist [data-pc-section="moveToTargetButton"] svg,
-  :host::ng-deep.responsive-picklist
-    [data-pc-section="moveAllToTargetButton"]
-    svg {
+  :host::ng-deep.responsive-picklist [data-pc-section="moveAllToTargetButton"] svg {
     transform: rotate(90deg) !important;
     display: block !important;
   }
+
   /* 指向來源 (原向左) -> 旋轉 90 度向上 (因為原圖向左，轉 90 度會變向上) */
   /* 如果轉 90 度不對，請嘗試使用 rotate(-90deg) 或 rotate(270deg) */
   :host::ng-deep.responsive-picklist [data-pc-section="moveToSourceButton"] svg,
-  :host::ng-deep.responsive-picklist
-    [data-pc-section="moveAllToSourceButton"]
-    svg {
+  :host::ng-deep.responsive-picklist [data-pc-section="moveAllToSourceButton"] svg {
     transform: rotate(90deg) !important;
     display: block !important;
   }
+
   /* 4. 寬度修正 */
   :host ::ng-deep .responsive-picklist .p-picklist-list-wrapper {
     width: 100% !important;
   }
 }
+
 /* 3. 桌機版樣式 (lg 以上) */
 @media (min-width: 1024px) {
   :host ::ng-deep .responsive-picklist .p-picklist {
@@ -288,23 +357,27 @@
     /* 水平排列：來源在左，目標在右 */
     align-items: flex-start;
   }
+
   /* 確保兩個清單寬度平分或自適應 */
   :host ::ng-deep .responsive-picklist .p-picklist-list-wrapper {
     flex: 1 1 50%;
   }
 }
+
 /* 修正中間控制按鈕垂直置中 */
 :host ::ng-deep .responsive-picklist .p-picklist-buttons {
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 .recommended-active {
   background-color: white !important;
   color: #662222 !important;
   font-weight: bold;
   border: 1px solid #662222 !important;
 }
+
 .transition-colors {
   transition: all 0.2s ease-in-out;
 }
@@ -316,12 +389,14 @@
   color: #7c2d12;
   font-weight: bold;
 }
+
 /* --- 手機、平板版 (水平頁籤) --- */
 @media (max-width: 1023px) {
   .active-tab {
     border-radius: 12px 12px 0 0;
     /* 圓角在上方 */
   }
+
   .active-tab::before,
   .active-tab::after {
     content: "";
@@ -332,12 +407,14 @@
     height: 20px;
     background-color: transparent;
   }
+
   /* 左下凹角 */
   .active-tab::before {
     left: -20px;
     border-bottom-right-radius: 15px;
     box-shadow: 5px 5px 0 5px white;
   }
+
   /* 右下凹角 */
   .active-tab::after {
     right: -20px;
@@ -345,6 +422,7 @@
     box-shadow: -5px 5px 0 5px white;
   }
 }
+
 /* --- 桌面版 (垂直頁籤) --- */
 @media (min-width: 1024px) {
   .active-tab {
@@ -353,6 +431,7 @@
     width: calc(100% + 1px);
     /* 稍微往右突出一點點，覆蓋內容區邊界 */
   }
+
   .active-tab::before,
   .active-tab::after {
     content: "";
@@ -362,12 +441,14 @@
     height: 20px;
     background-color: transparent;
   }
+
   /* 右上凹角 */
   .active-tab::before {
     top: -20px;
     border-bottom-right-radius: 15px;
     box-shadow: 5px 5px 0 5px white;
   }
+
   /* 右下凹角 */
   .active-tab::after {
     bottom: -20px;
@@ -383,54 +464,63 @@
   color: #662222 !important;
   font-weight: 600;
 }
+
 :host ::ng-deep .p-floatlabel {
   --p-floatlabel-focus-color: #662222;
 }
 
 
-::ng-deep .p-datepicker:not(.p-disabled).p-focus + label {
+::ng-deep .p-datepicker:not(.p-disabled).p-focus+label {
   color: #662222 !important;
 }
+
 /* 選中日期圓圈 */
 ::ng-deep .my-local-panel {
   --p-datepicker-date-selected-background: #662222 !important;
   --p-datepicker-date-selected-color: #ffffff !important;
 }
+
 /* 針對滑鼠懸停 (Hover) 時的圓圈顏色，也順便統一 */
-::ng-deep .my-local-panel .p-datepicker-calendar td > span:not(.p-highlight):hover {
+::ng-deep .my-local-panel .p-datepicker-calendar td>span:not(.p-highlight):hover {
   background-color: #fce7e7 !important;
   color: #662222 !important;
 }
+
 /* 「今天」的圈圈 (通常是外框線) */
-::ng-deep .my-local-panel .p-datepicker-calendar td.p-datepicker-today > span {
+::ng-deep .my-local-panel .p-datepicker-calendar td.p-datepicker-today>span {
   border: 1px solid #662222 !important;
   color: #662222 !important;
   background-color: transparent !important;
 }
+
 ::ng-deep .my-local-panel .p-datepicker-buttonbar button {
   background: #662222 !important;
   border: none;
+
   &:hover {
     background: rgba(102, 34, 34, 0.04) !important;
     color: #4a1818 !important;
   }
 }
+
 /* 針對所有箭頭 (SVG) */
 ::ng-deep .my-local-panel svg {
   color: #662222 !important;
   fill: #662222 !important;
   transition: transform 0.2s;
 }
+
 /* 當滑鼠懸停在按鈕上時，改變 SVG 顏色 */
 ::ng-deep .my-local-panel button:hover svg {
-    color: #4a1818 !important;
-    fill: #4a1818 !important;
-    transform: scale(1.1);
+  color: #4a1818 !important;
+  fill: #4a1818 !important;
+  transform: scale(1.1);
 }
+
 /* 修改按鈕本身的背景 Hover */
 ::ng-deep .my-local-panel button:hover {
-    background: rgba(102, 34, 34, 0.1) !important;
-    border-color: transparent !important;
+  background: rgba(102, 34, 34, 0.1) !important;
+  border-color: transparent !important;
 }
 
 
@@ -441,6 +531,7 @@
   /* 相容 Safari */
   background-color: rgba(0, 0, 0, 0.2) !important;
 }
+
 ::ng-deep .swal2-popup {
   box-shadow: 0 8px 32px 0 rgba(95, 96, 103, 0.37) !important;
   backdrop-filter: blur(4px);

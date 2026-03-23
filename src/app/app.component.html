@@ -1,93 +1,108 @@
 <div class="topbar-wrapper">
-  <header class="relative flex items-center px-4">
+  <header class="relative flex items-center px-">
+    <div class="flex items-center w-full max-w-[1440px] mx-auto">
+      <!-- 手機板附近按鈕 -->
+      @if(nearby) {
+      <div class="md:hidden">
+        <app-nearby-bar></app-nearby-bar>
+      </div>
+      }
 
-    <!-- 手機板附近按鈕 -->
-    @if(nearby) {
-    <div class="md:hidden">
-      <app-nearby-bar></app-nearby-bar>
-    </div>
-    }
-
-    <!-- 左：LOGO + nearby（怎麼變寬都不影響置中） -->
-    <!-- pTooltip說明：
+      <!-- 左：LOGO + nearby（怎麼變寬都不影響置中） -->
+      <!-- pTooltip說明：
           (1) pTooltip 為氣泡內容
           (2) tooltipPosition 為氣泡顯示位置可以使用 right 、 left 、 top 、 bottom
           (3) [positionLeft] 適用於 tooltipPosition 為 right 或 left 的時候
           (4) [positionTop] 適用於 tooltipPosition 為 top 或 bottom 的時候
           (5) [showDelay] 用於調整 pTooltip 顯示延遲時間-->
-    @if (isMobile) {
-    <div class="flex-1 flex items-center justify-center">
-      <img routerLink="gogobuy" src="ggb3.png" class="logo cursor-pointer h-13" pTooltip="點擊返回首頁"
-        tooltipPosition="bottom" [showDelay]="50">
-    </div>
-    }
-
-    @if (!isMobile) {
-    <div class="flex items-center gap-3 flex-none">
-      <img routerLink="gogobuy" src="ggb3.png" class="logo cursor-pointer h-13" pTooltip="點擊返回首頁"
-        tooltipPosition="bottom" [showDelay]="50">
-      @if (nearby) {
-      <app-nearby-bar class="hidden md:block" pTooltip="搜尋附近商家" tooltipPosition="bottom"
-        [positionTop]="5"></app-nearby-bar>
+      @if (isMobile) {
+      <div class="flex-1 flex items-center justify-center">
+        <img routerLink="gogobuy" src="ggb3.png" class="logo cursor-pointer h-13" pTooltip="點擊返回首頁"
+          tooltipPosition="bottom" [showDelay]="50">
+      </div>
       }
-    </div>
-    }
 
-    <!-- 中：搜尋欄「固定置中」(桌機才顯示，手機用下面那條 search-mobile) -->
-    @if (showSearch) {
-    <div class="disappear absolute left-1/2 -translate-x-1/2 w-full max-w-[560px] px-4">
-      <p-inputgroup class="w-full">
-        <p-select [options]="category" class="font-bold!" optionLabel="name" optionValue="value"
-          (onChange)="onSearchModeChangePrime($event)" styleClass="!w-28">
-        </p-select>
-
-        <input pInputText #searchInput type="text" [placeholder]="searchPlaceholder()"
-          (keyup.enter)="onSearch(searchInput.value)" [ngModel]="manualAddress()"
-          (ngModelChange)="manualAddress.set($event); enableNearbyManual();" class="!w-full" />
-
-        <button pButton type="button" icon="pi pi-search" class="p-button-danger" (click)="onSearch(searchInput.value)">
-        </button>
-      </p-inputgroup>
-    </div>
-    }
-
-
-
-    <nav>
-      <!-- 右側功能列表 -->
-      <ul class="items-center justify-center disappear">
-        <!-- 管理者介面 -->
-        @if(isAdmin()){
-        <li>
-          <i class="pi pi-wrench nav-icon cursor-pointer" style="font-size: 1.5rem" (click)="toDashboard()"
-            pTooltip="點擊進入管理" tooltipPosition="bottom" [positionTop]="5"></i>
-        </li>
+      @if (!isMobile) {
+      <div class="flex items-center gap-3 flex-1">
+        <img routerLink="gogobuy" src="ggb3.png" class="logo cursor-pointer h-13" pTooltip="點擊返回首頁"
+          tooltipPosition="bottom" [showDelay]="50">
+        @if (nearby) {
+        <app-nearby-bar class="hidden md:block" pTooltip="搜尋附近商家" tooltipPosition="bottom"
+          [positionTop]="5"></app-nearby-bar>
         }
-        <!-- 通知鈴鐺 -->
-        @if (isLoggedIn){
-        <li>
-          <app-notification-bell class="pi" pTooltip="點擊查看通知" tooltipPosition="bottom"
-            [positionTop]="5"></app-notification-bell>
-        </li>
-        <li><i class="pi pi-receipt nav-icon cursor-pointer" style="font-size: 1.5rem" (click)="goorders()"
-            pTooltip="點擊查看訂單" tooltipPosition="bottom" [positionTop]="5"></i></li>
-        <li>
-          @if (userAvatar()) {
-          <img [src]="userAvatar()" alt="User Avatar" class="avatar-style"
-            class="w-[24px] h-[25px] rounded-full cursor-pointer" (click)="onUserClick($event, menu)"
-            pTooltip="點擊查看功能選單" tooltipPosition="bottom" [positionTop]="5" />
-          } @else {
-          <i class="pi pi-user nav-icon cursor-pointer" style=" color: rgb(255, 255, 255); font-size: 1.5rem"
-            (click)="menu.toggle($event)" pTooltip="點擊查看功能選單" tooltipPosition="bottom" [positionTop]="5"></i>
+      </div>
+      }
+
+      <!-- 中：搜尋欄「固定置中」(桌機才顯示，手機用下面那條 search-mobile) -->
+      @if (showSearch) {
+      <div class="disappear absolute left-1/2 -translate-x-1/2 w-full max-w-[560px] px-4">
+        <p-inputgroup class="w-full">
+          <p-select [options]="category" class="font-bold!" optionLabel="name" optionValue="value"
+            (onChange)="onSearchModeChangePrime($event)" styleClass="!w-28">
+          </p-select>
+
+          <input pInputText #searchInput type="text" [placeholder]="searchPlaceholder()"
+            (keyup.enter)="onSearch(searchInput.value)" [ngModel]="manualAddress()"
+            (ngModelChange)="manualAddress.set($event); enableNearbyManual();" class="!w-full" />
+
+          <button pButton type="button" icon="pi pi-search" class="p-button-danger"
+            (click)="onSearch(searchInput.value)">
+          </button>
+        </p-inputgroup>
+      </div>
+      }
+
+
+
+      <nav>
+        <!-- 右側功能列表 -->
+        <ul class="items-center justify-center disappear">
+          <!-- 管理者介面 -->
+          @if(isAdmin()){
+          <li>
+            <i class="pi pi-wrench nav-icon cursor-pointer" style="font-size: 1.5rem" (click)="toDashboard()"
+              pTooltip="點擊進入管理" tooltipPosition="bottom" [positionTop]="5"></i>
+          </li>
           }
-        </li>
-        } @else {
-        <li><i class="pi pi-user nav-icon cursor-pointer" style=" color: rgb(255, 255, 255); font-size: 1.5rem"
-            (click)="this.router.navigate(['gogobuy/login'])" pTooltip="點擊進行登入" tooltipPosition="left"
-            [positionLeft]="-5"></i></li>
-        }
-      </ul>
-    </nav>
+          <!-- 通知鈴鐺 -->
+          @if (isLoggedIn){
+          <li>
+            <app-notification-bell class="pi" pTooltip="點擊查看通知" tooltipPosition="bottom"
+              [positionTop]="5"></app-notification-bell>
+          </li>
+          <li>
+            <i class="pi pi-receipt nav-icon cursor-pointer" style="font-size: 1.5rem" (click)="goOrders()"
+              pTooltip="點擊查看訂單" tooltipPosition="bottom" [positionTop]="5">
+            </i>
+          </li>
+          <li>
+            <i class="pi pi-heart nav-icon cursor-pointer" style="font-size: 1.5rem" (click)="goFavorite()"
+              pTooltip="點擊查看最愛店家" tooltipPosition="bottom" [positionTop]="5">
+            </i>
+          </li>
+          <li>
+            <i class="pi pi-sparkles nav-icon cursor-pointer" style="font-size: 1.5rem" (click)="goWish()"
+              pTooltip="點擊查看許願池" tooltipPosition="bottom" [positionTop]="5">
+            </i>
+          </li>
+          <li>
+            @if (userAvatar()) {
+            <img [src]="userAvatar()" alt="User Avatar" class="avatar-style"
+              class="w-[24px] h-[25px] rounded-full cursor-pointer" (click)="onUserClick($event, menu)"
+              pTooltip="點擊查看功能選單" tooltipPosition="bottom" [positionTop]="5" />
+            } @else {
+            <i class="pi pi-user nav-icon cursor-pointer" style=" color: rgb(255, 255, 255); font-size: 1.5rem"
+              (click)="menu.toggle($event)" pTooltip="點擊查看功能選單" tooltipPosition="bottom" [positionTop]="5"></i>
+            }
+          </li>
+          } @else {
+          <li><i class="pi pi-user nav-icon cursor-pointer" style=" color: rgb(255, 255, 255); font-size: 1.5rem"
+              (click)="this.router.navigate(['gogobuy/login'])" pTooltip="點擊進行登入" tooltipPosition="left"
+              [positionLeft]="-5"></i></li>
+          }
+        </ul>
+      </nav>
+    </div>
   </header>
   <p-menu #menu [popup]="true" [model]="filteredItems" appendTo="body"></p-menu>
 
@@ -135,25 +150,83 @@
 </main>
 
 <!-- footer -->
-<footer>
-  <div class="footer-container footer-info">
-    <a class="font-bold cursor-pointer underline decoration-1 hover:text-blue-200" (click)="contactUs()">聯繫我們</a>
-    <p class="font-bold">地址：台南市歸仁區歸仁十三路一段6號</p>
-    <p class="font-bold">電話：(06) 303 2550</p>
-  </div>
-  <div class="footer-bottom">
-    <a class="font-bold text-base">&copy; 2026 GogoBuy</a>
+<footer class="bg-[var(--bg-main)] py-16 px-4">
+  <div class="max-w-7xl mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+      <div
+        class="flex flex-col p-8 bg-[var(--footer-bg)] text-[var(--footer-text)] border border-[var(--brand-primary)] rounded-xl shadow-xl hover:-translate-y-1 hover:border-[var(--accent-orange)] transition-all duration-300">
+        <div class="mb-6">
+          <h2 class="text-2xl font-bold tracking-widest">GogoBuy</h2>
+          <div class="w-10 h-1 bg-[var(--accent-orange)] mt-2"></div>
+        </div>
+        <p class="text-sm opacity-80 leading-relaxed">
+          在地耕耘，提供最溫暖、最專業的購物選擇，讓每一份禮物都充滿意義。
+        </p>
+      </div>
+
+      <div
+        class="flex flex-col p-8 bg-[var(--footer-bg)] text-[var(--footer-text)] border border-[var(--brand-primary)] rounded-xl shadow-xl hover:-translate-y-1 hover:border-[var(--accent-orange)] transition-all duration-300">
+        <h3 class="text-lg font-bold mb-6 flex items-center gap-2 text-[var(--accent-soft)]">
+          <i class="pi pi-map-marker"></i> 聯絡資訊
+        </h3>
+        <ul class="space-y-4 text-sm">
+          <li class="flex items-start gap-3">
+            <span class="font-semibold text-[var(--accent-soft)] w-8">地址</span>
+            <span class="opacity-90">台南市歸仁區歸仁十三路一段6號</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <span class="font-semibold text-[var(--accent-soft)] w-8">電話</span>
+            <span class="opacity-90">(06) 303 2550</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <span class="font-semibold text-[var(--accent-soft)] w-8">信箱</span>
+            <span class="opacity-90">service&#64;gogobuy.com.tw</span>
+          </li>
+        </ul>
+      </div>
+
+      <div
+        class="flex flex-col p-8 bg-[var(--footer-bg)] text-[var(--footer-text)] border border-[var(--brand-primary)] rounded-xl shadow-xl hover:-translate-y-1 hover:border-[var(--accent-orange)] transition-all duration-300">
+        <h3 class="text-lg font-bold mb-6 flex items-center gap-2 text-[var(--accent-soft)]">
+          <i class="pi pi-link"></i> 快速導覽
+        </h3>
+        <div class="flex flex-col gap-4 text-sm">
+          <a (click)="privacyPolicy()"
+            class="flex items-center justify-between cursor-pointer  pb-2 transition-all duration-300 hover:translate-x-2 hover:text-[var(--accent-orange)]">
+            <span>隱私政策</span>
+          </a>
+          <a (click)="officialTerms()"
+            class="flex items-center justify-between cursor-pointer  pb-2 transition-all duration-300 hover:translate-x-2 hover:text-[var(--accent-orange)]">
+            <span>服務條款</span>
+          </a>
+          <a (click)="contactUs()"
+            class="flex items-center justify-between cursor-pointer pb-2 transition-all duration-300 hover:translate-x-2 hover:text-[var(--accent-orange)]">
+            <span>常見問題</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="mt-4 text-center">
+      <p class="text-slate-200 text-xs tracking-[0.3em] uppercase">
+        &copy; 2026 GogoBuy. Crafted with care in Tainan.
+      </p>
+    </div>
   </div>
 </footer>
 
 
 <!-- 常見問題+氣泡 -->
+@if(isMobile){
 @if(!showProblem){
 <button class="question" type="button" balloon-data="有甚麼疑問嗎?點擊這裡" aria-label="常見問題"
   (click)="problemMenu.toggle($event)">
   ?
 </button>
 <p-menu #problemMenu [popup]="true" [model]="problems"></p-menu>
+}
 }
 <!-- 手機 footer 依 router.url 判斷目前頁籤並高亮 -->
 <div class="footer-mobile">

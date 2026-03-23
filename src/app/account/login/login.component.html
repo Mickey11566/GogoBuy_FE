@@ -85,7 +85,7 @@
                 </div>
 
                 <!-- 預留一行高度 -->
-                <p class="min-h-[7px] mt-[5px] text-[13px] font-bold text-red-700"
+                <p class="min-h-[4px]  text-[13px] font-bold text-red-700"
                   [class.opacity-0]="!(nickname.invalid && nickname.touched)">
                   名稱不可為空
                 </p>
@@ -104,7 +104,7 @@
                     placeholder="example@gmail.com" value="test2@gmail.com" />
                 </div>
 
-                <p class="min-h-[7px] mt-[5px] text-[13px] font-bold text-red-700"
+                <p class="min-h-[7px] text-[13px] font-bold text-red-700"
                   [class.opacity-0]="!(email.invalid && email.touched)">
                   請輸入正確的 Email 格式
                 </p>
@@ -123,7 +123,7 @@
                     placeholder="0912345678" />
                 </div>
 
-                <p class="min-h-[7px] mt-[5px] text-[13px] font-bold text-red-700"
+                <p class="min-h-[7px] text-[13px] font-bold text-red-700"
                   [class.opacity-0]="!(phone.invalid && phone.touched)">
                   手機號碼格式錯誤（例：0912345678）
                 </p>
@@ -149,20 +149,54 @@
                   </div>
                 </div>
 
-                <p class="min-h-[7px] mt-[5px] text-[13px] font-bold text-red-700"
+                <p class="min-h-[7px] text-[13px] font-bold text-red-700"
                   [class.opacity-0]="!(password.invalid && password.touched)">
                   需包含英文與數字，長度 8–16 碼，不包含特殊符號
                 </p>
               </div>
 
+              <!-- 隱私政策與運費聲明 (僅註冊模式) -->
+              @if (pageMode == 'register') {
+              <div class="space-y-2">
+                <label class="flex items-center gap-2 cursor-pointer group">
+                  <input type="checkbox" name="privacyPolicy" [(ngModel)]="agreedToPrivacyPolicy" required
+                    class="w-4 h-4 rounded border-slate-300 text-red-900 focus:ring-red-900 cursor-pointer" />
+                  <span class="text-[14px] font-bold text-slate-600">
+                    我已閱讀並同意
+                    <span class="text-red-900 underline hover:text-red-700 transition-colors"
+                      (click)="showPrivacyPolicy(); $event.stopPropagation()">
+                      隱私政策聲明
+                    </span>
+                  </span>
+                </label>
+
+                <!-- <label class="flex items-center gap-2 cursor-pointer group">
+                  <input type="checkbox" name="shippingPolicy" [(ngModel)]="agreedToShippingPolicy" required
+                    class="w-4 h-4 rounded border-slate-300 text-red-900 focus:ring-red-900 cursor-pointer" />
+                  <span class="text-[14px] font-bold text-slate-600">
+                    我已閱讀並同意
+                    <span class="text-red-900 underline hover:text-red-700 transition-colors"
+                      (click)="showShippingPolicy(); $event.stopPropagation()">
+                      運費拆帳計算說明
+                    </span>
+                  </span>
+                </label> -->
+              </div>
+              }
+                <!-- line192 -->
+                <!-- [disabled]="!authForm.valid || (pageMode === 'register' && (!agreedToPrivacyPolicy || !agreedToShippingPolicy))" -->
+
               <!-- 送出 -->
-              <button type="submit" [disabled]="!authForm.valid"
+              <button type="submit"
+
+                [disabled]="!authForm.valid || (pageMode === 'register' && (!agreedToPrivacyPolicy))"
                 class="cursor-pointer  w-full mt-1 bg-red-900 text-white font-black py-2 rounded-2xl hover:bg-red-950 transition active:scale-[0.99] shadow-[0_12px_24px_rgba(127,29,29,0.28)] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest text-[20px]">
                 {{ pageMode == "login" ? "登入" : "註冊" }}
               </button>
               @if (pageMode == 'login') {
               <div style="text-align: center">
-                <a class="font-semibold hover:text-red-900 hover:border-b hover:border-red-900" style="cursor: pointer" (click)="resetPassword()">忘記密碼?</a>
+                <a class="font-semibold hover:text-red-900 hover:border-b hover:border-red-900" style="cursor: pointer"
+                  (click)="resetPassword()">忘記密碼?</a>
               </div>
               }
 
@@ -182,13 +216,27 @@
               </button>
             </form>
           </div>
-
-          <!-- 小字提示 -->
-          <p class="mt-4 text-[15px] font-bold text-red-950/80 text-center">
-            註冊登入即代表你同意平台的服務條款與隱私政策。
-          </p>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<p-dialog
+  [(visible)]="loading"
+  [modal]="true"
+  [closable]="false"
+  [showHeader]="false"
+  appendTo="body"
+  [style]="{ background: 'transparent', border: 'none', 'box-shadow': 'none' }"
+>
+  <div class="flex flex-col items-center w-full">
+    <i
+      class="pi pi-spin pi-spinner-dotted"
+      style="font-size: 3rem; color: white"
+    ></i>
+    <span class="mt-2 text-white tracking-widest animate-pulse"
+      >正在註冊中，請稍候...</span
+    >
+  </div>
+</p-dialog>

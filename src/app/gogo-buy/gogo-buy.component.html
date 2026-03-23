@@ -1,3 +1,5 @@
+<p-toast></p-toast>
+
 <body class="bg-[#F8FAFC] min-h-svh">
   <!--輪播欄-->
   <section class="max-w-[1440px] mx-auto mt-6">
@@ -29,7 +31,9 @@
     </p-carousel>
   </section>
 
-  <app-popular></app-popular>
+  <section class="max-w-[1440px] mx-auto p-4 md:p-4">
+    <app-popular></app-popular>
+  </section>
 
   <!--開團中店家-->
 
@@ -85,14 +89,16 @@
 
           <!-- Title Overlay -->
           <div
-            class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/70 to-transparent p-6 flex flex-col justify-end pointer-events-none">
-            <h3 class="text-lg font-bold text-white drop-shadow-md pr-8">
-              {{ event.eventName }}
+            class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/70 to-transparent p-6 flex flex-col pointer-events-none">
+            <!-- 轉換object並取得顯示店家名稱 -->
+            <!-- 加上背景讓文字更好讀取 -->
+            <h3
+              class="text-lg w-fit inline-flex flex-row justify-end font-bold bg-white/50 backdrop-blur-sm rounded-lg px-2 py-1 text-gray-900 drop-shadow-md">
+              {{ event.store.name }}
+            </h3>
+            <h3 class="text-lg h-full flex flex-col justify-evenly font-bold text-white drop-shadow-md pr-8">
               <br />
-              <br />
-              {{ event.announcement }}
-              <br />
-              <!-- {{ event.recommendDescription }} -->
+              <p class="text-xl">{{ event.eventName }}</p>
             </h3>
 
             <!-- Arrow Icon (Moved Back Inside Image) -->
@@ -162,9 +168,18 @@
         class="group relative overflow-hidden rounded-3xl bg-slate-200 min-h-[200px] w-full shadow-md hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 cursor-pointer"
         (click)="goStoreInfo(item.id)">
 
-        <img [src]="item.image" (error)="item.image = 'https://picsum.photos/800/600?random=' + item.id"
+        <img [src]="item.image || 'https://picsum.photos/800/600?random=' + item.id"
           class="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
           [class.grayscale]="item.isClosed" />
+        <i class="pi absolute top-3 right-3 z-30" style="font-size:1.6rem"
+          (click)="handleFavoriteClick(item.id); $event.stopPropagation()" [ngClass]="[
+                        isFavorite(item.id)
+                          ? 'pi-heart-fill text-red-500'
+                          : 'pi-heart text-gray-400',
+                        userId && this.userId != 'null'
+                          ? 'cursor-pointer'
+                          : 'cursor-not-allowed',
+                      ]"></i>
 
         @if (item.isClosed) {
         <div class="absolute inset-0 bg-black/40 z-10 flex items-center justify-center">
@@ -220,8 +235,8 @@
     (click)="$event.stopPropagation()">
     <!-- 底部選單 -->
     <!-- <div class="flex justify-center mb-5">  拖曳條
-              <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
-            </div> -->
+                <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+              </div> -->
     <h3 class="text-base font-semibold text-gray-900 mb-4">請選擇購買類型</h3>
     <!-- 標題 -->
     <button
@@ -312,12 +327,8 @@
           @if (choice == "不限" || !choice) {
           <div class="flex items-center my-4">
             <div class="flex-1 border-t border-gray-400"></div>
-            <!-- 左邊線 -->
-            <span class="mx-4 text-gray-700 whitespace-nowrap text-sm sm:text-base">
-              外送
-            </span>
+            <span class="mx-4 text-gray-700 whitespace-nowrap text-sm sm:text-base">外送</span>
             <div class="flex-1 border-t border-gray-400"></div>
-            <!-- 右邊線 -->
           </div>
           }
           @if (filteredFastStoreList.length == 0 && (choice == "不限" || !choice)) {
@@ -329,12 +340,27 @@
             class="w-full bg-[#F4E7E1]/50 rounded-xl border border-gray-100 overflow-hidden mt-4 hover:border-2 hover:border-[#662222] hover:scale-[1.01] transition duration-200 active:scale-[0.98]"
             (click)="goStoreInfo(store.id)">
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center">
+              @if(store.isClosed==true){
+              <div
+                class="shrink-0 w-full aspect-[4/3] sm:w-[200px] sm:h-[150px] bg-gray-100 relative overflow-hidden sm:m-4 sm:rounded-lg">
+                <img [src]=" store?.image ? store?.image : 'no-product-image'"
+                  (error)=" $any($event.target).src = 'no-product-image.jpg'"
+                  class="absolute inset-0 w-full h-full object-cover" />
+                <div class="absolute inset-0 z-10 flex items-center justify-center bg-gray-100/90">
+                  <div
+                    class="text-2xl sm:text-xl font-bold tracking-[4px] sm:tracking-[2px] px-4 py-1 border-2 whitespace-nowrap">
+                    未營業
+                  </div>
+                </div>
+              </div>
+              }@else {
               <div
                 class="shrink-0 w-full aspect-[4/3] sm:w-[200px] sm:h-[150px] bg-gray-100 relative overflow-hidden sm:m-4 sm:rounded-lg">
                 <img [src]="store?.image ? store?.image : 'no-product-image'" referrerpolicy="no-referrer" (error)="
-                                $any($event.target).src = 'no-product-image.jpg'
-                              " class="absolute inset-0 w-full h-full object-cover" />
+                          $any($event.target).src = 'no-product-image.jpg'
+                        " class="absolute inset-0 w-full h-full object-cover" />
               </div>
+              }
               <div class="flex-1 min-w-0 p-4 sm:pr-6 sm:py-4">
                 <div class="md:flex md:items-center md:justify-between md:mb-2">
                   <p class="text-2xl font-bold text-gray-800 truncate m-0" [innerHTML]="highlight(store.name)">
@@ -355,30 +381,30 @@
                 <div class="text-sm sm:text-base text-gray-600 space-y-1.5">
                   <p class="m-0 truncate">📞電話：{{ store.phone }}</p>
                   <p class="m-0 truncate">📍地址：{{ store.address }}</p>
-                  @if (store.feeDescription && store.feeDescription.length > 0) {
-                  <div class="flex flex-row items-center min-w-0 w-full">
-                    <span class="shrink-0 font-bold text-[#662222]">🚚外送費：</span>
-                    <ul class="list-none m-0 p-0 px-2 flex-1 min-w-0 truncate whitespace-nowrap leading-7 h-7">
-                      @for (each of store.feeDescription;track $index) {
-                      <li class="inline mr-4">
-                        <span class="font-bold mx-1">•</span>
-                        <span class="text-sm">
-                          @let current = $any(each);
-                          @let prev = $index > 0 ? $any(store.feeDescription[$index - 1]) : null;
-                          @if ($index == 0) {
-                          0 ~ {{ current.km }} 公里:
-                          } @else {
-                          {{ prev.km }} ~ {{ current.km }} 公里:
-                          }
-                          <span class="font-bold">
-                            {{ current.fee === 0 ? "免運" : current.fee + " 元" }}
-                          </span>
-                        </span>
-                      </li>
-                      }
-                    </ul>
-                  </div>
-                  }
+                  <!-- @if (store.feeDescription && store.feeDescription.length > 0) {
+                          <div class="flex flex-row items-center min-w-0 w-full">
+                            <span class="shrink-0 font-bold text-[#662222]">🚚外送費：</span>
+                            <ul class="list-none m-0 p-0 px-2 flex-1 min-w-0 truncate whitespace-nowrap leading-7 h-7">
+                              @for (each of store.feeDescription;track $index) {
+                                <li class="inline mr-4">
+                                  <span class="font-bold mx-1">•</span>
+                                  <span class="text-sm">
+                                    @let current = $any(each);
+                                    @let prev = $index > 0 ? $any(store.feeDescription[$index - 1]) : null;
+                                    @if ($index == 0) {
+                                      0 ~ {{ current.km }} 公里:
+                                    } @else {
+                                      {{ prev.km }} ~ {{ current.km }} 公里:
+                                    }
+                                    <span class="font-bold">
+                                      {{ current.fee === 0 ? "免運" : current.fee + " 元" }}
+                                    </span>
+                                  </span>
+                                </li>
+                              }
+                            </ul>
+                          </div>
+                        } -->
                   @if (store.memo) {
                   <p class="m-0 text-sm text-gray-400 italic truncate">
                     備註：{{ store.memo }}
@@ -394,42 +420,196 @@
           @if (choice == "不限" || !choice) {
           <div class="flex items-center my-4">
             <div class="flex-1 border-t border-gray-400"></div>
-            <!-- 左邊線 -->
-            <span class="mx-4 text-gray-700 whitespace-nowrap text-sm sm:text-base">
-              團購
-            </span>
+            <span class="mx-4 text-gray-700 whitespace-nowrap text-sm sm:text-base">團購</span>
             <div class="flex-1 border-t border-gray-400"></div>
-            <!-- 右邊線 -->
           </div>
           }
           @if ( filteredSlowStoreList.length == 0 && (choice == "不限" || !choice) ) {
           <p class="text-center">無團購店家資料</p>
           } @else {
-          @for (store of openStoreList; track $index) {
-          @if (activeTab === "allstores" || activeTab === store.type) {
+          <!-- @for (store of openStoreList; track $index) {
+              @if (activeTab === "allstores" || activeTab === store.type) {
+                <div
+                  class="w-full bg-[#F4E7E1]/50 rounded-xl border border-gray-100 overflow-hidden mt-4 hover:border-2 hover:border-[#662222] hover:scale-[1.01] transition duration-200 active:scale-[0.98]"
+                  (click)="goStoreInfo(store.id)">
+                  <div class="flex flex-col sm:flex-row items-stretch sm:items-center">
+                    <div
+                      class="shrink-0 w-full aspect-[4/3] sm:w-[200px] sm:h-[150px] bg-gray-100 relative overflow-hidden sm:m-4 sm:rounded-lg">
+                      <img [src]="store?.image ? store?.image : 'no-product-image'" (error)="
+                        $any($event.target).src = 'no-product-image.jpg'
+                      " class="absolute inset-0 w-full h-full object-cover" />
+                    </div>
+                    <div class="flex-1 min-w-0 p-4 sm:pr-6 sm:py-4">
+                      <div class="md:flex md:items-center md:justify-between md:mb-2">
+                        <p class="text-2xl font-bold text-gray-800 truncate m-0" [innerHTML]="highlight(store.name)">
+                          {{ store.name }}
+                        </p>
+                        <div class="text-right flex md:flex-col md:items-end">
+                          <span
+                            class="mt-1.25 h-[28px] shrink-0 px-2 py-0.5 rounded text-base bg-[#f0c9b7]/70 text-[#662222] truncate">
+                            {{ store.type }}
+                          </span>
+                          <span
+                            class="shrink-0 ml-2 px-2 py-0.5 rounded text-base bg-[#f0c9b7]/70 text-[#662222] flex mt-[5px] min-w-[77px]">
+                            <div class="delivery-icon -scale-x-100" style="background-color: #662222"></div>
+                            &nbsp;團購
+                          </span>
+                        </div>
+                      </div>
+                      <div class="text-sm sm:text-base text-gray-600 space-y-1.5">
+                        <p class="m-0 truncate">📞電話：{{ store.phone }}</p>
+                        <p class="m-0 truncate">📍地址：{{ store.address }}</p>
+                        @if ( store.feeDescription && store.feeDescription.length > 0 ) {
+                          <div class="flex flex-row items-center min-w-0 w-full">
+                            <span class="shrink-0 font-bold text-[#662222]">🚚外送費：</span>
+                            <ul class="list-none m-0 p-0 px-2 flex-1 min-w-0 truncate whitespace-nowrap leading-7 h-7">
+                              @for ( each of store.feeDescription; track $index ) {
+                                <li class="inline mr-4">
+                                  <span class="font-bold mx-1">•</span>
+                                  <span class="text-sm">
+                                    @let current = $any(each);
+                                    @let prev = $index > 0 ? $any(store.feeDescription[$index - 1]) : null;
+                                    @if ($index == 0) {
+                                      0 ~ {{ current.km }} 公里：
+                                    } @else {
+                                      {{ prev.km }} ~ {{ current.km }} 公里:
+                                    }
+                                    <span class="font-bold">
+                                      {{ current.fee === 0 ? "免運" : current.fee + " 元" }}
+                                    </span>
+                                  </span>
+                                </li>
+                              }
+                            </ul>
+                          </div>
+                        }
+                        @if (store.memo) {
+                          <p class="m-0 text-sm text-gray-400 italic truncate">
+                            備註：{{ store.memo }}
+                          </p>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+            @for (store of closeStoreList; track $index) {
+              @if (activeTab === "allstores" || activeTab === store.type) {
+                <div
+                  class="relative w-full rounded-xl overflow-hidden bg-amber-50/50 border border-gray-200 mt-4 hover:border-2 hover:border-[#4F4F4F] hover:scale-[1.01] transition duration-200 active:scale-[0.98]"
+                  (click)="goStoreInfo(store.id)">
+                  <div class="w-full rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center">
+                      <div
+                        class="shrink-0 w-full aspect-[4/3] sm:w-[200px] sm:h-[150px] bg-gray-100 relative overflow-hidden sm:m-4 sm:rounded-lg">
+                        <img [src]=" store?.image ? store?.image : 'no-product-image'"
+                          (error)=" $any($event.target).src = 'no-product-image.jpg'"
+                          class="absolute inset-0 w-full h-full object-cover" />
+                        <div class="absolute inset-0 z-10 flex items-center justify-center bg-amber-100/90">
+                          <div
+                            class="text-2xl sm:text-xl font-bold tracking-[4px] sm:tracking-[2px] px-4 py-1 border-2 whitespace-nowrap">
+                            未營業
+                          </div>
+                        </div>
+                      </div>
+                      <div class="flex-1 min-w-0 p-4 sm:pr-6 sm:py-4">
+                        <div class="md:flex md:items-center md:justify-between md:mb-2">
+                          <p class="text-2xl font-bold text-gray-800 truncate m-0" [innerHTML]="highlight(store.name)">
+                            {{ store.name }}
+                          </p>
+                          <div class="text-right flex md:flex-col md:items-end">
+                            <span
+                              class="mt-1.25 h-[28px] shrink-0 px-2 py-0.5 rounded text-base bg-amber-100 text-amber-700 truncate">
+                              {{ store.type }}
+                            </span>
+                            <span
+                              class="shrink-0 ml-2 px-2 py-0.5 rounded text-base bg-amber-100 text-amber-700 flex mt-[5px] min-w-[77px]">
+                              <div class="delivery-icon -scale-x-100" style="background-color: oklch(55.5% 0.163 48.998);">
+                              </div>
+                              &nbsp;團購
+                            </span>
+                          </div>
+                        </div>
+                        <div class="text-sm sm:text-base text-gray-600 space-y-1.5">
+                          <p class="m-0 truncate">📞電話：{{ store.phone }}</p>
+                          <p class="m-0 truncate">📍地址：{{ store.address }}</p>
+                          @if ( store.feeDescription && store.feeDescription.length > 0 ) {
+                            <div class="flex flex-row items-center min-w-0 w-full">
+                              <span class="shrink-0 font-bold text-[#662222]">🚚外送費：</span>
+                              <ul class="list-none m-0 p-0 px-2 flex-1 min-w-0 truncate whitespace-nowrap leading-7 h-7">
+                                @for (each of store.feeDescription;track $index) {
+                                  <li class="inline mr-4">
+                                    <span class="font-bold mx-1">•</span>
+                                    <span class="text-sm">
+                                      @let current = $any(each);
+                                      @let prev = $index > 0 ? $any( store.feeDescription[$index - 1] ) : null;
+                                      @if ($index == 0) {
+                                        0 ~ {{ current.km }} 公里:
+                                      } @else {
+                                        {{ prev.km }} ~ {{ current.km }} 公里:
+                                      }
+                                      <span class="font-bold">
+                                        {{ current.fee === 0 ? "免運" : current.fee + " 元" }}
+                                      </span>
+                                    </span>
+                                  </li>
+                                }
+                              </ul>
+                            </div>
+                          }
+                          @if (store.memo) {
+                            <p class="m-0 text-sm text-gray-400 italic truncate">
+                              備註：{{ store.memo }}
+                            </p>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+            } -->
+          @for (store of slowStoreList; track $index) {
+          @if (activeTab == "allstores" || activeTab == store.type) {
           <div
-            class="w-full bg-[#F4E7E1]/50 rounded-xl border border-gray-100 overflow-hidden mt-4 hover:border-2 hover:border-[#662222] hover:scale-[1.01] transition duration-200 active:scale-[0.98]"
+            class="w-full bg-[#e1eef4]/50 rounded-xl border border-gray-100 overflow-hidden mt-4 hover:border-2 hover:border-[#075985] hover:scale-[1.01] transition duration-200 active:scale-[0.98]"
             (click)="goStoreInfo(store.id)">
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center">
+              @if(store.isClosed==true){
               <div
                 class="shrink-0 w-full aspect-[4/3] sm:w-[200px] sm:h-[150px] bg-gray-100 relative overflow-hidden sm:m-4 sm:rounded-lg">
-                <img [src]="store?.image ? store?.image : 'no-product-image'" (error)="
-                                $any($event.target).src = 'no-product-image.jpg'
-                              " class="absolute inset-0 w-full h-full object-cover" />
+                <img [src]=" store?.image ? store?.image : 'no-product-image'"
+                  (error)=" $any($event.target).src = 'no-product-image.jpg'"
+                  class="absolute inset-0 w-full h-full object-cover" />
+                <div class="absolute inset-0 z-10 flex items-center justify-center bg-gray-100/90">
+                  <div
+                    class="text-2xl sm:text-xl font-bold tracking-[4px] sm:tracking-[2px] px-4 py-1 border-2 whitespace-nowrap">
+                    未營業
+                  </div>
+                </div>
               </div>
+              }@else {
+              <div
+                class="shrink-0 w-full aspect-[4/3] sm:w-[200px] sm:h-[150px] bg-gray-100 relative overflow-hidden sm:m-4 sm:rounded-lg">
+                <img [src]="store?.image ? store?.image : 'no-product-image'" referrerpolicy="no-referrer" (error)="
+                          $any($event.target).src = 'no-product-image.jpg'
+                        " class="absolute inset-0 w-full h-full object-cover" />
+              </div>
+              }
               <div class="flex-1 min-w-0 p-4 sm:pr-6 sm:py-4">
                 <div class="md:flex md:items-center md:justify-between md:mb-2">
                   <p class="text-2xl font-bold text-gray-800 truncate m-0" [innerHTML]="highlight(store.name)">
                     {{ store.name }}
                   </p>
-                  <div class="text-right flex md:flex-col md:items-end">
+                  <div class="flex md:flex-col md:items-end">
                     <span
-                      class="mt-1.25 h-[28px] shrink-0 px-2 py-0.5 rounded text-base bg-[#f0c9b7]/70 text-[#662222] truncate">
+                      class="mt-1.25 h-[28px] md:w-fit shrink-0 px-2 py-0.5 rounded text-base bg-sky-300/30 text-sky-800 truncate">
                       {{ store.type }}
                     </span>
                     <span
-                      class="shrink-0 ml-2 px-2 py-0.5 rounded text-base bg-[#f0c9b7]/70 text-[#662222] flex mt-[5px] min-w-[77px]">
-                      <div class="delivery-icon -scale-x-100" style="background-color: #662222"></div>
+                      class="shrink-0 ml-2 px-2 py-0.5 rounded text-base bg-sky-300/30 text-sky-800 flex mt-[5px] min-w-[77px]">
+                      <div class="delivery-icon -scale-x-100" style="background-color: #075985"></div>
                       &nbsp;團購
                     </span>
                   </div>
@@ -437,30 +617,6 @@
                 <div class="text-sm sm:text-base text-gray-600 space-y-1.5">
                   <p class="m-0 truncate">📞電話：{{ store.phone }}</p>
                   <p class="m-0 truncate">📍地址：{{ store.address }}</p>
-                  @if ( store.feeDescription && store.feeDescription.length > 0 ) {
-                  <div class="flex flex-row items-center min-w-0 w-full">
-                    <span class="shrink-0 font-bold text-[#662222]">🚚外送費：</span>
-                    <ul class="list-none m-0 p-0 px-2 flex-1 min-w-0 truncate whitespace-nowrap leading-7 h-7">
-                      @for ( each of store.feeDescription; track $index ) {
-                      <li class="inline mr-4">
-                        <span class="font-bold mx-1">•</span>
-                        <span class="text-sm">
-                          @let current = $any(each);
-                          @let prev = $index > 0 ? $any(store.feeDescription[$index - 1]) : null;
-                          @if ($index == 0) {
-                          0 ~ {{ current.km }} 公里：
-                          } @else {
-                          {{ prev.km }} ~ {{ current.km }} 公里:
-                          }
-                          <span class="font-bold">
-                            {{ current.fee === 0 ? "免運" : current.fee + " 元" }}
-                          </span>
-                        </span>
-                      </li>
-                      }
-                    </ul>
-                  </div>
-                  }
                   @if (store.memo) {
                   <p class="m-0 text-sm text-gray-400 italic truncate">
                     備註：{{ store.memo }}
@@ -472,88 +628,9 @@
           </div>
           }
           }
-          @for (store of closeStoreList; track $index) {
-          @if (activeTab === "allstores" || activeTab === store.type) {
-          <div
-            class="relative w-full rounded-xl overflow-hidden bg-amber-50/50 border border-gray-200 mt-4 hover:border-2 hover:border-[#4F4F4F] hover:scale-[1.01] transition duration-200 active:scale-[0.98]"
-            (click)="goStoreInfo(store.id)">
-            <div class="w-full rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div class="flex flex-col sm:flex-row items-stretch sm:items-center">
-                <div
-                  class="shrink-0 w-full aspect-[4/3] sm:w-[200px] sm:h-[150px] bg-gray-100 relative overflow-hidden sm:m-4 sm:rounded-lg">
-                  <img [src]=" store?.image ? store?.image : 'no-product-image'"
-                    (error)=" $any($event.target).src = 'no-product-image.jpg'"
-                    class="absolute inset-0 w-full h-full object-cover" />
-                  <div class="absolute inset-0 z-10 flex items-center justify-center bg-amber-100/90">
-                    <div
-                      class="text-2xl sm:text-xl font-bold tracking-[4px] sm:tracking-[2px] px-4 py-1 border-2 whitespace-nowrap">
-                      未營業
-                    </div>
-                  </div>
-                </div>
-                <div class="flex-1 min-w-0 p-4 sm:pr-6 sm:py-4">
-                  <div class="md:flex md:items-center md:justify-between md:mb-2">
-                    <p class="text-2xl font-bold text-gray-800 truncate m-0" [innerHTML]="highlight(store.name)">
-                      {{ store.name }}
-                    </p>
-                    <div class="text-right flex md:flex-col md:items-end">
-                      <span
-                        class="mt-1.25 h-[28px] shrink-0 px-2 py-0.5 rounded text-base bg-amber-100 text-amber-700 truncate">
-                        {{ store.type }}
-                      </span>
-                      <span
-                        class="shrink-0 ml-2 px-2 py-0.5 rounded text-base bg-amber-100 text-amber-700 flex mt-[5px] min-w-[77px]">
-                        <div class="delivery-icon -scale-x-100" style="background-color: oklch(55.5% 0.163 48.998);">
-                        </div>
-                        &nbsp;團購
-                      </span>
-                    </div>
-                  </div>
-                  <div class="text-sm sm:text-base text-gray-600 space-y-1.5">
-                    <p class="m-0 truncate">📞電話：{{ store.phone }}</p>
-                    <p class="m-0 truncate">
-                      📍地址：{{ store.address }}
-                    </p>
-                    @if ( store.feeDescription && store.feeDescription.length > 0 ) {
-                    <div class="flex flex-row items-center min-w-0 w-full">
-                      <span class="shrink-0 font-bold text-[#662222]">🚚外送費：</span>
-                      <ul class="list-none m-0 p-0 px-2 flex-1 min-w-0 truncate whitespace-nowrap leading-7 h-7">
-                        @for (each of store.feeDescription;track $index) {
-                        <li class="inline mr-4">
-                          <span class="font-bold mx-1">•</span>
-                          <span class="text-sm">
-                            @let current = $any(each);
-                            @let prev = $index > 0 ? $any( store.feeDescription[$index - 1] ) : null;
-                            @if ($index == 0) {
-                            0 ~ {{ current.km }} 公里:
-                            } @else {
-                            {{ prev.km }} ~ {{ current.km }} 公里:
-                            }
-                            <span class="font-bold">
-                              {{ current.fee === 0 ? "免運" : current.fee + " 元" }}
-                            </span>
-                          </span>
-                        </li>
-                        }
-                      </ul>
-                    </div>
-                    }
-                    @if (store.memo) {
-                    <p class="m-0 text-sm text-gray-400 italic truncate">
-                      備註：{{ store.memo }}
-                    </p>
-                    }
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          }
-          }
           }
           }
       </p-tabpanel>
     </div>
   </p-tabs>
-
 </p-dialog>

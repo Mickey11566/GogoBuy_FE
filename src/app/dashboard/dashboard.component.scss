@@ -58,3 +58,7 @@ button.active {
     color: #1e3a8a;
   }
 }
+
+.no-hover:hover {
+  background: inherit !important;
+}

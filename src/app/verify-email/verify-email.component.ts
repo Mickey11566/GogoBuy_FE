@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { ActivatedRoute, Route, Router } from '@angular/router';
 import Swal from 'sweetalert2';
+import { HttpService } from '../@service/http.service';
 
 
 @Component({
@@ -12,7 +13,12 @@ import Swal from 'sweetalert2';
 })
 export class VerifyEmailComponent {
 
-  constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient) { }
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private http: HttpClient,
+    private httpService: HttpService
+  ) { }
 
   // 定義狀態：'loading' | 'success' | 'error'
   status: 'loading' | 'success' | 'error' = 'loading';
@@ -28,19 +34,20 @@ export class VerifyEmailComponent {
     }
 
     // 發送至 Spring Boot API
-    this.http.get(`http://localhost:8080/gogobuy/user/active-account?token=${token}`)
+    this.httpService.getApi(`${this.httpService.BASE_URL}/gogobuy/user/active-account?token=${token}`)
       .subscribe({
         next: (res: any) => {
           if (res.code === 200) {
             this.status = 'success';
             // 3 秒後跳轉
-            setTimeout(() => this.router.navigate(['/gogobuy/login']), 3000);
+            setTimeout(() =>
+              this.router.navigate(['gogobuy', 'login']), 3000);
           } else {
             this.status = 'error';
             this.errorMessage = res.message || '驗證失敗';
           }
         },
-        error: (err) => {
+        error: (err: any) => {
           this.status = 'error';
           this.errorMessage = err.error?.message || '驗證程序發生錯誤';
         }
@@ -73,7 +80,7 @@ export class VerifyEmailComponent {
         allowOutsideClick: false
       });
 
-      this.http.get(`http://localhost:8080/gogobuy/user/resend-active-account?email=${email}`)
+      this.httpService.getApi(`${this.httpService.BASE_URL}/gogobuy/user/resend-active-account?email=${email}`)
         .subscribe({
           next: (res: any) => {
             if (res.code === 200) {
@@ -92,7 +99,7 @@ export class VerifyEmailComponent {
               });
             }
           },
-          error: (err) => {
+          error: (err: any) => {
             Swal.fire({
               icon: 'error',
               title: '發生錯誤',

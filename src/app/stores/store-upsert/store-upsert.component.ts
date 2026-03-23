@@ -26,7 +26,7 @@ import { BlockUIModule } from 'primeng/blockui';
     InputTextModule, DatePickerModule,
     SelectModule, FloatLabelModule,
     DatePickerModule, FormsModule, FluidModule,
-    FormsModule, CheckboxModule, InputNumber,
+    FormsModule, CheckboxModule,
     DialogModule, AutoCompleteModule, BlockUIModule
   ],
   templateUrl: './store-upsert.component.html',
@@ -188,7 +188,7 @@ export class StoreUpsertComponent {
   menuScan(file: File) {
     const menuImg = new FormData();
     menuImg.append('file', file);
-    this.http.postApi('http://localhost:8080/gogobuy/store/menuScan', menuImg).subscribe({
+    this.http.postApi(`${this.http.BASE_URL}/gogobuy/store/menuScan`, menuImg).subscribe({
       next: (res: any) => {
         let cateIdCount: number = 0;
         let menuIdCount: number = 0;
@@ -213,6 +213,7 @@ export class StoreUpsertComponent {
           return {
             ...group,
             id: ++groupIdCount,
+            maxSelection: 1,
             items: (group.items || []).map((items: any) => {
               return {
                 ...items,
@@ -271,7 +272,7 @@ export class StoreUpsertComponent {
   onStoreSelect(event: any) {
     const selected = event.value;
     this.id = selected.id;
-    this.http.getApi(`http://localhost:8080/gogobuy/store/searchId?id=${this.id}`)
+    this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/searchId?id=${this.id}`)
       .subscribe((res: any) => {
         if (res.storeList && res.storeList.length > 0) {
           this.storeData = { ...res.storeList[0] };
@@ -348,7 +349,7 @@ export class StoreUpsertComponent {
     this.loadTaiwanDistricts();
     this.initTimeOptions();
 
-    this.http.getApi(`http://localhost:8080/gogobuy/event/getGroupbuyEventByStoresId?stores_id=${this.id}`)
+    this.http.getApi(`${this.http.BASE_URL}/gogobuy/event/getGroupbuyEventByStoresId?stores_id=${this.id}`)
       .subscribe({
         next: (res: any) => {
           if (res.code === 200) {
@@ -364,7 +365,7 @@ export class StoreUpsertComponent {
         }
       });
 
-    this.http.getApi('http://localhost:8080/gogobuy/store/all').subscribe((res: any) => {
+    this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/all`).subscribe((res: any) => {
       this.storeList = res.storeList;
       console.log("this.storeList", this.storeList);
       this.existingPhones = this.storeList.map((s: any) => s.phone);
@@ -398,7 +399,7 @@ export class StoreUpsertComponent {
     })
 
     if (this.id !== 0 || this.id) {
-      this.http.getApi(`http://localhost:8080/gogobuy/store/searchId?id=${this.id}`)
+      this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/searchId?id=${this.id}`)
         .subscribe((res: any) => {
           if (res.storeList && res.storeList.length > 0) {
             this.storeData = { ...res.storeList[0] };
@@ -698,7 +699,7 @@ export class StoreUpsertComponent {
       return;
     }
 
-    if (this.isPhoneUsed || !this.phoneRegex.test(this.storeData.phone)) {
+    if ((this.isPhoneUsed || !this.phoneRegex.test(this.storeData.phone)) && !this.id) {
       this.displayPhoneUsedDialog = true;
       return;
     }

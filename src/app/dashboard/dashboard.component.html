@@ -40,13 +40,15 @@
           @if (currentView === 'stores') { 店家管理 }
           @else if (currentView === 'events') { 團購活動 }
           @else if (currentView === 'announce') { 通知管理 }
+          @else if (currentView === 'complaints') { 申訴管理 }
           @else { 會員管理 }
         </h2>
         <p class="mt-1 text-lg font-bold text-gray-700">
-          @if (currentView === 'stores') { 檢視並管理所有註冊店家 }
-          @else if (currentView === 'events') { 查看所有進行中團購 }
-          @else if (currentView === 'announce') { 發送及管理通知公告 }
-          @else { 管理平台使用者權限與狀態 }
+          @if (currentView === 'stores') { 檢視與管理所有合作店家 }
+          @else if (currentView === 'events') { 查看與管理所有已開團活動 }
+          @else if (currentView === 'announce') { 發送與管理系統公告 }
+          @else if (currentView === 'complaints') { 處理與查看客訴及舉報 }
+          @else { 管理平台用戶狀態及權限 }
         </p>
       </div>
       <div>
@@ -62,246 +64,362 @@
     </header>
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="overflow-x-auto w-full">
 
-      @switch (currentView) {
+        @switch (currentView) {
 
-      @case ('announce') {
-      <p-table [value]="historyNotices" [paginator]="true" [rows]="10" [loading]="loading" [rowHover]="true"
-        styleClass="p-datatable-striped" [tableStyle]="{ 'min-width': '50rem' }">
-        <ng-template pTemplate="header">
-          <tr>
-            <th class="text-xl!" pSortableColumn="id" style="width:10%">ID <p-sortIcon field="id"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="displayTitle" style="width:20%">標題 <p-sortIcon
-                field="displayTitle"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="displayContent" style="width:25%">內容</th>
-            <th class="text-xl!" pSortableColumn="displayLink" style="width:15%">連結</th>
-            <th class="text-xl!" pSortableColumn="createdAt" style="width:15%">建立時間 <p-sortIcon
-                field="createdAt"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="expiredAt" style="width:15%">過期時間 <p-sortIcon
-                field="expiredAt"></p-sortIcon></th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-notice>
-          <tr>
-            <td><span class="text-gray-700 font-semibold">#{{ notice.id }}</span></td>
-            <td class="font-bold text-gray-900">{{ notice.displayTitle }}</td>
-            <td class="text-gray-700 font-semibold">
-              <div class=" line-clamp-2" [title]="notice.displayContent">{{ notice.displayContent }}
-              </div>
-            </td>
-            <td>
-              @if (notice.displayLink) {
-              <a [href]="notice.displayLink" target="_blank"
-                class="text-blue-600 hover:underline truncate block max-w-[150px]">{{ notice.displayLink }}</a>
-              } @else {
-              <span class="text-gray-700">-</span>
+        @case ('announce') {
+        <p-table [value]="historyNotices" [paginator]="true" [rows]="10" [loading]="loading" [rowHover]="true"
+          styleClass="p-datatable-gridlines" [tableStyle]="{ 'min-width': '50rem' }">
+          <ng-template pTemplate="header">
+            <tr>
+              <th class="text-xl!" pSortableColumn="id" style="width:10%">ID <p-sortIcon field="id"></p-sortIcon></th>
+              <th class="text-xl!" pSortableColumn="displayTitle" style="width:20%">標題 <p-sortIcon
+                  field="displayTitle"></p-sortIcon></th>
+              <th class="text-xl!" pSortableColumn="displayContent" style="width:25%">內容</th>
+              <th class="text-xl!" pSortableColumn="displayLink" style="width:15%">連結</th>
+              <th class="text-xl!" pSortableColumn="createdAt" style="width:15%">建立時間 <p-sortIcon
+                  field="createdAt"></p-sortIcon></th>
+              <th class="text-xl!" pSortableColumn="expiredAt" style="width:15%">過期時間 <p-sortIcon
+                  field="expiredAt"></p-sortIcon></th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-notice>
+            <tr>
+              <td><span class="text-gray-700 font-semibold">#{{ notice.id }}</span></td>
+              <td class="font-bold text-gray-900">{{ notice.displayTitle }}</td>
+              <td class="text-gray-700 font-semibold">
+                <div class=" line-clamp-2" [title]="notice.displayContent">{{ notice.displayContent }}
+                </div>
+              </td>
+              <td>
+                @if (notice.displayLink) {
+                <a [href]="notice.displayLink" target="_blank"
+                  class="text-blue-600 hover:underline truncate block max-w-[150px]">{{ notice.displayLink }}</a>
+                } @else {
+                <span class="text-gray-700">-</span>
+                }
+              </td>
+              <td class="text-base text-gray-700">{{ notice.createdAt | date:'yyyy-MM-dd HH:mm' }}</td>
+              <td class="text-base text-gray-700">{{ notice.expiredAt ? (notice.expiredAt | date:'yyyy-MM-dd HH:mm') :
+                '無期限'
+                }}</td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="6" class="text-center p-8 text-gray-500">
+                <i class="pi pi-history text-4xl mb-2 block"></i>
+                目前沒有歷史公告
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+        }
+
+        @case ('stores') {
+        <p-table [value]="stores" [paginator]="true" [rows]="10" [loading]="loading" [rowHover]="true"
+          styleClass="p-datatable-striped" [tableStyle]="{ 'min-width': '50rem' }">
+          <ng-template pTemplate="header">
+            <tr>
+              <th class="text-xl!" pSortableColumn="id" style="width:8%">ID <p-sortIcon field="id"></p-sortIcon></th>
+              <th class="text-xl!" pSortableColumn="name" style="width:15%">店家名稱 <p-sortIcon field="name"></p-sortIcon>
+              </th>
+              <th class="text-xl!" pSortableColumn="category" style="width:10%">分類 <p-sortIcon
+                  field="category"></p-sortIcon></th>
+              <th class="text-xl!" pSortableColumn="address" style="width:17%">地址 <p-sortIcon
+                  field="address"></p-sortIcon></th>
+              <th class="text-xl!" pSortableColumn="phone" style="width:12%">電話 <p-sortIcon field="phone"></p-sortIcon>
+              </th>
+              <th class="text-xl!" pSortableColumn="publish" style="width:10%">公開狀態 <p-sortIcon
+                  field="publish"></p-sortIcon>
+              </th>
+              <th class="text-xl!" pSortableColumn="deleted" style="width:10%">刪除狀態 <p-sortIcon
+                  field="deleted"></p-sortIcon>
+              </th>
+              <th class="text-xl! text-center!" style="width:18%">操作</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-store>
+            <tr [class.no-hover]="store.deleted" [ngClass]="{'opacity-40': store.deleted}">
+              <td><span class="text-gray-700 font-semibold">#{{ store.id }}</span></td>
+              <td class="font-semibold text-gray-900">{{ store.name }}</td>
+              <td>
+                <p-tag class="text-base!" [value]="store.category || '未分類'"
+                  [severity]="storeGetServerity(store.category)" [rounded]="true">
+                </p-tag>
+              </td>
+              <td class="text-base font-bold text-gray-800">{{ store.address }}</td>
+              <td class="text-base font-semibold text-gray-600">{{ store.phone }}</td>
+              <td>
+                <p-tag class="text-base!" [value]="store.publish ? '公開' : '隱藏'"
+                  [severity]="getPublishSeverity(store.publish)" [rounded]="true">
+                </p-tag>
+              </td>
+              <td>
+                <p-tag class="text-base!" [value]="store.deleted ? '已刪除' : '正常'"
+                  [severity]="store.deleted ? 'danger' : 'success'" [rounded]="true">
+                </p-tag>
+              </td>
+              @if(!store.deleted){
+              <td>
+                <div class="flex gap-2">
+                  <p-button label="詳情" icon="pi pi-file-edit" styleClass="p-button-text p-button-base p-button-rounded"
+                    [routerLink]="['/management/store_upsert', store.id]"></p-button>
+                  <p-button label="刪除" icon="pi pi-trash" styleClass="p-button-text p-button-danger p-button-rounded"
+                    (onClick)="onStoreDelete(store)"></p-button>
+                </div>
+              </td>
               }
-            </td>
-            <td class="text-base text-gray-700">{{ notice.createdAt | date:'yyyy-MM-dd HH:mm' }}</td>
-            <td class="text-base text-gray-700">{{ notice.expiredAt ? (notice.expiredAt | date:'yyyy-MM-dd HH:mm') :
-              '無期限'
-              }}</td>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="emptymessage">
-          <tr>
-            <td colspan="6" class="text-center p-8 text-gray-500">
-              <i class="pi pi-history text-4xl mb-2 block"></i>
-              目前沒有歷史公告
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-      }
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="6" class="text-center p-8 text-gray-500">
+                <i class="pi pi-inbox text-4xl mb-2 block"></i>
+                目前沒有店家資料
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+        }
 
-      @case ('stores') {
-      <p-table [value]="stores" [paginator]="true" [rows]="10" [loading]="loading" [rowHover]="true"
-        styleClass="p-datatable-striped" [tableStyle]="{ 'min-width': '50rem' }">
-        <ng-template pTemplate="header">
-          <tr>
-            <th class="text-xl!" pSortableColumn="id" style="width:10%">ID <p-sortIcon field="id"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="name" style="width:20%">店家名稱 <p-sortIcon field="name"></p-sortIcon>
-            </th>
-            <th class="text-xl!" pSortableColumn="category" style="width:10%">分類 <p-sortIcon
-                field="category"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="address" style="width:25%">地址 <p-sortIcon
-                field="address"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="phone" style="width:15%">電話 <p-sortIcon field="phone"></p-sortIcon>
-            </th>
-            <th class="text-xl!" style="width:30%">操作</th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-store>
-          <tr>
-            <td><span class="text-gray-700 font-semibold">#{{ store.id }}</span></td>
-            <td class="font-semibold text-gray-900">{{ store.name }}</td>
-            <td>
-              <p-tag class="text-base!" [value]="store.category || '未分類'" [severity]="storeGetServerity(store.category)"
-                [rounded]="true">
-              </p-tag>
-            </td>
-            <td class="text-base font-bold text-gray-800">{{ store.address }}</td>
-            <td class="text-base font-semibold text-gray-600">{{ store.phone }}</td>
-            <td>
-              <div class="flex gap-2">
-                <p-button label="詳情" icon="pi pi-file-edit" styleClass="p-button-text p-button-base p-button-rounded"
-                  [routerLink]="['/management/store_upsert', store.id]"></p-button>
-                <p-button label="刪除" icon="pi pi-trash" styleClass="p-button-text p-button-danger p-button-rounded"
-                  (onClick)="onStoreDelete(store)"></p-button>
-              </div>
-            </td>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="emptymessage">
-          <tr>
-            <td colspan="6" class="text-center p-8 text-gray-500">
-              <i class="pi pi-inbox text-4xl mb-2 block"></i>
-              目前沒有店家資料
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-      }
+        @case ('events') {
+        <p-table [value]="events" [paginator]="true" [rows]="10" [loading]="loading" [rowHover]="true"
+          styleClass="p-datatable-striped" [tableStyle]="{ 'min-width': '50rem' }">
+          <ng-template pTemplate="header">
+            <tr>
+              <th class="text-xl!" pSortableColumn="id" style="width:10%">ID <p-sortIcon field="id"></p-sortIcon></th>
+              <th class="text-xl!" pSortableColumn="eventName" style="width:20%">活動名稱 <p-sortIcon
+                  field="eventName"></p-sortIcon></th>
+              <th class="text-xl!" pSortableColumn="storeName" style="width:20%">店家名稱 <p-sortIcon
+                  field="storeName"></p-sortIcon></th>
+              <th class="text-xl!" pSortableColumn="nickname" style="width:20%">開團者 <p-sortIcon
+                  field="nickname"></p-sortIcon></th>
+              <th class="text-xl!" pSortableColumn="status" style="width:15%">狀態 <p-sortIcon
+                  field="status"></p-sortIcon>
+              </th>
+              <th class="text-xl! text-center!" style="width:25%">操作</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-event>
+            <tr>
+              <td><span class="text-gray-700 font-semibold">#{{ event.id }}</span></td>
+              <td class="font-semibold text-gray-900">{{ event.eventName || '未命名活動' }}</td>
+              <td class="font-semibold text-gray-900">{{ event.storeName }}</td>
+              <td>
+                <div class="flex items-center gap-2">
+                  <p-avatar [image]="event.avatarUrl" shape="circle" size="normal"></p-avatar>
+                  <span class="font-bold">{{ event.nickname || '未知' }}</span>
+                </div>
+              </td>
+              <td>
+                <p-tag class="text-base!" [value]="event.status || '進行中'" [severity]="getEventSeverity(event.status)"
+                  [rounded]="true"></p-tag>
+              </td>
+              <td>
+                <div class="flex gap-2">
+                  <p-button label="管理" icon="pi pi-cog" styleClass="p-button-text p-button-info p-button-rounded"
+                    (onClick)="onEventManage(event)">
+                  </p-button>
+                  <p-button label="刪除" icon="pi pi-trash" styleClass="p-button-text p-button-danger p-button-rounded"
+                    (onClick)="onEventDelete(event)"></p-button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="6" class="text-center p-8 text-gray-500">
+                <i class="pi pi-calendar-times text-4xl mb-2 block"></i>
+                目前沒有活動資料
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+        }
 
-      @case ('events') {
-      <p-table [value]="events" [paginator]="true" [rows]="10" [loading]="loading" [rowHover]="true"
-        styleClass="p-datatable-striped" [tableStyle]="{ 'min-width': '50rem' }">
-        <ng-template pTemplate="header">
-          <tr>
-            <th class="text-xl!" pSortableColumn="id" style="width:10%">ID <p-sortIcon field="id"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="eventName" style="width:20%">活動名稱 <p-sortIcon
-                field="eventName"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="storeName" style="width:20%">店家名稱 <p-sortIcon
-                field="storeName"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="nickname" style="width:20%">開團者 <p-sortIcon
-                field="nickname"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="status" style="width:15%">狀態 <p-sortIcon field="status"></p-sortIcon>
-            </th>
-            <th class="text-xl!" style="width:25%">操作</th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-event>
-          <tr>
-            <td><span class="text-gray-700 font-semibold">#{{ event.id }}</span></td>
-            <td class="font-semibold text-gray-900">{{ event.eventName || '未命名活動' }}</td>
-            <td class="font-semibold text-gray-900">{{ event.storeName }}</td>
-            <td>
-              <div class="flex items-center gap-2">
-                <p-avatar [image]="event.avatarUrl" shape="circle" size="normal"></p-avatar>
-                <span class="font-bold">{{ event.nickname || '未知' }}</span>
-              </div>
-            </td>
-            <td>
-              <p-tag class="text-base!" [value]="event.status || '進行中'" [severity]="getEventSeverity(event.status)"
-                [rounded]="true"></p-tag>
-            </td>
-            <td>
-              <div class="flex gap-2">
-                <p-button label="查看" icon="pi pi-eye" styleClass="p-button-text p-button-info p-button-rounded"
-                  (onClick)="onEventView(event)">
-                </p-button>
-
-                <p-button label="刪除" icon="pi pi-trash" styleClass="p-button-text p-button-danger p-button-rounded"
-                  (onClick)="onEventDelete(event)"></p-button>
-              </div>
-            </td>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="emptymessage">
-          <tr>
-            <td colspan="6" class="text-center p-8 text-gray-500">
-              <i class="pi pi-calendar-times text-4xl mb-2 block"></i>
-              目前沒有活動資料
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-      }
-
-      @case ('users') {
-      <p-table [value]="users" [paginator]="true" [rows]="10" [loading]="loading" [rowHover]="true"
-        styleClass="p-datatable-striped" [tableStyle]="{ 'min-width': '50rem' }">
-        <ng-template pTemplate="header">
-          <tr>
-            <!-- <th pSortableColumn="id" style="width:10%">ID <p-sortIcon field="id"></p-sortIcon></th> -->
-            <th class="text-xl!" pSortableColumn="nickname" style="width:20%">暱稱 <p-sortIcon
-                field="nickname"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="email" style="width:20%">Email <p-sortIcon field="email"></p-sortIcon>
-            </th>
-            <th class="text-xl!" pSortableColumn="role" style="width:15%">權限 <p-sortIcon field="role"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="provider" style="width:15%">登入方式 <p-sortIcon
-                field="provider"></p-sortIcon></th>
-            <th class="text-xl!" pSortableColumn="status" style="width:15%">狀態 <p-sortIcon field="status"></p-sortIcon>
-            </th>
-            <th class="text-xl!" style="width:15%">操作</th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-user>
-          <tr>
-            <!-- <td><span class="text-gray-500">#{{ user.id }}</span></td> -->
-            <td>
-              <div class="flex items-center gap-2">
-                <p-avatar [image]="user.avatarUrl" shape="circle"></p-avatar>
-                <span class="font-bold text-gray-900">{{ user.nickname }}</span>
-              </div>
-            </td>
-            <td class="font-semibold text-gray-700">{{ user.email }}</td>
-            <td>
-              @if (user.role === 'admin') {
-              <span
-                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-base font-bold bg-amber-300 text-gray-800">
-                管理員
-              </span>
-              } @else {
-              <span
-                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-base font-bold bg-purple-100 text-purple-800">
-                一般用戶
-              </span>
+        @case ('users') {
+        <p-table [value]="users" [paginator]="true" [rows]="10" [loading]="loading" [rowHover]="true"
+          styleClass="p-datatable-striped" [tableStyle]="{ 'min-width': '50rem' }">
+          <ng-template pTemplate="header">
+            <tr>
+              <!-- <th pSortableColumn="id" style="width:10%">ID <p-sortIcon field="id"></p-sortIcon></th> -->
+              <th class="text-xl!" pSortableColumn="nickname" style="width:20%">暱稱 <p-sortIcon
+                  field="nickname"></p-sortIcon></th>
+              <th class="text-xl!" pSortableColumn="email" style="width:20%">Email <p-sortIcon
+                  field="email"></p-sortIcon>
+              </th>
+              <th class="text-xl!" pSortableColumn="role" style="width:15%">權限 <p-sortIcon field="role"></p-sortIcon>
+              </th>
+              <th class="text-xl!" pSortableColumn="provider" style="width:15%">登入方式 <p-sortIcon
+                  field="provider"></p-sortIcon></th>
+              <th class="text-xl!" pSortableColumn="status" style="width:15%">狀態 <p-sortIcon
+                  field="status"></p-sortIcon>
+              </th>
+              <th class="text-xl! text-center!" style="width:15%">操作</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-user>
+            <tr>
+              <!-- <td><span class="text-gray-500">#{{ user.id }}</span></td> -->
+              <td>
+                <div class="flex items-center gap-2">
+                  <p-avatar [image]="user.avatarUrl" shape="circle"></p-avatar>
+                  <span class="font-bold text-gray-900">{{ user.nickname }}</span>
+                </div>
+              </td>
+              <td class="font-semibold text-gray-700">{{ maskEmail(user.email) }}</td>
+              <td>
+                @if (user.role === 'admin') {
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-base font-bold bg-amber-300 text-gray-800">
+                  管理員
+                </span>
+                } @else {
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-base font-bold bg-purple-100 text-purple-800">
+                  一般用戶
+                </span>
+                }
+              </td>
+              <td>
+                <p-tag class="text-base!" [value]="user.provider" [severity]="getSeverity(user.provider)"
+                  [rounded]="true"></p-tag>
+              </td>
+              <td>
+                @if(user.status === "banned"){
+                <p-tag class="text-base!" value="禁用" [severity]="getUserStatusSeverity(user.status)"
+                  [rounded]="true"></p-tag>
+                <!-- <br>
+              @if(user.bannedUntil){
+              <small class="text-red-500 font-bold">至 {{ user.bannedUntil | date:'MM/dd HH:mm' }}</small>
               }
-            </td>
-            <td>
-              <p-tag class="text-base!" [value]="user.provider" [severity]="getSeverity(user.provider)"
-                [rounded]="true"></p-tag>
-            </td>
-            <td>
-              @if(user.status === "banned"){
-              <p-tag class="text-base!" value="禁用" [severity]="getUserStatusSeverity(user.status)"
-                [rounded]="true"></p-tag>
-              } @else if (user.status === "self_suspended") {
-              <p-tag class="text-base!" value="停用" [severity]="getUserStatusSeverity(user.status)"
-                [rounded]="true"></p-tag>
-              } @else if (user.status === "pending_active") {
-              <p-tag class="text-base!" value="待開通" [severity]="getUserStatusSeverity(user.status)"
-                [rounded]="true"></p-tag>
-              } @else {
-              <p-tag class="text-base!" value="已開通" [severity]="getUserStatusSeverity(user.status)"
-                [rounded]="true"></p-tag>
-              }
-            </td>
-            <td>
-              @if(user.status !== "banned"){
-              <p-button label="禁用" icon="pi pi-ban" (onClick)="onUserBan(user)"
-                styleClass="p-button-text p-button-base p-button-rounded p-button-danger"></p-button>
-              }
-              @if(user.status === "banned" || user.status === "self_suspended"){
-              <p-button label="恢復" icon="pi pi-refresh" (onClick)="onUserActive(user)"
-                styleClass="p-button-text p-button-base p-button-rounded p-button-info"></p-button>
-              }
-            </td>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="emptymessage">
-          <tr>
-            <td colspan="6" class="text-center p-8 text-gray-500">
-              <i class="pi pi-users text-4xl mb-2 block"></i>
-              目前沒有使用者資料
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-      }
-      }
+              @if(user.banReason){
+              <small class="text-gray-500 italic block max-w-[120px] truncate" [title]="user.banReason">
+                理由: {{ user.banReason }}
+              </small>
+              } -->
+                } @else if (user.status === "self_suspended") {
+                <p-tag class="text-base!" value="停用" [severity]="getUserStatusSeverity(user.status)"
+                  [rounded]="true"></p-tag>
+                } @else if (user.status === "pending_active") {
+                <p-tag class="text-base!" value="待開通" [severity]="getUserStatusSeverity(user.status)"
+                  [rounded]="true"></p-tag>
+                } @else {
+                <p-tag class="text-base!" value="已開通" [severity]="getUserStatusSeverity(user.status)"
+                  [rounded]="true"></p-tag>
+                }
+              </td>
+              <td>
+                @if (user.id !== currentAdminId) {
 
+                @if (user.role === 'user') {
+                <p-button label="晉升管理員" icon="pi pi-crown" (onClick)="onUserRoleChange(user, 'admin')"
+                  styleClass="p-button-text p-button-base p-button-rounded p-button-success"></p-button>
+                } @else {
+                <p-button label="降為一般戶" icon="pi pi-user" (onClick)="onUserRoleChange(user, 'user')"
+                  styleClass="p-button-text p-button-base p-button-rounded p-button-secondary"></p-button>
+                }
+
+                @if (user.status === 'active') {
+                <p-button label="禁用" icon="pi pi-ban" (onClick)="onUserBan(user)"
+                  styleClass="p-button-text p-button-base p-button-rounded p-button-danger"></p-button>
+                } @else if (user.status === 'banned' || user.status === 'self_suspended') {
+                <p-button label="恢復" icon="pi pi-refresh" (onClick)="onUserActive(user)"
+                  styleClass="p-button-text p-button-base p-button-rounded p-button-info"></p-button>
+                }
+
+                } @else {
+                <span class="p-tag p-tag-info text-xl ">這是你自己</span>
+                }
+
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="6" class="text-center p-8 text-gray-500">
+                <i class="pi pi-users text-4xl mb-2 block"></i>
+                目前沒有使用者資料
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+        }
+        }
+      </div>
+
+      <!-- 申訴單處理 -->
+      @if (currentView === 'complaints') {
+      <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+        <div class="px-8 py-6 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
+          <div>
+            <h2 class="text-2xl font-black text-slate-800">申訴內容管理</h2>
+            <p class="text-slate-400 text-base font-bold">查看與處理用戶提交的檢舉與申訴單</p>
+          </div>
+        </div>
+
+        <div class="p-4 overflow-x-auto w-full">
+          <p-table [value]="complaints" [rows]="10" [paginator]="true" responsiveLayout="scroll"
+            styleClass="p-datatable-sm" [showCurrentPageReport]="true"
+            currentPageReportTemplate="顯示第 {first} 到 {last} 筆，共 {totalRecords} 筆"
+            [tableStyle]="{ 'min-width': '50rem' }">
+            <ng-template pTemplate="header">
+              <tr class="text-slate-500 font-black uppercase tracking-wider">
+                <th class="px-6 py-4">申訴者</th>
+                <th class="px-6 py-4">被舉報者</th>
+                <th class="px-6 py-4">相關活動ID</th>
+                <th class="px-6 py-4">理由</th>
+                <th class="px-6 py-4 text-center">處理狀態</th>
+                <th class="px-6 py-4 text-center flex justify-center gap-2">操作</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-complaint>
+              <tr class="hover:bg-slate-50/80 transition-colors border-b border-slate-50">
+                <td class="px-6 py-4 font-bold text-slate-700">{{ complaint.complaintUserName }}</td>
+                <td class="px-6 py-4 font-bold text-rose-600">{{ complaint.respondentUserName }}</td>
+                <td class="px-6 py-4">
+                  <span class="bg-slate-100 text-slate-500 px-2 py-1 rounded text-xs font-black">#{{ complaint.eventId
+                    }}</span>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="max-w-[300px] text-slate-600 italic text-sm truncate" [title]="complaint.reason">
+                    {{ complaint.reason }}
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <p-tag [value]="complaint.completed ? '已處理' : '待處理'"
+                    [severity]="getComplaintSeverity(complaint.completed)" [rounded]="true"></p-tag>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex justify-center gap-2">
+                    <button type="button"
+                      class="px-3 py-1.5 rounded-lg text-xs font-black transition-all border cursor-pointer" [ngClass]="complaint.completed
+                                 ? 'bg-white border-slate-200 text-slate-400 hover:border-orange-200 hover:text-orange-500'
+                                 : 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-100'"
+                      (click)="onComplaintResolve(complaint)">
+                      <i class="pi" [ngClass]="complaint.completed ? 'pi-undo' : 'pi-check-circle'"></i>
+                      {{ complaint.completed ? '標為未處理' : '結案處理' }}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="6" class="px-6 py-12 text-center">
+                  <div class="flex flex-col items-center gap-2">
+                    <i class="pi pi-inbox text-slate-200 text-5xl mb-2"></i>
+                    <p class="text-slate-400 font-bold">目前無任何申訴單</p>
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      </div>
+      }
     </div>
   </main>
 </div>
@@ -334,5 +452,117 @@
     <p-button label="取消" icon="pi pi-times" (onClick)="displayAnnounceDialog = false"
       styleClass="p-button-text"></p-button>
     <p-button label="發送" icon="pi pi-send" (onClick)="sendAnnouncement()" autofocus="true"></p-button>
+  </ng-template>
+</p-dialog>
+
+<!-- 團購成員管理對話框 -->
+<p-dialog [(visible)]="displayManageDialog" [modal]="true"
+  [header]="'團購管理 - ' + (selectedEventForManage?.eventName || '（活動）')" [style]="{ width: '90vw', maxWidth: '1200px' }"
+  [draggable]="false" [resizable]="false">
+  <div class="p-4">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+      <div>
+        <h3 class="text-xl font-bold text-slate-800">{{ selectedEventForManage?.storeName }}</h3>
+        <p class="text-slate-500">活動 ID: #{{ selectedEventForManage?.id }} | 狀態: {{ selectedEventForManage?.status }}
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <p-button label="匯出 CSV" icon="pi pi-file-excel" severity="success"
+          (onClick)="exportManageCSV(selectedEventForManage)"></p-button>
+        <p-button label="發送取貨通知" icon="pi pi-bell" severity="warn"
+          (onClick)="notifyMembers(selectedEventForManage)"></p-button>
+      </div>
+    </div>
+
+
+
+    <div class="overflow-x-auto w-full">
+      <p-table [value]="manageMembersMap()[selectedEventForManage?.id] || []" [rowHover]="true"
+        styleClass="p-datatable-sm p-datatable-striped" [tableStyle]="{ 'min-width': '50rem' }">
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 20%">成員</th>
+            <th style="width: 15%">金額</th>
+            <th style="width: 20%">付款狀態</th>
+            <th style="width: 20%">領取狀態</th>
+            <!-- <th style="width: 25%">操作</th> -->
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-member>
+          <tr>
+            <td>
+              <div class="flex flex-col">
+                <span class="font-bold text-slate-700">{{ member.userNickname || '匿名' }}</span>
+                <!-- <span class="text-xs text-slate-400 truncate max-w-[150px]">{{ member.userEmail }}</span> -->
+              </div>
+            </td>
+            <td>
+              <span class="font-bold text-emerald-600">${{ member.totalSum }}</span>
+            </td>
+            <td>
+              <button (click)="togglePaymentStatus(member, selectedEventForManage?.id)"
+                class="px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border-none" [ngClass]="{
+                   'bg-emerald-100 text-emerald-700': member.paymentStatus === 'CONFIRMED' || member.paymentStatus === 'PAID',
+                   'bg-amber-100 text-amber-700': member.paymentStatus !== 'CONFIRMED' && member.paymentStatus !== 'PAID'
+                 }">
+                <i class="pi mr-1"
+                  [ngClass]="(member.paymentStatus === 'CONFIRMED' || member.paymentStatus === 'PAID') ? 'pi-check-circle' : 'pi-clock'"></i>
+                {{ (member.paymentStatus === 'CONFIRMED' || member.paymentStatus === 'PAID') ? '已付費' : '未付費' }}
+              </button>
+            </td>
+            <td>
+              <button (click)="togglePickupStatus(member, selectedEventForManage?.id)"
+                class="px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border-none" [ngClass]="{
+                   'bg-blue-100 text-blue-700': member.pickupStatus === 'PICKED_UP',
+                   'bg-slate-100 text-slate-600': member.pickupStatus !== 'PICKED_UP'
+                 }">
+                <i class="pi mr-1" [ngClass]="member.pickupStatus === 'PICKED_UP' ? 'pi-box' : 'pi-minus-circle'"></i>
+                {{ member.pickupStatus === 'PICKED_UP' ? '已領取' : '未領取' }}
+              </button>
+            </td>
+            <!-- <td>
+            <div class="flex gap-2">
+              <p-button icon="pi pi-exclamation-triangle" severity="danger" [text]="true" [rounded]="true"
+                (onClick)="onComplaint(member, selectedEventForManage?.id)"></p-button>
+            </div>
+          </td> -->
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="5" class="text-center p-8 text-slate-400 font-bold">
+              沒有找到成員訂單資料
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</p-dialog>
+
+
+<p-dialog [(visible)]="displayNotifyDialog" [modal]="true" header="確認發送通知" [style]="{ width: '450px' }"
+  [closable]="!isSending">
+
+  @if (isSending) {
+  <div class="flex flex-col items-center justify-center py-8">
+    <p-progressSpinner styleClass="w-16 h-16" strokeWidth="4" animationDuration=".5s"></p-progressSpinner>
+    <p class="mt-4 text-slate-600 font-medium">正在發送通知與信件，請稍候...</p>
+  </div>
+  } @else {
+  <div class="flex items-center justify-center py-6">
+    <i class="pi pi-exclamation-triangle text-yellow-500 mr-4" style="font-size: 2.5rem"></i>
+    <span *ngIf="selectedEventForNotify">
+      確定要發送通知給<b>「{{selectedEventForNotify.eventName}}」</b>的所有成員嗎？
+    </span>
+  </div>
+  }
+
+  <ng-template pTemplate="footer">
+    <p-button label="取消" icon="pi pi-times" styleClass="p-button-text" (onClick)="displayNotifyDialog = false"
+      [disabled]="isSending"></p-button>
+
+    <p-button label="確定發送" icon="pi pi-check" severity="warn" (onClick)="confirmSendNotification()"
+      [loading]="isSending"></p-button>
   </ng-template>
 </p-dialog>

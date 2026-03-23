@@ -1,5 +1,5 @@
 import { FeeDescriptionVoList, MenuCategoriesVoList, MenuVoList, OperatingHoursVoList, PriceLevel, ProductOptionGroupsVoList, Stores } from './../../@service/store.service';
-import { Component } from '@angular/core';
+import { Component, NgZone, ViewChild } from '@angular/core';
 import { HttpService } from '../../@service/http.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule, Location } from '@angular/common';
@@ -15,35 +15,20 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { PrimeNG } from 'primeng/config';
 import Swal from 'sweetalert2';
 import { TabsModule } from 'primeng/tabs';
+import { Popover } from 'primeng/popover';
+import * as L from 'leaflet';
+import { PositionService } from '../../@service/position.service';
 
 
 
 @Component({
-  template: `
-    <div class="card">
-      <p-tabs value="0" scrollable>
-        <p-tablist>
-          @for (tab of scrollableTabs; track tab.value) {
-            <p-tab [value]="tab.value">
-                {{ tab.title }}
-            </p-tab>
-          }
-        </p-tablist>
-        <p-tabpanels>
-          @for (tab of scrollableTabs; track tab.value) {
-            <p-tabpanel [value]="tab.value">
-                <p class="m-0">{{ tab.content }}</p>
-            </p-tabpanel>
-          }
-        </p-tabpanels>
-      </p-tabs>
-    </div>`,
   standalone: true,
   selector: 'app-group-event',
   imports: [
     CommonModule, Dialog, PickListModule, DragDropModule,
     InputGroupModule, InputGroupAddonModule, InputNumberModule, FloatLabelModule,
-    FormsModule, DatePickerModule, TabsModule
+    FormsModule, DatePickerModule, TabsModule,
+    Popover
   ],
   templateUrl: './group-event.component.html',
   styleUrl: './group-event.component.scss'
@@ -54,7 +39,9 @@ export class GroupEventComponent {
     private router: Router,
     private route: ActivatedRoute,
     private primeng: PrimeNG,
-    private location: Location
+    private location: Location,
+    private ngZone: NgZone,
+    private positionService: PositionService
   ) { };
 
   storeList: Stores | null = null;
@@ -66,7 +53,7 @@ export class GroupEventComponent {
 
   eventName!: string;
   endTime!: Date;
-  splitType!: string;
+  // splitType!: string;
   announcement!: string;
   type!: string;
   tempMenu: number[] = [];  //存品項id
@@ -75,6 +62,7 @@ export class GroupEventComponent {
   limitation!: number;
   pickTime!: Date;
   pickLocation!: string;
+  shippingFee: number = 0;
 
   scrolllabelTabs: any = [];
   isExist: boolean = true;  //判斷店家存在
@@ -92,6 +80,9 @@ export class GroupEventComponent {
   maxEndDate: Date = new Date(new Date().setMonth(new Date().getMonth() + 2));
   maxPickDate!: Date;
   previewTab!: number;
+  isLoadingLocation = false;
+  currentLocation: any = null;
+  currentAddress!: string;
 
 
   dateFormat(date: Date) {  //後端回傳營業間轉換
@@ -193,12 +184,36 @@ export class GroupEventComponent {
       }
     });
   }
+  positionSpinnerAlert() {
+    Swal.fire({
+      title: '正在定位請稍後',
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      width: '300px',
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+  }
+  positionSuccessAlert() {
+    Swal.fire({
+      icon: 'success',
+      title: '定位更新成功',
+      text: this.currentAddress,
+      timer: 2000,
+      showConfirmButton: false
+    });
+  }
 
 
   ngOnInit(): void {
     this.userId = String(localStorage.getItem('user_id'));
     if (!this.userId || this.userId === 'null') {
       this.loginFirst();
+    }
+    if (this.positionService.lastCoords) {
+      this.currentLocation = this.positionService.lastCoords;
+      console.log('載入快取位置:', this.currentLocation);
     }
     this.route.queryParams.subscribe(params => {
       if (params['event_id']) {
@@ -227,7 +242,7 @@ export class GroupEventComponent {
 
     //行為判斷：有 storeId 沒 eventId 是新增；有 eventId 沒 storeId 是修改
     if (this.storeId && !this.eventId) {
-      this.http.getApi('http://localhost:8080/gogobuy/store/searchId?id=' + this.storeId).subscribe((res: any) => {
+      this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/searchId?id=${this.storeId}`).subscribe((res: any) => {
         if (res.code == 200) {
           this.getStore(res);
         } else {
@@ -235,9 +250,9 @@ export class GroupEventComponent {
         }
       });
     } else if (this.eventId && !this.storeId) {
-      this.http.getApi('http://localhost:8080/gogobuy/event/getEventsByEventsId?id=' + this.eventId).subscribe((eventRes: any) => {
+      this.http.getApi(`${this.http.BASE_URL}/gogobuy/event/getEventsByEventsId?id=${this.eventId}`).subscribe((eventRes: any) => {
         if (eventRes.code == 200) {
-          this.http.getApi('http://localhost:8080/gogobuy/store/searchId?id=' + eventRes.groupbuyEvents[0].storeId).subscribe((storeRes: any) => {
+          this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/searchId?id=${eventRes.groupbuyEvents[0].storeId}`).subscribe((storeRes: any) => {
             if (storeRes.code == 200) {
               this.getStore(storeRes);
               if (this.userId == eventRes.groupbuyEvents[0].hostId) {
@@ -249,14 +264,19 @@ export class GroupEventComponent {
                   this.endTime = new Date(rawEndTime);
                 }
 
-                this.isConfirmed = true;
-                this.splitType = eventRes.groupbuyEvents[0].splitType;
-                this.choose(this.splitType);
+                // this.isConfirmed = true;
+                // this.splitType = eventRes.groupbuyEvents[0].splitType;
+                // this.choose(this.splitType);
                 this.announcement = eventRes.groupbuyEvents[0].announcement;
                 this.type = eventRes.groupbuyEvents[0].eventType;
+                this.shippingFee = eventRes.groupbuyEvents[0].shippingFee || 0;
 
-                this.tempMenu = eventRes.groupbuyEvents[0].tempMenuList
+                this.tempMenu = JSON.parse(eventRes.groupbuyEvents[0].tempMenuList);
                 if (this.tempMenu.length > 0) {
+                  console.log(this.tempMenu.length, this.menuVoList.length)
+                  if (this.tempMenu.length == this.menuVoList.length) {
+                    this.useAll = true;
+                  }
                   this.selectedItems = this.menuVoList.filter(item => this.tempMenu.includes(item.id));
                   this.updateDisplaySource();
                 } else {
@@ -360,7 +380,15 @@ export class GroupEventComponent {
     if (this.storeList) {
       this.type = this.storeList.type;
     }
-    this.menuVoList = res.menuVoList.filter((item: any) => item.available) || [];
+    const allMenu = res.menuCategoriesVoList;
+    allMenu.map((cate: any) => {
+      cate.menuVo.filter((item: any) => {
+        if (item.available) {
+          this.menuVoList.push(item);
+        }
+      });
+    })
+    // this.menuVoList = res.menuVoList.filter((item: any) => item.available) || [];
     this.menuCategoriesVoList = res.menuCategoriesVoList || [];
     if (this.menuCategoriesVoList?.length > 0) {
       const categoryMap = new Map(
@@ -495,28 +523,28 @@ export class GroupEventComponent {
     event.stopPropagation();
     this.splitOpen = !this.splitOpen;
   }
-  choice!: string;
-  choose(choice: string) {
-    if (choice == "EQUAL") {
-      this.choice = "平分制";
-      this.splitType = "EQUAL";
-    } else {
-      this.choice = "權重制";
-      this.splitType = "WEIGHT";
-    }
-    this.splitOpen = false;
-  }
-  close() {
-    this.splitOpen = false;
-  }
-  openDialog: boolean = false;
-  dialog() {
-    this.openDialog = true;
-  }
-  isConfirmed!: boolean;
-  onCheckChange(event: any) {
-    this.isConfirmed = event.target.checked;
-  }
+  // choice!: string;
+  // choose(choice: string) {
+  //   if (choice == "EQUAL") {
+  //     this.choice = "平分制";
+  //     this.splitType = "EQUAL";
+  //   } else {
+  //     this.choice = "權重制";
+  //     this.splitType = "WEIGHT";
+  //   }
+  //   this.splitOpen = false;
+  // }
+  // close() {
+  //   this.splitOpen = false;
+  // }
+  // openDialog: boolean = false;
+  // dialog() {
+  //   this.openDialog = true;
+  // }
+  // isConfirmed!: boolean;
+  // onCheckChange(event: any) {
+  //   this.isConfirmed = event.target.checked;
+  // }
 
 
   useAllChange(event: any) {
@@ -701,7 +729,7 @@ export class GroupEventComponent {
   handleOnShow() {
     if (!this.endTime) {
       const nextMinute = new Date();
-      nextMinute.setMinutes(nextMinute.getMinutes() + 1);
+      nextMinute.setMinutes(nextMinute.getMinutes() + 5);
       nextMinute.setSeconds(0);
       nextMinute.setMilliseconds(0);
       // 設定初始預設時間
@@ -861,6 +889,7 @@ export class GroupEventComponent {
 
 
   get uniqueTabs() {
+    this.selectedItems = this.selectedItems.filter(i => i.id !== 'BOTTOM_PADDING' && i.id !== 'SOURCE_PADDING');
     const uniqueIds = [...new Set(this.selectedItems.map(item => item.categoryId))];
     return uniqueIds.map(catId => {
       const category = this.menuCategoriesVoList.find(cat => cat.id === catId);
@@ -938,9 +967,9 @@ export class GroupEventComponent {
     this.tempMenu = this.selectedItems.filter(item => item.id !== this.paddingItem.id).map(item => item.id);
     const missingFields: string[] = [];
     if (!this.eventName) missingFields.push('開團名稱');
-    if (!this.choice) missingFields.push('運費拆帳方式');
-    if (!this.isConfirmed) missingFields.push('同意拆帳規則');
-    if (!this.tempMenu) missingFields.push('菜單品項')
+    // if (!this.choice) missingFields.push('運費拆帳方式');
+    // if (!this.isConfirmed) missingFields.push('同意拆帳規則');
+    if (this.tempMenu.length == 0) missingFields.push('菜單品項')
     if (this.limitation && this.limitation < 1) {
       missingFields.push('成團門檻金額至少為1');
     } else if (!this.limitation) {
@@ -987,6 +1016,8 @@ export class GroupEventComponent {
     }
   }
 
+  openDisclaimer: boolean = false;
+  req: any;
   revise() {
     this.isPreview = false;
   }
@@ -1039,15 +1070,16 @@ export class GroupEventComponent {
 
     const end = this.formatToFullDateTime(this.endTime);
     const pick = this.formatToFullDateTime(this.pickTime);
-    const req = {
+    this.req = {
       id: 0,
       hostId: this.userId,
       storesId: this.storeId,
       eventName: this.eventName,
       endTime: end,
       status: "OPEN",
-      shippingFee: 0,
-      splitType: this.splitType,
+      shippingFee: this.shippingFee || 0,
+      // splitType: this.splitType,
+      splitType: 'EQUAL',
       announcement: this.announcement,
       type: this.type,
       tempMenuList: [...this.tempMenu],
@@ -1060,53 +1092,303 @@ export class GroupEventComponent {
       pickLocation: this.pickLocation
     }
     if (this.storeId && !this.eventId) {
-      this.http.postApi('http://localhost:8080/gogobuy/event/addEvent', req).subscribe({
-        next: (res: any) => {
-          console.log(req);
-          console.log(res);
-          if (res && res.id) {
-            // if (this.wishId) {  // 有許願，先結案再跳轉
-            //   const finishUrl = `http://localhost:8080/gogobuy/wish/finish_wish?id=${this.wishId}&userId=${this.userId}&targetUrl=http://localhost:4200/groupbuy-event/group-follow/${res.id}`;
-            //   this.http.postApi(finishUrl, {}).subscribe({
-            //     next: () => this.router.navigate(['/groupbuy-event/group-follow', res.id]),
-            //     error: (err) => {
-            //       console.error('許願結案失敗', err);
-            //     }
-            //   });
-            // } else {  // 沒有許願，直接跳轉
-            this.router.navigate(['/groupbuy-event/group-follow', res.id]);
-            // }
-          } else if (res && res.code == 400) {
-            const error: string[] = [];
-            error.push(res.message);
-            if (error.length > 0) {    // Swal 警告
-              const fieldList = error.join('、'); // 將陣列轉為 "欄位A、欄位B"
-              this.showAlert('新增失敗', `${fieldList}`);
-            }
-          }
+      this.openDisclaimer = true;
+    } else if (this.eventId && !this.storeId) {
+      this.req.id = this.eventId;
+      this.req.storesId = this.storeIdFromEvent;
+      console.log(JSON.stringify(this.req));
+      Swal.fire({
+        title: '正在儲存請稍後',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          Swal.showLoading();
         }
       });
-    } else if (this.eventId && !this.storeId) {
-      req.id = this.eventId;
-      req.storesId = this.storeIdFromEvent;
-      console.log(JSON.stringify(req));
-      this.http.postApi('http://localhost:8080/gogobuy/event/updateEvent', req).subscribe({
+      this.http.postApi(`${this.http.BASE_URL}/gogobuy/event/updateEvent`, this.req).subscribe({
         next: (res: any) => {
-          console.log(req);
+          console.log(this.req);
           console.log(res);
           if (res && res.code == 200) {
-            this.router.navigate(['/groupbuy-event/group-follow', req.id]);
-          } else if (res && res.code == 400) {
-            const error: string[] = [];
-            error.push("網站出現問題，請稍後再試");
-            if (error.length > 0) {    // Swal 警告
-              const fieldList = error.join('、'); // 將陣列轉為 "欄位A、欄位B"
-              this.showAlert('修改失敗', `${fieldList}`);
-            }
+            Swal.close();
+            this.router.navigate(['/groupbuy-event/group-follow', this.req.id]);
+          } else {
+            const errorMsg = res?.message || "網站出現問題，請稍後再試";
+            this.showAlert('修改失敗', errorMsg);
           }
+        },
+        error: (err) => {
+          Swal.close();
+          this.showAlert('修改失敗', err?.message || '系統連線錯誤');
         }
       });
     }
   }
+  agreeDisclaimer() {
+    this.http.postApi(`${this.http.BASE_URL}/gogobuy/event/addEvent`, this.req).subscribe({
+      next: (res: any) => {
+        console.log(this.req);
+        console.log(res);
+        if (res && (res.id || res.code == 200)) {
+          const eventId = res.id || this.req.id;
+          this.router.navigate(['/groupbuy-event/group-follow', eventId]);
+        } else {
+          const errorMsg = res?.message || "開團失敗";
+          this.showAlert('新增失敗', errorMsg);
+        }
+      },
+      error: (err) => {
+        this.showAlert('新增失敗', err?.message || '系統連線錯誤');
+      }
+    });
+    this.openDisclaimer = false;
+  }
 
+
+  async getGeolocation() {
+    const now = Date.now();
+    const cooldown = 15000;
+    if (now - this.positionService.lastFetchAt < cooldown && this.positionService.lastCoords) {
+      this.currentLocation = this.positionService.lastCoords;
+      Swal.fire({
+        icon: 'info',
+        title: '位置已是最新的',
+        text: '請稍後再試 (冷卻時間 15s)',
+        timer: 1500,
+        showConfirmButton: false
+      });
+      return;
+    }
+    this.isLoadingLocation = true;
+    if (this.isLoadingLocation == true) {
+      this.positionSpinnerAlert();
+    }
+    try {
+      // 取得新座標
+      const newCoords = await this.positionService.getCurrentPosition();
+      // 計算新舊距離差距
+      if (this.currentLocation && this.currentAddress) {
+        const distance = this.positionService.getDistance(
+          this.currentLocation.lat, this.currentLocation.lng,
+          newCoords.lat, newCoords.lng
+        );
+        // 如果移動距離小於 10 公尺，就不重新抓地址，避免門牌跳動
+        if (distance < 10) {
+          console.log(`移動距離僅 ${distance.toFixed(1)}m，忽略更新以穩定地址`);
+          this.isLoadingLocation = false;
+          this.positionSuccessAlert();
+          return;
+        }
+      }
+      this.currentLocation = newCoords;
+      // 呼叫地址解析
+      this.positionService.getAddressFromOSM(this.currentLocation.lat, this.currentLocation.lng).subscribe({
+        next: (res) => {
+          const addr = res.address;
+          let hNum = addr.house_number || '';
+          if (hNum && !hNum.includes('號')) hNum += '號';
+          const addressParts = [
+            addr.city || addr.town || addr.county || '',
+            addr.suburb || addr.district || addr.village || '',
+            addr.road || addr.pedestrian || '',
+            hNum
+          ];
+          this.currentAddress = addressParts.filter(part => !!part).join('');
+          if (this.currentAddress.length < 5) {
+            this.currentAddress = res.display_name;
+          }
+          this.pickLocation = this.currentAddress;
+          this.positionSuccessAlert();
+        },
+        error: (err) => {
+          console.error('解析失敗', err);
+          this.currentAddress = '無法解析詳細地址';
+        }
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: '定位失敗',
+        text: '請確認瀏覽器定位權限'
+      });
+    } finally {
+      this.isLoadingLocation = false;
+    }
+  }
+  @ViewChild('op') op!: Popover;
+  selectedLat: number = 22.997; // 預設台南座標
+  selectedLng: number = 120.211;
+  // Leaflet 實例
+  map!: L.Map;
+  marker!: L.Marker;
+  /**
+   * 💡 當 Popover 顯示時初始化地圖
+   * 必須在 Popover 顯示後才 init，否則地圖容器寬高為 0 會導致破圖
+   */
+  onMapShow() {
+    if (this.currentLocation) {
+      this.selectedLat = this.currentLocation.lat;
+      this.selectedLng = this.currentLocation.lng;
+    }
+    setTimeout(() => {
+      this.ngZone.runOutsideAngular(() => {
+        // 💡 不管有沒有 this.map，都執行 initMap()，裡面會處理銷毀舊實例
+        this.initMap();
+      });
+    }, 300);
+  }
+  private initMap() {
+    if (this.map) {
+      this.map.remove();
+      (this.map as any) = undefined;
+    }
+    // 1. 初始化地圖中心
+    this.map = L.map('map').setView([this.selectedLat, this.selectedLng], 16);
+    // 2. 載入 OpenStreetMap 圖資
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.map);
+    // 3. 建立可拖拽的標記
+    // 修正預設 Icon 遺失的問題
+    const defaultIcon = L.icon({
+      iconUrl: 'leaflet/marker-icon.png',       // 對應到編譯後的 /leaflet/...
+      iconRetinaUrl: 'leaflet/marker-icon-2x.png',
+      shadowUrl: 'leaflet/marker-shadow.png',
+      iconSize: [25, 41],      // 標記的寬高
+      iconAnchor: [12, 41],    // 重點！確保點擊判定的「針尖」對準座標底部
+      popupAnchor: [1, -34],   // 彈出視窗的位置
+      shadowSize: [41, 41]     // 陰影大小
+    });
+
+    L.Marker.prototype.options.icon = defaultIcon;
+    this.marker = L.marker([this.selectedLat, this.selectedLng], {
+      draggable: true
+    }).addTo(this.map);
+    // 4. 監聽標記拖拽結束
+    this.marker.on('dragend', () => {
+      this.ngZone.run(() => { // 💡 確保跑回 Angular 檢查機制
+        const pos = this.marker.getLatLng();
+        this.searchName = '';
+        this.updateLocation(pos.lat, pos.lng);
+      });
+    });
+
+    // 5. 監聽地圖點擊
+    this.map.on('click', (e: L.LeafletMouseEvent) => {
+      this.ngZone.run(() => { // 💡 確保跑回 Angular 檢查機制
+        this.marker.setLatLng(e.latlng);
+        this.searchName = '';
+        this.updateLocation(e.latlng.lat, e.latlng.lng);
+      });
+    });
+    console.log('Map Container:', document.getElementById('map'));
+  }
+  // 搜尋地點功能 (連動 OpenStreetMap API)
+  searchNameList: string[] = [];
+  searchName!: string;
+  searchLocation(event: any) {
+    const query = event.target.value;
+    if (!query) return;
+
+    const taiwanViewbox = '119.3,25.4,122.1,21.7';
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&viewbox=${taiwanViewbox}&bounded=1&addressdetails=1`)
+      .then(res => res.json())
+      .then(data => {
+        // 💡 1. 進行更精細的篩選
+        const filteredData = data.filter((item: any) => {
+          // 排除掉「預定線 (proposed)」、「道路 (highway)」或「行政區 (boundary)」
+          const isBlacklisted = ['proposed', 'highway', 'boundary', 'administrative'].includes(item.type);
+          return !isBlacklisted;
+        });
+
+        if (filteredData.length > 0) {
+          // 💡 2. 排序優化：優先讓「名稱完全符合」且「是餐廳/店面」的排前面
+          filteredData.sort((a: any, b: any) => {
+            // 如果名字跟搜尋詞完全一致（例如都叫 鼎泰豐）
+            const aExact = a.name === query ? 1 : 0;
+            const bExact = b.name === query ? 1 : 0;
+
+            // 如果類別是設施或餐廳 (amenity)
+            const aIsAmenity = a.class === 'amenity' ? 1 : 0;
+            const bIsAmenity = b.class === 'amenity' ? 1 : 0;
+
+            // 排序權重：精確名稱 > 設施類別 > 重要性
+            return (bExact - aExact) || (bIsAmenity - aIsAmenity) || (b.importance - a.importance);
+          });
+
+          // 💡 3. 更新 UI 列表，讓使用者選
+          this.ngZone.run(() => {
+            this.searchNameList = filteredData.map((item: any) => item.display_name);
+
+            // 選出最符合的一筆
+            const bestMatch = filteredData[0];
+            const lat = parseFloat(bestMatch.lat);
+            const lon = parseFloat(bestMatch.lon);
+
+            this.map.setView([lat, lon], 16);
+            this.marker.setLatLng([lat, lon]);
+            this.updateLocation(lat, lon);
+          });
+        } else {
+          Swal.fire({
+            title: '在台灣境內沒找到該地點',
+            text: '請嘗試輸入更詳細的地址或名稱',
+            icon: 'warning'
+          });
+        }
+      });
+  }
+  // 更新經緯度並反查地址
+  private updateLocation(lat: number, lng: number) {
+    this.selectedLat = lat;
+    this.selectedLng = lng;
+    // 反查地址 API
+    // fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+    //   .then(res => res.json())
+    //   .then(data => {
+    //     this.ngZone.run(() => {
+    //       this.pickLocation = data.display_name;
+    //       console.log(data);
+    //     });
+    //   });
+    this.positionService.getAddressFromOSM(lat, lng).subscribe({
+      next: (res) => {
+        //有搜尋拿搜尋名稱
+        if (this.searchName.length > 0) {
+          this.pickLocation = this.searchName;
+        } else {
+          //沒搜尋純點擊地點
+          const addr = res.address;
+          let hNum = addr.house_number || '';
+          if (hNum && !hNum.includes('號')) hNum += '號';
+          const addressParts = [
+            addr.city || addr.town || addr.county || '',
+            addr.suburb || addr.district || addr.village || '',
+            addr.road || addr.pedestrian || '',
+            hNum
+          ];
+          this.currentAddress = addressParts.filter(part => !!part).join('');
+          if (this.currentAddress.length < 5) {
+            this.currentAddress = res.display_name;
+          }
+          this.pickLocation = this.currentAddress;
+          if (addr.amenity.length != 0) {
+            this.pickLocation = this.pickLocation + " " + addr.amenity;
+          }
+          if (addr.railway.length != 0) {
+            this.pickLocation = this.pickLocation + " " + addr.railway;
+          }
+        }
+      },
+      error: (err) => {
+        console.error('解析失敗', err);
+        this.currentAddress = '無法解析詳細地址';
+      }
+    });
+  }
+  // 確認選取
+  confirmLocation() {
+    console.log('最終選定位置:', this.pickLocation, { lat: this.selectedLat, lng: this.selectedLng });
+    // 這裡可以呼叫 SweetAlert2 提示
+  }
 }

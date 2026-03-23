@@ -15,6 +15,8 @@ import Swal from 'sweetalert2';
 import { CommonModule } from '@angular/common';
 import { catchError } from 'rxjs/operators';
 import { OrderTransferService } from '../@service/orderTransfer.service';
+import { MessageService as NotifiService, NotifiCategoryEnum, NotifiMesReq } from '../@service/message.service';
+import { LinePayService } from '../@service/linepay.service';
 
 
 
@@ -51,6 +53,8 @@ type OrderVM = {
   userId?: string;
   eventId: number;
   personalMemo?: string;
+  paymentStatus?: string;
+  pickupStatus?: string;
 };
 
 type OrderGroupVM = {
@@ -88,12 +92,18 @@ export class OrderInfoComponent implements OnInit {
   latestOrderTime = '';
   userId = '';
   totalAmount = '';
+  thresholdAmount = 0;
   eventsId = 0;
   activeIndex: number = 0;
   menuDate: any;
   res: any;
   storeLogo: any;
   hostLogo: any;
+  hostId = '';
+  hostEmail = '';
+  hostNickname = '';
+  isLoading = false;
+  memberPaymentStatus = '';
 
 
   constructor(
@@ -103,29 +113,33 @@ export class OrderInfoComponent implements OnInit {
     public router: Router,
     private route: ActivatedRoute,
     public transfer: OrderTransferService,
+    private notifiService: NotifiService,
+    private linePayService: LinePayService,
   ) { }
 
 
   ngOnInit() {
     this.userId = String(localStorage.getItem('user_id') || '');
     this.host = [
-      { label: '查看訂單明細' },
-      { label: '確認' }
+      { label: '核對訂單' },
+      { label: '確認結算' },
+      { label: '付費階段' }
     ];
     this.member = [
-      { label: 'Confirmation' }
+      { label: '核對訂單' },
+      { label: '確認訂單' }
     ];
     // 載入cart傳入開團訂單詳情
     this.route.queryParamMap.subscribe(params => {
       this.mode = (params.get('mode') == 'host') ? 'host' : 'member';
       this.eventsId = Number(params.get('events_id') || 0);
-      this.loadOrders();
+      // this.loadOrders();
       if (this.eventsId) {
         this.loadEventInfo();
       }
     });
   }
-
+  checkEventStatus!: boolean;
   private loadEventInfo() {
     this.cart.getEventsByEventsId(this.eventsId).subscribe({
       next: (res: any) => {
@@ -133,6 +147,23 @@ export class OrderInfoComponent implements OnInit {
 
         const event = res.groupbuyEvents?.[0];
         if (!event) return;
+        if (event.eventStatus != "OPEN") {
+          this.checkEventStatus = false;
+          Swal.fire({
+            icon: 'warning',
+            title: '該團已結單',
+            text: '即將返回首頁',
+            width: 600,
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+          }).then(() => {
+            this.router.navigate(['/gogobuy/home']);
+          });
+          return;
+        } else {
+          this.loadOrders();
+        }
 
         // 取得欄位
         this.latestOrderTime = event.latestOrderTime ?? '';
@@ -140,6 +171,10 @@ export class OrderInfoComponent implements OnInit {
         this.storeName = event.storeName ?? '';
         this.pickupTime = event.pickupTime ?? '';
         this.pickLocation = event.pickLocation ?? '';
+        this.hostId = event.hostId ?? '';
+        this.hostEmail = event.hostEmail ?? '';
+        this.hostNickname = event.hostNickname ?? '';
+        this.thresholdAmount = event.limitation ?? 0;
       },
       error: (err: any) => {
         console.error('getEventsByEventsId 失敗', err);
@@ -158,6 +193,7 @@ export class OrderInfoComponent implements OnInit {
       subtotal: dto.subtotal ?? 0,
       weight: dto.weight ?? 0,
       deleted: dto.deleted ?? dto.is_deleted ?? false,
+      paymentStatus: dto.paymentStatus ?? dto.payment_status,
     };
 
     const menuList = Array.isArray(dto.menuList) ? dto.menuList : [];
@@ -192,6 +228,8 @@ export class OrderInfoComponent implements OnInit {
       hostNickname: o.hostNickname ?? o.userNickname ?? o.user_nickname ?? null,
       parsedOptions,
       menuName: o.menuName ?? null,
+      userEmail: o.email ?? o.userEmail ?? o.user_email ?? '',
+      paymentStatus: o.paymentStatus ?? o.payment_status,
     };
   }
 
@@ -212,6 +250,11 @@ export class OrderInfoComponent implements OnInit {
     const n = this.host?.length ?? 0;
     if (n <= 1) return 0;
     return this.activeIndex / (n - 1); // 0~1
+  }
+
+  get isMemberConfirmed(): boolean {
+    if (this.mode !== 'member') return false;
+    return this.memberPaymentStatus === 'SUBMITTED' || this.memberPaymentStatus === 'PAID';
   }
 
   clear() {
@@ -241,11 +284,58 @@ export class OrderInfoComponent implements OnInit {
 
   // 統一處理主按鈕點擊
   onPrimaryAction() {
-    if (this.activeIndex === 0 && this.mode === 'host') {
+    if (this.activeIndex === 0) {
+      if (this.mode === 'host' && Number(this.totalAmount) < this.thresholdAmount) {
+        Swal.fire({
+          icon: 'warning',
+          title: '未達門檻金額',
+          text: `目前總額 $${this.totalAmount} 低於門檻金額 $${this.thresholdAmount}，無法結算。`,
+          confirmButtonText: '確定'
+        });
+        return;
+      }
       this.nextStep();
+    } else if (this.activeIndex === 1 && this.mode === 'host') {
+      this.submitOrder();
+    } else if (this.activeIndex === 2 && this.mode === 'host') {
+      this.router.navigate(['/user/orders'], { queryParams: { tab: 'history' } });
     } else {
       this.submitOrder();
     }
+  }
+
+  payByLinePay() {
+    Swal.fire({
+      title: '即將跳轉至 LINE Pay',
+      text: `支付金額：NT$ ${this.totalAmount}`,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: '確定前往',
+      cancelButtonText: '取消'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: '準備中...',
+          didOpen: () => Swal.showLoading()
+        });
+
+        const payUserId = (this.mode === 'member') ? (this.userId || this.auth.user?.id) : undefined;
+
+        this.linePayService.requestPayment(this.eventsId, payUserId).subscribe({
+          next: (payUrl: string) => {
+            if (payUrl && payUrl.startsWith('http')) {
+              window.location.href = payUrl;
+            } else {
+              Swal.fire('支付失敗', '無法取得支付連結', 'error');
+            }
+          },
+          error: (err) => {
+            console.error('LinePay Error:', err);
+            Swal.fire('系統錯誤', '發送支付請求失敗', 'error');
+          }
+        });
+      }
+    });
   }
 
   // 統一處理返回/次要按鈕點擊
@@ -374,9 +464,35 @@ export class OrderInfoComponent implements OnInit {
         allowEscapeKey: false,
         didOpen: () => Swal.showLoading()
       });
-      this.cart.deleteOrderById(orderId).subscribe({
+      const currentUserId = this.userId || this.auth.user?.id || localStorage.getItem('user_id') || '';
+      const actingUserId = this.mode === 'host' ? currentUserId : undefined;
+
+      // 先找出這筆訂單的擁有者，以便通知 (如果操作者是團長且刪除的是別人的)
+      const orderToDel = this.res?.orders?.find((o: any) => (o.id ?? o.orderId) === orderId);
+
+      console.log('[DEBUG] removeorder:', { orderId, actingUserId, mode: this.mode });
+
+      this.cart.deleteOrderById(orderId, actingUserId).subscribe({
         next: (res) => {
           if (res.code == 200) {
+            // 如果是團長刪除成員的商品，發送通知
+            if (this.mode === 'host' && orderToDel && orderToDel.userId !== currentUserId) {
+              const req: NotifiMesReq = {
+                category: NotifiCategoryEnum.GROUP_BUY,
+                title: '訂單品項被移除',
+                content: `很抱歉，團長「${this.auth.user?.nickname || '團長'}」將您在「${this.eventName}」中的「${orderToDel.menuName}」移除了。`,
+                eventId: this.eventsId,
+                userId: currentUserId,
+                targetUrl: '/user/orders',
+                expiredAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                userNotificationVoList: [{
+                  userId: orderToDel.userId,
+                  email: orderToDel.userEmail || ''
+                }]
+              };
+              this.notifiService.create(req).subscribe();
+            }
+
             this.res.orders = (this.res.orders ?? []).filter(
               (o: any) => (o.id ?? o.orderId) !== orderId
             );
@@ -389,6 +505,7 @@ export class OrderInfoComponent implements OnInit {
               icon: "success"
             });
           } else {
+            console.error('[API Error] deleteOrderById:', res);
             Swal.fire({
               title: "刪除失敗",
               text: res.message ?? "請稍後再試",
@@ -397,10 +514,10 @@ export class OrderInfoComponent implements OnInit {
           }
         },
         error: (err) => {
-          console.error(err);
+          console.error('[Network Error] deleteOrderById:', err);
           Swal.fire({
             title: "刪除失敗",
-            text: "刪除失敗，請稍後再試",
+            text: "刪除失敗，請連繫系統開發者或稍後再試",
             icon: "error"
           });
         }
@@ -463,12 +580,29 @@ export class OrderInfoComponent implements OnInit {
   }
   private loadOrders() {
     if (!this.eventsId) return;
-    const orders$ = this.cart.getOrdersAll(this.eventsId);
 
-    orders$.pipe(
-      tap((x: any) => console.log('[RAW ordersRes]', x)),
-      map((ordersRes: any) => {
+    const orders$ = this.cart.getOrdersAll(this.eventsId);
+    const personalOrders$ = this.cart.getPersonalOrdersByEventId(this.eventsId).pipe(
+      catchError(() => of({ personalOrder: [] }))
+    );
+
+    forkJoin({
+      ordersRes: orders$,
+      personalRes: personalOrders$
+    }).pipe(
+      tap(({ ordersRes, personalRes }: any) => console.log('[RAW ordersRes]', ordersRes, '[RAW personalRes]', personalRes)),
+      map(({ ordersRes, personalRes }: any) => {
         const raw: any = ordersRes;
+        const personalList = personalRes.personalOrder || [];
+        const myUserId = this.userId || this.auth.user?.id;
+
+        // 找尋當前使用者的個人訂單狀態
+        if (this.mode === 'member' && myUserId) {
+          const myPersonalOrder = personalList.find((p: any) => p.userId === myUserId);
+          if (myPersonalOrder) {
+            this.memberPaymentStatus = myPersonalOrder.paymentStatus || '';
+          }
+        }
 
         const listFromHost = Array.isArray(raw.ordersSearchViewList)
           ? raw.ordersSearchViewList.map((o: any) => this.normalizeOrder(o))
@@ -480,17 +614,13 @@ export class OrderInfoComponent implements OnInit {
 
         let orders = listFromHost.length > 0 ? listFromHost : listFromMember;
 
-        if (this.mode == 'member') {
-          const myUserId = this.userId || this.auth.user?.id;
-          if (myUserId) {
-            orders = orders.filter((o: any) => o.userId == myUserId);
-          }
+        if (this.mode == 'member' && myUserId) {
+          orders = orders.filter((o: any) => o.userId == myUserId);
         }
 
-        return { code: 200, message: 'ok', orders: orders };
-      }),
-      switchMap((data: any) => {
-        // 3. 抓取頭像與暱稱 (這部分邏輯保留，因為 getOrdersView 通常不包含 Avatar URL)
+        const data = { code: 200, message: 'ok', orders: orders };
+
+        // 3. 抓取頭像與暱稱
         const userIds: string[] = Array.from(
           new Set(
             (data.orders ?? [])
@@ -498,6 +628,10 @@ export class OrderInfoComponent implements OnInit {
               .filter((id: any): id is string => typeof id == 'string' && id.trim().length > 0)
           )
         );
+
+        return { data, userIds };
+      }),
+      switchMap(({ data, userIds }) => {
         if (userIds.length == 0) return of(data);
 
         const needFetch = userIds.filter(id => !this.avatarMap[id]);
@@ -538,7 +672,7 @@ export class OrderInfoComponent implements OnInit {
 
   submitOrder() {
     const title = this.mode === 'host' ? "確定確認全團並送出?" : "確定確認個人訂單?";
-    const text = this.mode === 'host' ? "確認後該團將結算並關閉，不可再修改內容!" : "確認後您的訂單將轉為已確認狀態!";
+    const text = this.mode === 'host' ? "確認後該團將結算並關閉，不可再修改內容!" : "確認後您的訂單將轉為已確認狀態，不可再修改內容!";
 
     Swal.fire({
       title,
@@ -551,6 +685,17 @@ export class OrderInfoComponent implements OnInit {
       cancelButtonText: "取消"
     }).then((result) => {
       if (result.isConfirmed) {
+        this.isLoading = true;
+        Swal.fire({
+          title: "處理中...",
+          text: "正在送出確認請求，請稍候",
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
         const submitUserId = this.userId || this.auth.user?.id || '';
 
         // 根據身分呼叫不同 API
@@ -561,27 +706,87 @@ export class OrderInfoComponent implements OnInit {
         request$.subscribe({
           next: (res: any) => {
             if (res.code == 200) {
-              Swal.fire({
-                title: "送出!",
-                text: this.mode === 'host' ? "全團已成功結算" : "您的個人訂單已確認",
-                icon: "success",
-                showCancelButton: true,
-                confirmButtonColor: "#3085d6",
-                cancelButtonColor: "rgb(24, 173, 54)",
-                confirmButtonText: "返回首頁",
-                cancelButtonText: "查看訂單"
-              }).then((result) => {
-                if (result.isConfirmed) {
-                  this.router.navigate(['/gogobuy/home'])
-                } else {
-                  this.router.navigate(['/user/orders'], { queryParams: { tab: 'history' } })
+              this.isLoading = false;
+              // --- SSE 通知邏輯 ---
+              if (this.mode === 'host') {
+                // 團長結單：通知所有成員
+                this.cart.getPersonalOrdersByEventId(this.eventsId).subscribe({
+                  next: (memberRes: any) => {
+                    const members = memberRes.personalOrder || [];
+                    const membersToNotify = members.filter((m: any) => m.userId !== this.userId);
+                    if (membersToNotify.length > 0) {
+                      const req: NotifiMesReq = {
+                        category: NotifiCategoryEnum.GROUP_BUY,
+                        title: '團購結單通知',
+                        content: `您參加的團購「${this.eventName}」已結單！請查看訂單明細並配合團長後續取貨通知。`,
+                        eventId: this.eventsId,
+                        userId: this.userId,
+                        targetUrl: '/user/orders?tab=history',
+                        expiredAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        userNotificationVoList: membersToNotify.map((m: any) => ({
+                          userId: m.userId,
+                          email: m.userEmail
+                        }))
+                      };
+                      this.notifiService.create(req).subscribe();
+                    }
+                  }
+                });
+              } else {
+                // 成員確認訂單：通知團長
+                if (this.hostId && this.hostId !== this.userId) {
+                  const req: NotifiMesReq = {
+                    category: NotifiCategoryEnum.GROUP_BUY,
+                    title: '成員訂單確認',
+                    content: `成員「${this.auth.user?.nickname || '有人'}」已確認了在「${this.eventName}」中的訂單。`,
+                    eventId: this.eventsId,
+                    userId: this.userId,
+                    targetUrl: `/user/orders/info?events_id=${this.eventsId}&mode=host`,
+                    expiredAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    userNotificationVoList: [{
+                      userId: this.hostId,
+                      email: this.hostEmail
+                    }]
+                  };
+                  this.notifiService.create(req).subscribe();
                 }
-              });
+              }
+              // --- SSE 通知邏輯結束 ---
+
+              if (this.mode === 'host') {
+                Swal.fire({
+                  title: "結算成功!",
+                  text: "全團已成功結算，請進行後續付款。",
+                  icon: "success",
+                  timer: 2000,
+                  showConfirmButton: false
+                });
+                this.nextStep();
+              } else {
+                Swal.fire({
+                  title: "送出!",
+                  text: "您的個人訂單已確認",
+                  icon: "success",
+                  showCancelButton: true,
+                  confirmButtonColor: "#3085d6",
+                  cancelButtonColor: "rgb(24, 173, 54)",
+                  confirmButtonText: "返回首頁",
+                  cancelButtonText: "查看訂單"
+                }).then((result) => {
+                  if (result.isConfirmed) {
+                    this.router.navigate(['/gogobuy/home'])
+                  } else {
+                    this.router.navigate(['/user/orders'], { queryParams: { tab: 'history' } })
+                  }
+                });
+              }
             } else {
+              this.isLoading = false;
               Swal.fire("錯誤", res.message || "作業失敗", "error");
             }
           },
           error: (err: any) => {
+            this.isLoading = false;
             Swal.fire("系統異常", "無法送出確認請求", "error");
           }
         });

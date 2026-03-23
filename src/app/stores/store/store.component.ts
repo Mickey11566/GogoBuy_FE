@@ -1,4 +1,4 @@
-import { FeeDescriptionVoList, StoreService } from './../../@service/store.service';
+import { FeeDescriptionVoList, StoreService, OperatingHoursVoList } from './../../@service/store.service';
 import { Component, ElementRef, HostListener, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { StepperModule } from 'primeng/stepper';
 import { ButtonModule } from 'primeng/button';
@@ -14,7 +14,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { DialogModule } from 'primeng/dialog';
 import { HttpService } from '../../@service/http.service';
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
-import { Items, MenuCategoriesVoList, MenuVoList, OperatingHoursVoList, ProductOptionGroupsVoList } from '../../@service/store.service';
+import { Items, MenuCategoriesVoList, MenuVoList, ProductOptionGroupsVoList } from '../../@service/store.service';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { FloatLabelModule } from 'primeng/floatlabel';
@@ -29,6 +29,8 @@ import { FileUploadModule } from 'primeng/fileupload';
 import { ToastModule } from 'primeng/toast';
 import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { ChangeDetectorRef } from '@angular/core';
+import { DragDropModule } from '@angular/cdk/drag-drop';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
 @Component({
   selector: 'app-store',
@@ -38,7 +40,7 @@ import { ChangeDetectorRef } from '@angular/core';
     ImageModule, ButtonModule,
     InputTextModule, ScrollPanelModule,
     TableModule, SelectButtonModule, CommonModule,
-    DialogModule, ButtonModule,
+    DialogModule, ButtonModule, DragDropModule,
     InputGroupModule, InputGroupAddonModule, FloatLabelModule,
     InputNumberModule, SelectModule, InputTextModule,
     IconFieldModule, InputIconModule, CheckboxModule,
@@ -80,8 +82,10 @@ export class StoreComponent {
   displayPublishConfirm = false
   displaySaveFailedDialog = false;
   displaySureUpdateDialog = false;
+  displayDelSelectedPDialog = false;
 
   selectedProduct!: MenuVoList;
+  selectedProductId: number[] = [];
   selectedCategoryId: number | null = null;
   selectedIndex: number = -1;
 
@@ -222,6 +226,14 @@ export class StoreComponent {
     sessionStorage.setItem('temp_order_info', JSON.stringify(this.storeData));
   }
 
+  private syncIdCounters() {
+    // 使用負數計數器策略：新增項目從 0 遞減 (-1, -2, ...)
+    // 真實 DB ID 都是正數，不會衝突
+    this.newCateId = 0;
+    this.newSpecId = 0;
+    this.newPId = 0;
+  }
+
   ngOnInit() {
     this.userId = String(localStorage.getItem('user_id') || '');
     this.id = Number(this.route.snapshot.paramMap.get('id'));
@@ -229,14 +241,30 @@ export class StoreComponent {
     this.activeEventsByStoreId = this.storeService.activeEventsByStoreId;
 
     if (this.id !== 0) {
-      this.http.getApi(`http://localhost:8080/gogobuy/store/searchId?id=${this.id}`)
+      this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/searchId?id=${this.id}`)
         .subscribe((res: any) => {
           console.log('res', res);
 
           if (res.storeList && res.storeList.length > 0) {
-            this.storeData.menuCategoriesVoList = res.menuCategoriesVoList;
-            this.storeData.productOptionGroupsVoList = res.productOptionGroupsVoList;
-            this.storeData.menuVoList = res.menuVoList.map((product: any) => {
+            this.storeData.menuCategoriesVoList = (res.menuCategoriesVoList || []).map((c: any) => ({
+              ...c,
+              id: Number(c.id)
+            }));
+            this.storeData.productOptionGroupsVoList = (res.productOptionGroupsVoList || []).map((g: any) => ({
+              ...g,
+              id: Number(g.id)
+            }));
+            // 優先吃新格式 (嵌套在類別裡)，沒有才退回舊格式
+            const rawCategories = res.menuCategoriesVoList || [];
+
+            const oldMenuList = res.menuVoList || [];
+            const newMenuList = rawCategories.flatMap((c: any) => c.menuVo || []);
+
+            const rawMenuVoList = newMenuList.length ? newMenuList : oldMenuList;
+
+            this.storeData.menuVoList = rawMenuVoList.map((product: any) => {
+              product.id = Number(product.id);
+              product.categoryId = Number(product.categoryId);
               if (Array.isArray(product.unusual) && product.unusual.length > 0) {
                 // 將 [{124: '湯頭'}, {125: '麵條'}] 合併成 {124: '湯頭', 125: '麵條'}
                 product.unusual = product.unusual.reduce((acc: any, curr: any) => {
@@ -247,12 +275,12 @@ export class StoreComponent {
               }
               return product;
             });
+
             this.rebuildApplicableCategoryIds();
             this.filteredProducts = [...this.storeData.menuVoList];
-            this.newPId = this.storeData.menuVoList.length + 1;
-            this.newSpecId = this.storeData.productOptionGroupsVoList.length + 1;
-            this.newCateId = this.storeData.menuCategoriesVoList.length + 1;
           }
+
+          this.syncIdCounters();
         });
     }
 
@@ -263,30 +291,23 @@ export class StoreComponent {
         ...source,
         memo: source.memo ?? '',
       }
+      // 確保從 service 拿回來的 ID 也是 Number
+      if (this.storeData.menuVoList) {
+        this.storeData.menuVoList.forEach(p => {
+          p.id = Number(p.id);
+          p.categoryId = Number(p.categoryId);
+        });
+      }
     }
 
     // session 讀取資料
     const savedData = sessionStorage.getItem('temp_order_info');
     if (savedData) {
       this.storeData = JSON.parse(savedData);
-      if (this.storeData.menuCategoriesVoList && this.storeData.menuCategoriesVoList.length > 0) {
-        const maxId = Math.max(...this.storeData.menuCategoriesVoList.map((c: any) => c.id || 0));
-        this.newCateId = maxId;
-      } else {
-        this.newCateId = 0;
-      }
-      if (this.storeData.productOptionGroupsVoList && this.storeData.productOptionGroupsVoList.length > 0) {
-        const maxId = Math.max(...this.storeData.productOptionGroupsVoList.map((c: any) => c.id || 0));
-        this.newSpecId = maxId;
-      } else {
-        this.newSpecId = 0;
-      }
-      if (this.storeData.menuVoList && this.storeData.menuVoList.length > 0) {
-        const maxId = Math.max(...this.storeData.menuVoList.map((c: any) => c.id || 0));
-        this.newPId = maxId;
-      } else {
-        this.newPId = 0;
-      }
+      // 重置計數器到 0，讓新增項目使用負數 ID 策略
+      this.newCateId = 0;
+      this.newSpecId = 0;
+      this.newPId = 0;
     }
     this.applyFilters();
     this.rebuildApplicableCategoryIds();
@@ -441,14 +462,18 @@ export class StoreComponent {
     if (this.isEditMode && this.editingIndex !== -1) {
       this.storeData.menuCategoriesVoList[this.editingIndex] = { ...this.currentCategories };
     } else {
-      this.newCateId++;
+      // 用負數作為新增分類的暫時 ID，避免與真實 DB ID 衝突
+      // 送出 payload 時再轉回 0，讓後端識別為「新增」
+      this.newCateId--;
 
       const newCategory = {
         ...this.currentCategories,
-        id: this.newCateId
+        id: this.newCateId  // 負數 tempId
       };
 
       this.storeData.menuCategoriesVoList.push(newCategory);
+      console.log("this.storeData.menuCategoriesVoList", this.storeData.menuCategoriesVoList);
+
     }
 
     this.storeData.menuCategoriesVoList = [...this.storeData.menuCategoriesVoList];
@@ -466,7 +491,14 @@ export class StoreComponent {
     this.applyFilters();
   }
 
-
+  dropCategory(event: CdkDragDrop<any[]>) {
+    // 直接對 storeData 中的陣列進行排序
+    moveItemInArray(
+      this.storeData.menuCategoriesVoList,
+      event.previousIndex,
+      event.currentIndex
+    );
+  }
 
   // 規格 ---------------------------------------------------------
   addSpecs() {
@@ -622,6 +654,14 @@ export class StoreComponent {
     );
   }
 
+  dropSpec(event: CdkDragDrop<any[]>) {
+    moveItemInArray(
+      this.storeData.productOptionGroupsVoList,
+      event.previousIndex,
+      event.currentIndex
+    );
+  }
+
   // search ---------------------------------------------------------
   applyFilters() {
     let results = this.storeData.menuVoList;
@@ -639,8 +679,6 @@ export class StoreComponent {
     }
 
     this.filteredProducts = results;
-    console.log('filteredProducts', this.filteredProducts);
-
   }
 
   // 新增商品 ---------------------------------------------------------
@@ -659,7 +697,7 @@ export class StoreComponent {
   // 商品圖片
   onFileSelected(event: any) {
     const input = event.target as HTMLInputElement;
-    const file = event.target.files[0];
+    const file = input.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -724,7 +762,6 @@ export class StoreComponent {
       icon: 'warning',
       title,
       text,
-      timer: 1200,
       showConfirmButton: false,
       didOpen: () => {
         const c = document.querySelector(
@@ -896,7 +933,6 @@ export class StoreComponent {
   }
 
   saveProduct() {
-    console.log(this.currentProduct.categoryId);
     this.submitted = true;
     const isNameValid = !!this.currentProduct.name?.trim();
     const isCategoryValid = !!this.currentProduct.categoryId;
@@ -906,22 +942,23 @@ export class StoreComponent {
       return;
     }
 
-    // 若未符合 p.id === this.currentProduct.id ， 那 index = -1
-    const index = this.storeData.menuVoList.findIndex(p => p.id === this.currentProduct.id);
+    // 用 Number 比較確保型別一致
+    const index = this.storeData.menuVoList.findIndex(p => Number(p.id) === Number(this.currentProduct.id));
 
     this.currentProduct.unusual = this.currentProduct.unusual ? { ...this.currentProduct.unusual } : {};
 
     if (index > -1) {
+      // 編輯現有商品（包含真實 DB 商品和尚未儲存的新商品）
       this.storeData.menuVoList = this.storeData.menuVoList.map((p, i) =>
         i === index ? { ...this.currentProduct } : p
       );
     } else {
-      this.newPId++;
+      // 新增商品：使用負數暫時 ID，送出時轉回 0 讓後端識別為「新增」
+      this.newPId--;
       const newProduct = { ...this.currentProduct, id: this.newPId, storesId: this.storeData.id };
       this.storeData.menuVoList = [...this.storeData.menuVoList, newProduct];
     }
-
-    this.sortProduct();
+    this.applyFilters();
     this.displayProductDialog = false;
     this.submitted = false;
   }
@@ -931,15 +968,53 @@ export class StoreComponent {
     this.isEditMode = true;
     this.currentProduct = { ...product };
 
-    console.log('currentProduct(上)', this.currentProduct);
     this.currentProduct.unusual = this.currentProduct.unusual ? { ...this.currentProduct.unusual } : {};
 
     this.displayProductDialog = true;
   }
 
-
-
   // 刪除商品 ---------------------------------------------------------
+  get isAllProductSelected(): boolean {
+    const listLength = this.storeData.menuVoList.length;
+    return listLength > 0 && listLength == this.selectedProductId.length;
+  }
+
+  toggleSelectAllProduct(event: any) {
+    if (event.target.checked) {
+      this.selectedProductId = this.storeData.menuVoList.map(p => p.id);
+    } else {
+      this.selectedProductId = [];
+    }
+  }
+
+  isProductSelected(productId: number): boolean {
+    return this.selectedProductId.includes(productId);
+  }
+
+  toggleProductSelection(productId: number) {
+    const index = this.selectedProductId.indexOf(productId);
+    if (index > -1) {
+      this.selectedProductId.splice(index, 1);
+    } else {
+      this.selectedProductId.push(productId);
+    }
+  }
+
+  deleteSelectedProducts() {
+    if (this.selectedProductId.length === 0) return;
+    this.displayDelSelectedPDialog = true;
+  }
+
+  delSelectedProduct() {
+    this.storeData.menuVoList = this.storeData.menuVoList.filter(
+      product => !this.selectedProductId.includes(product.id)
+    );
+
+    this.displayDelSelectedPDialog = false;
+    this.selectedProductId = [];
+    this.applyFilters();
+  }
+
   openDeleteProduct(traget: MenuVoList, index: number) {
     this.tempProductTarget = traget;
     this.tempProductIndex = index;
@@ -965,7 +1040,7 @@ export class StoreComponent {
     this.tempProductIndex = -1;
   }
 
-  // 商品分類滾動效果
+  // 商品分類滾動效果 ---------------------------------------------(
   @ViewChild('categoryNav') categoryNav!: ElementRef;
   scrollNav(distance: number) {
     this.categoryNav.nativeElement.scrollBy({
@@ -992,22 +1067,40 @@ export class StoreComponent {
     this.applyFilters();
   }
 
+  // drag and drop ---------------------------------------------
+  dropProduct(event: CdkDragDrop<any[]>) {
+    moveItemInArray(this.filteredProducts, event.previousIndex, event.currentIndex);
+  }
+
   // 最下面按鈕 ---------------------------------------------------------
   goBack() {
+    console.log('this.storeService.storeData', this.storeService.storeData);
+
+    this.storeService.storeData = this.storeData;
     if (this.id && this.id !== 0) {
       this.router.navigate(['/management/store_upsert', this.id]);
     } else {
       this.router.navigate(['/management/store_upsert']);
     }
-
   }
 
-  openPublic() {
+  openPublic() { // 無使用
     if (this.id === 0) {
       this.displayPublishConfirm = true;
     } else {
       this.onSaveAll();
     }
+  }
+
+  // 公開不公開店家 ---------------------------------------------------------
+  nonPublishStore() {
+    this.storeData.publish = false;
+    this.onSaveAll();
+  }
+
+  yesPublishStore() {
+    this.storeData.publish = true;
+    this.onSaveAll();
   }
 
   // 存資料庫 ---------------------------------------------------------
@@ -1031,7 +1124,6 @@ export class StoreComponent {
       }
 
       if (this.storeData.id == 0) {
-        this.loading = true;
         const payload = {
           storesname: this.storeData.name,
           phone: this.storeData.phone,
@@ -1047,7 +1139,7 @@ export class StoreComponent {
           menuCategoriesVoList: this.storeData.menuCategoriesVoList.map(category => ({
             name: category.name,
             priceLevel: category.priceLevel,
-            menuVo: this.storeData.menuVoList.filter(item => item.categoryId === category.id)
+            menuVo: this.storeData.menuVoList.filter(item => Number(item.categoryId) === Number(category.id))
               .map(product => ({
                 ...product,
                 unusual: transformUnusual(product.unusual)
@@ -1056,17 +1148,28 @@ export class StoreComponent {
           productOptionGroupsVoList: this.storeData.productOptionGroupsVoList
         }
         console.log("payload(create):", payload);
-        this.http.postApi('http://localhost:8080/gogobuy/store/create', payload)
+        this.http.postApi(`${this.http.BASE_URL}/gogobuy/store/create`, payload)
           .subscribe({
             next: (res: any) => {
               console.log("create store:", res);
               if (res.code === 200) {
 
-                this.http.getApi('http://localhost:8080/gogobuy/store/all').subscribe((all: any) => {
+                this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/all`).subscribe((all: any) => {
                   const myStores = all.storeList.filter((s: any) => s.createdBy === this.userId);
                   if (myStores && myStores.length > 0) {
                     const latestStore = myStores.reduce((prev: any, current: any) => (prev.id > current.id) ? prev : current);
                     this.id = latestStore.id;
+
+                    // 如果是許願池來的，通知對應許願者與跟隨者
+                    if (this.wishId) {
+                      const targetUrl = `${window.location.origin}/management/store_info/${this.id}`;
+                      const finishUrl = `${this.http.BASE_URL}/gogobuy/wish/finish_wish?id=${this.wishId}&userId=${this.userId}&targetUrl=${encodeURIComponent(targetUrl)}`;
+                      this.http.postApi(finishUrl, {}).subscribe({
+                        next: () => console.log('願望結案通知成功'),
+                        error: (err) => console.error('願望結案通知失敗', err)
+                      });
+                    }
+
                     this.afterSaveSuccess();
                   } else {
                     this.router.navigate(['gogobuy/home']);
@@ -1114,7 +1217,7 @@ export class StoreComponent {
     // }
   }
 
-  // 更新店家資訊並刪正在開的團
+  // 更新店家資訊並刪正在開的團 -----------------------------------------------
   deleteEvent() {
     this.displaySureUpdateDialog = false;
     let deleteEventIdList: any[] = [];
@@ -1129,9 +1232,11 @@ export class StoreComponent {
   }
 
   updateStore() {
-    this.loading = true;
+    // 將負數tempId轉換為0，讓後端識別為「新增」操作
+    // 正數ID代表已在DB中的記錄，保持不變讓後端執行「更新」
     const payload = {
-      ...this.storeData, storesname: this.storeData.name,
+      ...this.storeData,
+      storesname: this.storeData.name,
       phone: this.storeData.phone,
       address: this.storeData.address,
       category: this.storeData.category,
@@ -1143,20 +1248,24 @@ export class StoreComponent {
       operatingHoursVoList: this.normalizeOperatingHours(),
       fee_description: this.storeData.feeDescription,
       menuCategoriesVoList: this.storeData.menuCategoriesVoList.map(category => ({
+        id: category.id < 0 ? 0 : category.id,  // 負數tempId -> 0 (新增) | 正數 -> 更新
         name: category.name,
         priceLevel: category.priceLevel,
-        menuVo: this.storeData.menuVoList.filter(item => item.categoryId === category.id)
+        menuVo: this.storeData.menuVoList
+          .filter(item => Number(item.categoryId) === Number(category.id))
           .map(product => ({
             ...product,
+            id: (product.id ?? 0) < 0 ? 0 : (product.id ?? 0),  // 負數tempId -> 0 (新增)
+            categoryId: category.id < 0 ? 0 : category.id,  // 若分類是新增，product的categoryId也要清0
             unusual: (Array.isArray(product.unusual) || !product.unusual || Object.keys(product.unusual).length === 0)
               ? null : [product.unusual]
           }))
       })),
       productOptionGroupsVoList: this.storeData.productOptionGroupsVoList
-    }
+    };
     console.log("payload(update):", payload);
 
-    this.http.postApi(`http://localhost:8080/gogobuy/store/update?id=${this.storeData.id}`, payload)
+    this.http.postApi(`${this.http.BASE_URL}/gogobuy/store/update?id=${this.storeData.id}`, payload)
       .subscribe({
         next: (res: any) => {
           if (res.code === 200) {

@@ -1,5 +1,6 @@
+import { filter } from 'rxjs/operators';
 import { AutoCompleteModule } from 'primeng/autocomplete';
-import { Component, computed, signal, ViewChild } from '@angular/core';
+import { Component, computed, effect, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { AuthService } from '../../@service/auth.service';
@@ -10,6 +11,8 @@ import { HttpService } from '../../@service/http.service';
 import { MessageService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
+import { CommonModule } from '@angular/common';
+import Swal from 'sweetalert2';
 
 type Store = {
   id: number;
@@ -38,6 +41,7 @@ interface StoreOperating {
     TooltipModule,
     ToastModule,
     AutoCompleteModule,
+    CommonModule
   ],
   providers: [MessageService],
   templateUrl: './store-list.component.html',
@@ -49,7 +53,16 @@ export class StoreListComponent {
     public auths: AuthService,
     private https: HttpService,
     private messageService: MessageService,
-  ) { }
+  ) {
+    effect(() => {
+      const u = this.auths.user;
+      console.log(u);
+      if (u) {
+        this.userId = u.id;
+        this.favoriteIds = u.favoriteStore || [];
+      }
+    });
+  }
   readonly storeSearch = signal<string>('');
   // 選到的類型（外送 / 團購 / 不限）
   readonly selectedCategory = signal<'all' | 'fast' | 'slow'>('all');
@@ -112,6 +125,16 @@ export class StoreListComponent {
   ngOnInit() {
     this.getUserLocation();
     this.loadStores();
+    this.userId = String(localStorage.getItem('user_id'));
+    this.user = localStorage.getItem('user_info');
+    // 刷新用戶資料
+    this.auths.refreshUser();
+    this.updateLocalFavoriteList();
+    this.auths.user$.subscribe((user) => {
+      if (user) {
+        this.favoriteIds = user.favoriteStore || [];
+      }
+    });
   }
 
   choose(category: 'all' | 'fast' | 'slow') {
@@ -222,9 +245,24 @@ export class StoreListComponent {
   loadStores() {
     this.auths.getallstore().subscribe({
       next: (res: any) => {
-        const list = res?.storeList ?? [];
-        this.stores.set(list);
-        if (list.length > 0) this.fetchOperatingStatus(list.map((s: { id: any; }) => s.id));
+        const list = (res?.storeList ?? []).filter((s: any) => s.publish === true);
+
+        console.log('storeList raw =', list);
+
+        const processedList = list
+          .filter((s: any) =>
+            s.deleted != true
+          )
+          .map((s: any) => ({
+            ...s,
+            type: s.type || (s.category == 'fast' ? '外送' : '團購')
+          }));
+
+        this.stores.set(processedList);
+
+        if (processedList.length > 0) {
+          this.fetchOperatingStatus(processedList.map((s: any) => s.id));
+        }
       }
     });
   }
@@ -233,7 +271,7 @@ export class StoreListComponent {
   fetchOperatingStatus(ids: number[]) {
     const payload = { filteredStoreIds: ids };
     // 假設你的 http 服務是注入在建構子
-    this.auths.https.postApi('http://localhost:8080/gogobuy/store/getOperatingStores', payload)
+    this.auths.https.postApi(`${this.https.BASE_URL}/gogobuy/store/getOperatingStores`, payload)
       .subscribe((res: any) => {
         if (res.code == 200 && res.storeOperatingList) {
           this.operatingStores.set(res.storeOperatingList);
@@ -339,6 +377,81 @@ export class StoreListComponent {
   // 前往商店頁面
   goStoreInfo(storeId: number) {
     this.router.navigate(['/management/store_info', storeId]);
+  }
+
+  //收藏功能(搬運自STORE-INFO)
+  userId = ''; // 沒登入就 ""
+  user: any | null = null; // 存用戶資料
+
+  // 放收藏店家陣列
+  favoriteIds: number[] = [];
+
+  // 更新同步收藏店家陣列
+  private updateLocalFavoriteList() {
+    if (this.user) {
+      this.favoriteIds = this.user.favoriteStore || [];
+    }
+  }
+
+  // 收藏的店家
+  isFavorite(storeId: number) {
+    return this.favoriteIds.includes(storeId);
+  }
+
+  // 收藏店家
+  toggleFavorite(storeId: number) {
+    console.log('userId:', this.userId);
+    // --- 樂觀更新 (Optimistic UI) ---
+    // 不等 API 回傳，先直接在畫面上改掉顏色
+    if (this.isFavorite(storeId)) {
+      this.favoriteIds = this.favoriteIds.filter((id) => id !== storeId);
+    } else {
+      this.favoriteIds = [...this.favoriteIds, storeId];
+    }
+    const urlWithParams = `${this.https.BASE_URL}/gogobuy/updateFavoriteStore?id=${this.userId}&storesList=${storeId}`;
+    this.https.postApi(urlWithParams, {}).subscribe({
+      next: (res: any) => {
+        if (res?.code === 200) {
+          this.toastSuccess('成功', '收藏狀態已更新');
+          this.auths.refreshUser(); // 後端同步
+        } else {
+          // 如果後端失敗，再把畫面改回來（回滾）
+          this.updateLocalFavoriteList();
+          this.toastWarn('失敗', '同步失敗');
+        }
+      },
+      error: () => {
+        this.updateLocalFavoriteList(); // 網路失敗也回滾
+      },
+    });
+  }
+
+  // 點擊收藏店家
+  handleFavoriteClick(id: number) {
+    if (!this.userId) {
+      this.toastWarn('提醒', '請先登入才能收藏店家');
+      return;
+    }
+    this.toggleFavorite(id);
+  }
+
+  // 狀態更新提示
+  private toastSuccess(summary: string, detail: string): void {
+    this.messageService.add({ severity: 'success', summary, detail });
+  }
+  toastWarn(title: string, text: string): void {
+    Swal.fire({
+      icon: 'warning',
+      title,
+      text,
+      confirmButtonColor: '#7F1D1D',
+      didOpen: () => {
+        const c = document.querySelector(
+          '.swal2-container',
+        ) as HTMLElement | null;
+        if (c) c.style.zIndex = '20000';
+      },
+    });
   }
 
 }

@@ -69,7 +69,7 @@ export class MyStoresComponent {
     this.favoriteStores = [];
 
     this.favoriteStoreIds.forEach((id: number) => {
-      this.http.getApi(`http://localhost:8080/gogobuy/store/searchId?id=${id}`).subscribe((store: any) => {
+      this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/searchId?id=${id}`).subscribe((store: any) => {
         if (store.storeList && store.storeList.length > 0) {
           const storeInfo = store.storeList[0];
 
@@ -92,12 +92,10 @@ export class MyStoresComponent {
 
   // 店家目前營業狀態
   isStoreOpen(store: any) {
-    if (store.force_closed) {
+    if (store.force_closed || !store.operatingHoursVoList?.length) {
       return false;
     }
-    if (!store.operatingHoursVoList || store.operatingHoursVoList.length === 0) {
-      return false;
-    }
+
     const now = new Date();
     const currentDay = now.getDay() === 0 ? 7 : now.getDay();
     const currentTime = now.getHours().toString().padStart(2, '0') + ":" +
@@ -109,8 +107,14 @@ export class MyStoresComponent {
       const start = s.openTime?.substring(0, 5);
       const end = s.closeTime?.substring(0, 5);
 
+      if (!start || !end) return false;
+      // 處理跨日邏輯
+      if (end < start) {
+        return currentTime >= start || currentTime <= end;
+      }
+
       return currentTime >= start && currentTime <= end;
-    })
+    });
   }
 
   // 收藏按鈕
@@ -141,13 +145,13 @@ export class MyStoresComponent {
   // 未收藏 -> 收藏
   executeAddFavorite(storeId: number) {
     const updatedIds = [...this.favoriteStoreIds, storeId];
-    this.syncFavoriteToServer(updatedIds, '已加入最愛喵！');
+    this.syncFavoriteToServer(updatedIds, '已加入最愛！');
   }
 
   // 處理後端
   private syncFavoriteToServer(updatedIds: number[], successMsg: string) {
     const idParams = updatedIds.map(id => `storesList=${id}`).join('&');
-    const url = `http://localhost:8080/gogobuy/updateFavoriteStore?id=${this.userId}${idParams ? '&' + idParams : ''}`;
+    const url = `${this.http.BASE_URL}/gogobuy/updateFavoriteStore?id=${this.userId}${idParams ? '&' + idParams : ''}`;
 
     this.http.postApi(url, {}).subscribe({
       next: () => {
@@ -206,7 +210,7 @@ export class MyStoresComponent {
     const remainingIds = this.favoriteStoreIds.filter(id => !this.selectedStoreIds.includes(id));
     const idParams = remainingIds.map(id => `storesList=${id}`).join('&');
 
-    let url = `http://localhost:8080/gogobuy/updateFavoriteStore?id=${this.userId}`;
+    let url = `${this.http.BASE_URL}/gogobuy/updateFavoriteStore?id=${this.userId}`;
     if (idParams) {
       url += `&${idParams}`;
     } else {

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -48,17 +48,28 @@ export class WishesComponent implements OnInit {
   // =========================
   userId: string = '';
   timesRemaining = 0;
+  role = 'user';
 
   // =========================
   // UI 狀態
   // =========================
-  isLoading = true; // 這是判斷 "是否還在讀取中"
+  isLoading = true;
   activeTab = 0; // 0: all, 1: followed, 2: mine
   myFilter: MyFilter = 'all';
   foFilter: FoFilter = 'all';
 
+  // 新增願望相關
+  createVisible = false;
+  isCreating = false;
+  createForm = {
+    title: '',
+    type: '手搖店',
+    location: '',
+    anonymous: false,
+  };
+
   // 分頁（每個 tab 各自一套，避免互相干擾）
-  pageSize = 10; // 可自行調
+  pageSize = 10;
   pageAll = 0;
   pageFollowed = 0;
   pageMine = 0;
@@ -108,8 +119,61 @@ export class WishesComponent implements OnInit {
     });
     // 刷新資料
     this.auth.refreshUser();
-
+    // 先依目前螢幕設定 pageSize
+    this.updatePageSize();
     this.loadWishes();
+  }
+
+  isUser() {
+    return this.role === 'user';
+  }
+
+  updatePageSize(): void {
+    const width = window.innerWidth;
+
+    // 對應你的 grid：
+    // grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5
+    if (width >= 1536) {
+      // 2xl：一排 5 張，兩排 = 10
+      this.pageSize = 10;
+    } else if (width >= 1024) {
+      // lg：一排 4 張，兩排 = 8
+      this.pageSize = 8;
+    } else if (width >= 640) {
+      // sm：一排 2 張，兩排 = 4
+      this.pageSize = 4;
+    } else {
+      // 手機：一排 1 張，照你的需求固定 10
+      this.pageSize = 10;
+    }
+
+    this.fixCurrentPages();
+  }
+
+  // 避免縮放後目前頁碼超出範圍
+  fixCurrentPages(): void {
+    const maxAllPage = Math.max(
+      0,
+      Math.ceil(this.getAllTabList().length / this.pageSize) - 1,
+    );
+    const maxFollowedPage = Math.max(
+      0,
+      Math.ceil(this.getFollowedTabList().length / this.pageSize) - 1,
+    );
+    const maxMinePage = Math.max(
+      0,
+      Math.ceil(this.getMineTabList().length / this.pageSize) - 1,
+    );
+
+    if (this.pageAll > maxAllPage) this.pageAll = maxAllPage;
+    if (this.pageFollowed > maxFollowedPage)
+      this.pageFollowed = maxFollowedPage;
+    if (this.pageMine > maxMinePage) this.pageMine = maxMinePage;
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.updatePageSize();
   }
 
   // =========================
@@ -141,7 +205,7 @@ export class WishesComponent implements OnInit {
 
     // 後端上線後使用：
     this.http
-      .getApi('http://localhost:8080/gogobuy/wish/all_wishes')
+      .getApi(`${this.http.BASE_URL}/gogobuy/wish/all_wishes`)
       .subscribe((res: any) => {
         this.wishes = res.allWish || [];
         this.afterLoad();
@@ -456,40 +520,17 @@ export class WishesComponent implements OnInit {
   */
 
   // =========================
-  // Create Wish Dialog (創建願望)
-  // =========================
-  createVisible = false;
-  // 表單資料（先用最小可行）
-  createForm = {
-    title: '',
-    type: '手搖店',
-    location: '',
-    anonymous: false,
-  };
-  // optional：送出中（避免連點）
-  isCreating = false;
-
-  // =========================
-  // 右上角「我要許願」
+  // Create Wish Dialog
   // =========================
   onCreateWish(): void {
-    // 未登入防呆
     if (!this.userId) {
-      this.toastWarn('請先登入', '登入後才可以許願喔');
+      this.toastWarn('請先登入', '登入後才可以許願');
       return;
     }
-
     if (this.timesRemaining <= 0) {
       this.toastWarn('本月已達上限', '本月許願次數已達上限');
       return;
     }
-
-    // 打開 PrimeNG Dialog
-    this.openCreateDialog();
-  }
-
-  // 開啟 dialog（每次開啟先重置表單）
-  openCreateDialog(): void {
     this.createForm = {
       title: '',
       type: '手搖店',
@@ -497,10 +538,8 @@ export class WishesComponent implements OnInit {
       anonymous: false,
     };
     this.createVisible = true;
-    this.disableScroll();
   }
 
-  // 關閉 dialog
   closeCreateDialog(): void {
     this.createVisible = false;
     this.isCreating = false;
@@ -516,7 +555,7 @@ export class WishesComponent implements OnInit {
     return 'groceries';
   }
 
-  // 送出（dialog 的送出按鈕呼叫）
+  // 送出
   submitCreateWish(): void {
     if (this.isCreating) return;
 
@@ -543,26 +582,35 @@ export class WishesComponent implements OnInit {
     };
 
     this.isCreating = true;
-
-    // 後端上線後使用（成功再刷新/更新畫面）
     this.http
-      .postApi('http://localhost:8080/gogobuy/wish/add_wishes', payload)
-      .subscribe((res: any) => {
-        this.isCreating = false;
-        if (res?.code === 200) {
-          this.toastSuccess('成功', '創建成功');
-          this.timesRemaining -= 1;
-          this.closeCreateDialog();
-          this.loadWishes(); // 重新抓一次
-        } else {
-          this.toastWarn('失敗', res?.message || '創建失敗');
-        }
+      .postApi(`${this.http.BASE_URL}/gogobuy/wish/add_wishes`, payload)
+      .subscribe({
+        next: (res: any) => {
+          this.isCreating = false;
+          if (res?.code === 200) {
+            this.toastSuccess('願望創建成功', '~ 敬請期待 ~');
+            // 刷新使用者資料以獲取最新剩餘次數
+            this.auth.refreshUser();
+            this.closeCreateDialog();
+            this.loadWishes();
+          } else {
+            this.toastWarn('失敗', res?.message || '創建失敗');
+          }
+        },
+        error: (err: any) => {
+          this.isCreating = false;
+          this.toastWarn('系統錯誤', '許願時發生異常，請稍後再試');
+          console.error('[Wish] add_wish error:', err);
+        },
       });
   }
 
   // =========================
   // 跟願 / 取消跟願（同 API）
   // =========================
+  // 跟願時 loading
+  loading = false;
+
   onToggleFollow(wish: any): void {
     if (!this.userId) {
       this.toastWarn('請先登入', '登入後才可以跟願');
@@ -573,26 +621,34 @@ export class WishesComponent implements OnInit {
       this.toastWarn('提醒', '自己的願望不能跟願喔！');
       return;
     }
+    this.loading = true;
 
-    // 後端上線後使用：
-    const url = `http://localhost:8080/gogobuy/wish/follow_wish?id=${wish.id}&userId=${this.userId}`;
-    this.http.postApi(url, {}).subscribe((res: any) => {
-      if (res?.code === 200) {
-        if (idx > -1) {
-          followers.splice(idx, 1);
-          this.toastInfo('已取消', '已取消跟願');
-        } else {
-          followers.push(this.userId);
-          this.toastSuccess('成功', '跟願成功！');
-        }
-      } else {
-        this.toastWarn('失敗', res?.message || '請重新操作');
-      }
-    });
-
-    // 測試：前端直接切換
     const followers: string[] = wish.followers || [];
     const idx = followers.indexOf(this.userId);
+
+    const url = `${this.http.BASE_URL}/gogobuy/wish/follow_wish?id=${wish.id}&userId=${this.userId}`;
+    this.http.postApi(url, {}).subscribe({
+      next: (res: any) => {
+        if (res?.code === 200) {
+          if (idx > -1) {
+            followers.splice(idx, 1);
+            this.toastInfo('已取消', '已取消跟願');
+            this.loading = false;
+          } else {
+            followers.push(this.userId);
+            this.toastSuccess('成功', '跟願成功！');
+            this.loading = false;
+          }
+        } else {
+          this.toastWarn('失敗', res?.message || '請重新操作');
+          this.loading = false;
+        }
+      },
+      error: (err: any) => {
+        this.toastWarn('錯誤', '操作失敗，請檢查網路連線');
+        this.loading = false;
+      },
+    });
   }
 
   // p-dialog用變數 ----------------------------
@@ -628,8 +684,9 @@ export class WishesComponent implements OnInit {
     this.detailFollowerCount = (wish.followers || []).length;
     this.detailDisplayName = this.getDisplayName(wish);
 
-    // 是否允許開團
+    // 是否允許開團 (管理員專屬功能)
     const canStartGroup =
+      this.role === 'admin' &&
       !!this.userId &&
       !isReadOnlyInFollowed &&
       !isReadOnlyInMine &&
@@ -653,7 +710,6 @@ export class WishesComponent implements OnInit {
     this.selectedWish = null;
   }
 
-  role = 'user';
   startGroupFromWish(): void {
     if (!this.selectedWish) return;
     if (!this.userId) {
@@ -662,9 +718,16 @@ export class WishesComponent implements OnInit {
     }
 
     const wishId = this.selectedWish.id;
-    const wishTitle = encodeURIComponent(this.selectedWish.title || '');
+    const wishTitle = this.selectedWish.title || '';
     sessionStorage.removeItem('temp_order_info');
-    window.location.href = `/management/store_upsert?wish_id=${wishId}&wish_title=${wishTitle}`;
+
+    // 使用 Angular Router 導向，避免 Hash 模式下跳回首頁
+    this.router.navigate(['/management/store_upsert'], {
+      queryParams: {
+        wish_id: wishId,
+        wish_title: wishTitle,
+      },
+    });
   }
 
   // =========================
@@ -694,7 +757,7 @@ export class WishesComponent implements OnInit {
       if (!r.isConfirmed) return;
 
       // 後端上線後使用：
-      const url = `http://localhost:8080/gogobuy/wish/delete_wish?id=${wish.id}&userId=${this.userId}`;
+      const url = `${this.http.BASE_URL}/gogobuy/wish/delete_wish?id=${wish.id}&userId=${this.userId}`;
       this.http.postApi(url, {}).subscribe((res: any) => {
         if (res?.code === 200) {
           this.toastSuccess('成功', '刪除成功');
@@ -741,14 +804,13 @@ export class WishesComponent implements OnInit {
         title: wish.title,
         anonymous: 'false',
         type: wish.type,
-        location: wish.location,
       };
       this.http
-        .postApi('http://localhost:8080/gogobuy/wish/add_wishes', addPayload)
+        .postApi(`${this.http.BASE_URL}/gogobuy/wish/add_wishes`, addPayload)
         .subscribe((res: any) => {
           if (res?.code === 200) {
             // 刪除原願望
-            const delUrl = `http://localhost:8080/gogobuy/wish/delete_wish?id=${wish.id}&userId=${this.userId}`;
+            const delUrl = `${this.http.BASE_URL}/gogobuy/wish/delete_wish?id=${wish.id}&userId=${this.userId}`;
             this.http.postApi(delUrl, {}).subscribe((del: any) => {
               if (res?.code === 200) {
                 this.toastSuccess('成功', '已刪除原願望');

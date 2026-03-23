@@ -22,23 +22,23 @@ export class CartService {
 
   // 取得開團資料
   getEventsByEventsId(id: number) {
-    return this.https.getApi(`http://localhost:8080/gogobuy/event/getEventsByEventsId?id=${id}`);
+    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/event/getEventsByEventsId?id=${id}`);
   }
 
   // 透過ID取得使用者資料(這裡只是要拿頭像)
   getUserById(userId: string) {
-    return this.https.getApi(`http://localhost:8080/gogobuy/user/get-user?id=${userId}`);
+    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/user/get-user?id=${userId}`);
   }
 
 
   // 取得該團詳細訂單
   getOrdersAll(eventId: number) {
-    return this.https.getApi(`http://localhost:8080/gogobuy/event/getOrdersView?event_id=${eventId}`);
+    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/event/getOrdersView?event_id=${eventId}`);
   }
 
   // 取得用戶所有訂單
   getCart(userId: string) {
-    return this.https.getApi(`http://localhost:8080/gogobuy/event/getCart?user_id=${encodeURIComponent(userId)}`);
+    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/event/getCart?user_id=${encodeURIComponent(userId)}`);
   }
 
   // 透過menuid取得訂單詳情
@@ -50,7 +50,7 @@ export class CartService {
       params = params.append('temp_menu', String(id));
     }
     return this.https.getApi(
-      'http://localhost:8080/gogobuy/event/getMenuByMenuId', { params }
+      `${this.https.BASE_URL}/gogobuy/event/getMenuByMenuId`, { params }
     );
   }
 
@@ -58,24 +58,28 @@ export class CartService {
   // 取得用戶跟團訂單品項
   getOrders(userId: string, eventsId: number) {
     const url =
-      `http://localhost:8080/gogobuy/event/getAllOrdersByUserIdAndEventsId?user_id=${encodeURIComponent(userId)}&events_id=${eventsId}`;
+      `${this.https.BASE_URL}/gogobuy/event/getAllOrdersByUserIdAndEventsId?user_id=${encodeURIComponent(userId)}&events_id=${eventsId}`;
     return this.https.getApi(url);
   }
 
   // 取得用戶歷史訂單
   getHistoryOrders(userId: string) {
-    return this.https.getApi(`http://localhost:8080/gogobuy/orders/history?user_id=${encodeURIComponent(userId)}`);
+    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/orders/history?user_id=${encodeURIComponent(userId)}`);
   }
 
   // 確認訂單 (將狀態轉為 CONFIRMED)
   confirmPersonalOrder(userId: string, eventsId: number) {
-    const url = `http://localhost:8080/gogobuy/event/confirmPersonalOrder?user_id=${encodeURIComponent(userId)}&events_id=${eventsId}`;
+    const url = `${this.https.BASE_URL}/gogobuy/event/confirmPersonalOrder?user_id=${encodeURIComponent(userId)}&events_id=${eventsId}`;
     return this.https.postApi<BasicRes>(url, null);
   }  // 刪除訂單（後端用 POST 做刪除，不是 RESTful 的 DELETE）
   // body 不需要資料，所以傳 null
-  deleteOrderByUserIdAndEventsId(userId: string, eventsId: number) {
-    const url =
-      `http://localhost:8080/gogobuy/event/deleteOrderByUserIdAndEventsId?user_id=${encodeURIComponent(userId)}&events_id=${eventsId}`;
+  deleteOrderByUserIdAndEventsId(userId: string, eventsId: number, actingUserId?: string) {
+    let url =
+      `${this.https.BASE_URL}/gogobuy/event/deleteOrderByUserIdAndEventsId?user_id=${encodeURIComponent(userId)}&events_id=${eventsId}`;
+
+    if (actingUserId) {
+      url += `&acting_user_id=${encodeURIComponent(actingUserId)}`;
+    }
 
     return this.https.postApi(url, null);
   }
@@ -83,28 +87,36 @@ export class CartService {
   // 物理性刪除團購活動
   deleteEventPhysically(id: number) {
     const url =
-      `http://localhost:8080/gogobuy/event/deleteEventPhysically?id=${encodeURIComponent(id)}`;
+      `${this.https.BASE_URL}/gogobuy/event/deleteEventPhysically?id=${encodeURIComponent(id)}`;
     return this.https.postApi(url, null);
   }
   // 刪除單筆品項
-  deleteOrderById(orderId: number) {
-    const url = `http://localhost:8080/gogobuy/order/deleteOrderById?order_id=${orderId}`;
+  deleteOrderById(orderId: number, actingUserId?: string) {
+    let url = `${this.https.BASE_URL}/gogobuy/order/deleteOrderById?order_id=${orderId}`;
+    if (actingUserId) {
+      url += `&acting_user_id=${encodeURIComponent(actingUserId)}`;
+    }
     return this.https.postApi<BasicRes>(url, null);
   }
 
   // [管理中心] 取得該團所有人的結算單
   getPersonalOrdersByEventId(eventsId: number) {
-    return this.https.getApi(`http://localhost:8080/gogobuy/event/getPersonalOrdersByEventId?events_id=${eventsId}`);
+    return this.https.getApi(`${this.https.BASE_URL}/gogobuy/event/getPersonalOrdersByEventId?events_id=${eventsId}`);
   }
 
   // [管理中心] 更新結算單 (付款狀態、取餐狀態等)
   updatePersonalOrder(payload: any) {
-    return this.https.postApi(`http://localhost:8080/gogobuy/event/updatePersonalOrder`, payload);
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/event/updatePersonalOrder`, payload);
   }
 
   // [團長] 手動結單 (結帳完成，正式關閉活動並生成各員帳單)
   hostCloseEvent(eventsId: number, hostId: string) {
-    const url = `http://localhost:8080/gogobuy/event/hostCloseEvent?id=${eventsId}&host_id=${encodeURIComponent(hostId)}`;
+    const url = `${this.https.BASE_URL}/gogobuy/event/hostCloseEvent?id=${eventsId}&host_id=${encodeURIComponent(hostId)}`;
     return this.https.postApi<BasicRes>(url, null);
+  }
+
+  // 加入黑名單
+  addBlacklist(payload: any) {
+    return this.https.postApi(`${this.https.BASE_URL}/gogobuy/blacklist/add`, payload);
   }
 }

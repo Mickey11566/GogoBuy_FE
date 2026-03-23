@@ -115,9 +115,9 @@ export class AppComponent {
   userAvatar = computed(() => {
     const u: any = this.user();
     if (!u) return null;
-    console.log(u.user_avatar_url)
-    console.log(u.avatar_url)
-    console.log(u.avatarUrl)
+    // console.log(u.user_avatar_url)
+    // console.log(u.avatar_url)
+    // console.log(u.avatarUrl)
     return u.user_avatar_url || u.avatar_url || u.avatarUrl || '/default_avatar.png';
   });
 
@@ -206,9 +206,9 @@ export class AppComponent {
   // 用戶頭向下拉選單
   items: MenuItem[] = [
     { label: '用戶首頁', icon: 'pi pi-user', routerLink: '/user/profile' },
-    { label: '最愛店家', icon: 'pi pi-heart', routerLink: '/user/my_store' },
-    { label: '許願池', icon: 'pi pi-sparkles', routerLink: '/user/wishes' },
-    { label: '登入', icon: 'pi pi-sign-in', routerLink: '/gogobuy/login' },
+    // { label: '最愛店家', icon: 'pi pi-heart', routerLink: '/user/my_store' },
+    // { label: '許願池', icon: 'pi pi-sparkles', routerLink: '/user/wishes' },
+    // { label: '登入', icon: 'pi pi-sign-in', routerLink: '/gogobuy/login' },
     { label: '登出', icon: 'pi pi-sign-out', command: () => { this.logout(); } }
   ];
 
@@ -300,8 +300,18 @@ export class AppComponent {
   }
 
   // 跳轉購物車頁面
-  goorders() {
+  goOrders() {
     this.router.navigate(['/user/orders']);
+  }
+
+  // 跳轉最愛店家頁面
+  goFavorite() {
+    this.router.navigate(['/user/my_store']);
+  }
+
+  // 跳轉許願池頁面
+  goWish() {
+    this.router.navigate(['/user/wishes']);
   }
 
   toDashboard() {
@@ -395,6 +405,17 @@ export class AppComponent {
     )
   }
 
+  officialTerms() {
+    this.router.navigate(['/support/conditions'],
+      { state: { scrollToBottom: true } }
+    )
+  }
+
+  privacyPolicy() {
+    this.router.navigate(['/support/privacy'],
+      { state: { scrollToBottom: true } }
+    )
+  }
 
   stopNearbyWatch() {
     if (this.watchId != null) {

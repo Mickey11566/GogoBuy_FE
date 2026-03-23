@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../@service/auth.service';
 import { HttpService } from '../../@service/http.service';
@@ -29,7 +29,7 @@ type TabMode = 'info' | 'order';
   templateUrl: './store-info.component.html',
   styleUrl: './store-info.component.scss',
 })
-export class StoreInfoComponent implements OnInit {
+export class StoreInfoComponent implements OnInit, OnDestroy {
   // =========================
   // 狀態
   // =========================
@@ -76,7 +76,7 @@ export class StoreInfoComponent implements OnInit {
 
   // 預設圖
   readonly defaultStoreCover = '/Store Default Cover Image2.webp';
-  readonly defaultProductCover = '/Default Product Image.webp';
+  readonly defaultProductCover = '/Default_Product_Image.webp';
 
   constructor(
     private route: ActivatedRoute,
@@ -84,7 +84,7 @@ export class StoreInfoComponent implements OnInit {
     private http: HttpService,
     private auth: AuthService,
     private messageService: MessageService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // userId（測試塞假id）
@@ -112,6 +112,7 @@ export class StoreInfoComponent implements OnInit {
 
     // 載入資料
     this.loadStoreById(this.storeId);
+    this.loadPopular(this.storeId);
     this.isEventOpen(this.storeId);
   }
 
@@ -138,7 +139,7 @@ export class StoreInfoComponent implements OnInit {
     } else {
       this.favoriteIds = [...this.favoriteIds, storeId];
     }
-    const urlWithParams = `http://localhost:8080/gogobuy/updateFavoriteStore?id=${this.userId}&storesList=${storeId}`;
+    const urlWithParams = `${this.http.BASE_URL}/gogobuy/updateFavoriteStore?id=${this.userId}&storesList=${storeId}`;
     this.http.postApi(urlWithParams, {}).subscribe({
       next: (res: any) => {
         if (res?.code === 200) {
@@ -166,6 +167,37 @@ export class StoreInfoComponent implements OnInit {
     }
   }
 
+  popular: any[] = [];
+  // 取得熱門餐點
+  loadPopular(storeId: number) {
+    this.http
+      .getApi(
+        `${this.http.BASE_URL}/gogobuy/salesStats/top10/${storeId}?type=YEAR`,
+      )
+      .subscribe({
+        next: (res: any) => {
+          console.log(res);
+          if (res?.code === 200) {
+            const pop = res.salesDetailList || [];
+            if (pop && pop.length > 0) {
+              // map只會取key值不重複的
+              this.popular = Array.from(
+                new Map(pop.map((item: any) => [item.menuId, item])).values(),
+              ).slice(0, 3); // 取最多3個但少於也不會報錯
+            }
+            console.log(this.popular);
+          }
+        },
+        error: () => {
+          console.log('熱門產品取得失敗');
+        },
+      });
+  }
+  // 判斷是不是熱門商品
+  isPopular(menuId: number) {
+    return this.popular.some((i) => i.menuId === menuId);
+  }
+
   // =========================
   // 小工具：Toast (右上角)
   // =========================
@@ -180,7 +212,7 @@ export class StoreInfoComponent implements OnInit {
   isEventOpen(storeId: number) {
     this.http
       .getApi(
-        `http://localhost:8080/gogobuy/event/getGroupbuyEventByStoresId?stores_id=${storeId}`,
+        `${this.http.BASE_URL}/gogobuy/event/getGroupbuyEventByStoresId?stores_id=${storeId}`,
       )
       .subscribe((res: any) => {
         this.event = res.groupbuyEvents.filter((o: any) => o.status === 'OPEN');
@@ -253,10 +285,12 @@ export class StoreInfoComponent implements OnInit {
 
     // 後端上線後使用
     this.http
-      .getApi(`http://localhost:8080/gogobuy/store/searchId?id=${id}`)
+      .getApi(`${this.http.BASE_URL}/gogobuy/store/searchId?id=${id}`)
       .subscribe((res: any) => {
         const normalized = this.normalizeStoreResponse(res);
         this.store = normalized;
+        // console.log(this.store);
+        console.log(JSON.stringify(this.store, null, 2));
         // 判斷是否全部售完
         this.allSoldOut();
         this.afterLoaded();
@@ -287,7 +321,7 @@ export class StoreInfoComponent implements OnInit {
     // 3) publish 權限：publish=false 且不是建立者 → 擋掉
     if (this.store.publish === false) {
       const createdBy = this.store.createdBy;
-      if (!this.userId || createdBy !== this.userId) {
+      if (!this.userId || !this.isAdmin()) {
         this.toastWarn('不公開店家', '此為不公開店家');
         // 延遲再跳轉
         setTimeout(() => {
@@ -309,6 +343,15 @@ export class StoreInfoComponent implements OnInit {
     this.isLoading = false;
   }
 
+  isFast(category: string) {
+    let c = this.getCategoryName(category);
+    if (c === '外送') {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   // =========================
   // 進入時回上一頁
   // =========================
@@ -326,7 +369,7 @@ export class StoreInfoComponent implements OnInit {
   }
 
   // =========================
-  // 營業狀態計算
+  // 營業狀態計算（修正跨日/凌晨問題）
   // =========================
   buildOpenStatus(): void {
     // force_closed：直接覆蓋顯示
@@ -340,44 +383,65 @@ export class StoreInfoComponent implements OnInit {
     const hours: any[] = this.store?.operatingHoursVoList || [];
     const now = new Date();
 
-    // 取今天星期（資料是 1~7：週一=1…週日=7）
-    const jsDay = now.getDay(); // 0(日)~6(六)
-    const dayNum = jsDay === 0 ? 7 : jsDay; // 轉成 1~7
+    const getDayNum = (d: Date) => {
+      const jsDay = d.getDay(); // 0(日)~6(六)
+      return jsDay === 0 ? 7 : jsDay; // 轉成 1~7
+    };
 
-    // 找今天的時段
-    const todaySlots = hours
-      .filter((h) => Number(h.dayOfWeek) === dayNum)
-      .map((h) => ({
-        start: String(h.startTime || ''),
-        end: String(h.endTime || ''),
-      }))
-      .filter((s) => this.isValidTime(s.start) && this.isValidTime(s.end));
+    const buildSlots = (dayNum: number) => {
+      return hours
+        .filter((h) => Number(h.dayOfWeek) === dayNum)
+        .map((h) => ({
+          start: String(h.startTime || ''),
+          end: String(h.endTime || ''),
+        }))
+        .filter((s) => this.isValidTime(s.start) && this.isValidTime(s.end));
+    };
 
-    // 如果今天完全沒有營業時間
-    if (todaySlots.length === 0) {
-      this.openStatusDot = 'closed';
-      this.openStatusText = '休息中';
-      this.openStatusSubText = '今日無營業時段';
-      return;
-    }
+    const todayDayNum = getDayNum(now);
 
-    // 轉成區間（處理跨日）
-    const intervals = todaySlots
-      .map((s) => this.toInterval(now, s.start, s.end))
-      .sort((a, b) => a.start.getTime() - b.start.getTime());
+    // 今天的時段
+    const todaySlots = buildSlots(todayDayNum);
 
-    // now 是否在任何區間內
+    // 昨天（用來處理跨日延伸到今天凌晨）
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const yesterdayDayNum = getDayNum(yesterday);
+    const yesterdaySlots = buildSlots(yesterdayDayNum);
+
+    // 今天 intervals（baseDate=now）
+    const todayIntervals = todaySlots.map((s) =>
+      this.toInterval(now, s.start, s.end),
+    );
+
+    // 昨天跨日 intervals（只取 end<=start 的那些，才會延伸到今天）
+    // 注意：24H 若用 00:00~00:00 表示，end<=start 也會成立，這裡也會正確覆蓋到今天
+    const yesterdayCrossIntervals = yesterdaySlots
+      .filter((s) => {
+        // 判斷是否跨日：用 toInterval 的邏輯等價條件 end<=start
+        // 這裡不用 parse 太複雜，直接借用 setTime 比較最穩
+        const st = this.setTime(new Date(yesterday), s.start).getTime();
+        const ed = this.setTime(new Date(yesterday), s.end).getTime();
+        return ed <= st;
+      })
+      .map((s) => this.toInterval(yesterday, s.start, s.end));
+
+    // 合併並排序
+    const intervals = [...yesterdayCrossIntervals, ...todayIntervals].sort(
+      (a, b) => a.start.getTime() - b.start.getTime(),
+    );
+
+    // 先看現在是否在任何區間內（這一步修掉你 00:30 變休息中的 bug）
     const current = intervals.find((it) => now >= it.start && now < it.end);
 
     if (current) {
-      // 營業中 → 顯示將於 XX:XX 結束
       this.openStatusDot = 'open';
       this.openStatusText = '營業中';
       this.openStatusSubText = `將於 ${this.formatTime(current.end)} 休息`;
       return;
     }
 
-    // 不在區間內 → 找下一段開始
+    // 不在區間內 → 找下一段開始（優先找今天接下來的）
     const next = intervals.find((it) => now < it.start);
 
     if (next) {
@@ -387,26 +451,19 @@ export class StoreInfoComponent implements OnInit {
       return;
     }
 
-    // 今天沒有下一段 → 已打烊，找明天第一段
+    // 今天＆昨跨日都沒有下一段 → 找明天第一段
     const tomorrow = new Date(now);
     tomorrow.setDate(now.getDate() + 1);
-    const tomorrowJsDay = tomorrow.getDay();
-    const tomorrowDayNum = tomorrowJsDay === 0 ? 7 : tomorrowJsDay;
+    const tomorrowDayNum = getDayNum(tomorrow);
 
-    const tomorrowSlots = hours
-      .filter((h) => Number(h.dayOfWeek) === tomorrowDayNum)
-      .map((h) => ({
-        start: String(h.startTime || ''),
-        end: String(h.endTime || ''),
-      }))
-      .filter((s) => this.isValidTime(s.start) && this.isValidTime(s.end))
+    const tomorrowIntervals = buildSlots(tomorrowDayNum)
       .map((s) => this.toInterval(tomorrow, s.start, s.end))
       .sort((a, b) => a.start.getTime() - b.start.getTime());
 
-    if (tomorrowSlots.length > 0) {
+    if (tomorrowIntervals.length > 0) {
       this.openStatusDot = 'closed';
       this.openStatusText = '已打烊';
-      this.openStatusSubText = `明日 ${this.formatTime(tomorrowSlots[0].start)} 開始營業`;
+      this.openStatusSubText = `明日 ${this.formatTime(tomorrowIntervals[0].start)} 開始營業`;
       return;
     }
 
@@ -460,20 +517,22 @@ export class StoreInfoComponent implements OnInit {
   // 按鈕：編輯 / 開團
   // =========================
   goEdit(): void {
-    const userDate = JSON.parse(this.user);
-    const role = userDate.role;
-    if (!this.userId) return;
-    if (!this.user || role === 'user') {
+    if (!this.isAdmin()) {
       this.toastWarn('無法修改', '只有管理員可以修改店家資訊');
       return;
     }
-    // if (this.isGroupOpening) {
-    //   this.toastWarn(
-    //     '重要警示',
-    //     '目前此店家正在開團，若進行修改，將強制終止所有正在進行的團購',
-    //   );
-    // }
     this.router.navigate(['/management/store_upsert', this.storeId]);
+  }
+
+  isAdmin() {
+    const userDate = JSON.parse(this.user);
+    const role = userDate.role;
+    if (!this.userId || !this.user) return false;
+    if (role === 'admin') {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   // 開團按鈕目前只有鎖 未登入 || 今日公休 || fast的休息時間
@@ -574,7 +633,7 @@ export class StoreInfoComponent implements OnInit {
       const decoded = atob(String(img));
       if (decoded.startsWith('http://') || decoded.startsWith('https://'))
         return decoded;
-    } catch {}
+    } catch { }
 
     return this.defaultProductCover;
   }
@@ -590,6 +649,71 @@ export class StoreInfoComponent implements OnInit {
     const available = p?.available;
     const soldOutByAvailable = available === false;
     return soldOutByUnusual || soldOutByAvailable;
+  }
+
+  // 組合出「同一商品」的判斷 key
+  private getMenuVersionKey(item: any): string {
+    const name = String(item?.name || '')
+      .trim()
+      .toLowerCase();
+    const desc = String(item?.description || '')
+      .trim()
+      .toLowerCase();
+    const price = Number(item?.basePrice || 0);
+    const storeId = Number(item?.storesId || 0);
+
+    return `${storeId}__${name}__${desc}__${price}`;
+  }
+
+  // 把同商品的歷史版本去重，只保留畫面該顯示的一筆
+  private dedupeMenuVersions(list: any[]): any[] {
+    if (!Array.isArray(list)) return [];
+
+    const grouped = new Map<string, any[]>();
+
+    list.forEach((item) => {
+      const key = this.getMenuVersionKey(item);
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+      grouped.get(key)!.push(item);
+    });
+
+    const result: any[] = [];
+
+    grouped.forEach((items) => {
+      // 1. 先找 available === true 的版本
+      const availableItems = items.filter((i) => i?.available === true);
+
+      if (availableItems.length > 0) {
+        // 2. available 裡面挑 id 最大的
+        const best = availableItems.sort(
+          (a, b) => Number(b?.id || 0) - Number(a?.id || 0),
+        )[0];
+        result.push(best);
+        return;
+      }
+
+      // 3. 如果全部都 unavailable，就挑 id 最大的留一筆
+      const fallback = items.sort(
+        (a, b) => Number(b?.id || 0) - Number(a?.id || 0),
+      )[0];
+      result.push(fallback);
+    });
+
+    return result;
+  }
+
+  // shouldHide(p: any): boolean {
+  //   return this.isSoldOut(p);
+  // }
+
+  // // 取得「沒售完」的商品列表
+  getVisibleItems(items: any[] | undefined): any[] {
+    if (!items) return [];
+    // 回傳所有「非售完」的商品
+    // return items.filter((item) => !this.isSoldOut(item));
+    return items;
   }
 
   // 打開商品詳情（純瀏覽）
@@ -746,42 +870,59 @@ export class StoreInfoComponent implements OnInit {
     // 統一欄位命名：把後端 week/openTime/closeTime 轉成前端用
     const operatingHoursVoList = (res?.operatingHoursVoList || [])
       .map((h: any) => ({
-        dayOfWeek: Number(h.week), // 後端叫 week
-        startTime: this.toHHmm(h.openTime), // 後端是 "18:00:00"
-        endTime: this.toHHmm(h.closeTime), // 後端是 "02:00:00"
+        dayOfWeek: Number(h.week),
+        startTime: this.toHHmm(h.openTime),
+        endTime: this.toHHmm(h.closeTime),
         closed: !!h.closed,
       }))
-      // 如果後端有 closed=true 的要排除
       .filter((h: any) => !h.closed);
 
-    // 運費：用 feeDescriptionVoList
+    // 運費
     const feeDescriptionVoList = (res?.feeDescriptionVoList || []).map(
       (f: any) => ({
-        distance: Number(f.km), // 我們頁面用 distance
+        distance: Number(f.km),
         fee: Number(f.fee),
       }),
     );
 
-    // 分類：後端用 id，這裡統一叫 categoryId
-    const menuCategoriesVoList = (res?.menuCategoriesVoList || []).map(
-      (c: any) => ({
-        categoryId: Number(c.id),
-        name: String(c.name || '未分類'),
-        priceLevel: c.priceLevel || [],
-      }),
-    );
+    // 分類原始資料
+    const rawCategories = res?.menuCategoriesVoList || [];
 
-    // 菜單：categoryId / unusual 物件
-    const menuVoList = (res?.menuVoList || []).map((m: any) => ({
-      ...m,
-      categoryId: Number(m.categoryId),
-      // sortOrder 你這包沒給就先不動
+    // 分類
+    const menuCategoriesVoList = rawCategories.map((c: any) => ({
+      categoryId: Number(c.id),
+      name: String(c.name || '未分類'),
+      priceLevel: c.priceLevel || [],
     }));
 
-    // 商品選項群組：這頁只是瀏覽，先留著，之後商品詳情 dialog 可以用
+    // 舊格式：menu 在 res.menuVoList
+    const oldMenuList = (res?.menuVoList || []).map((m: any) => ({
+      ...m,
+      categoryId: Number(m.categoryId),
+      storesId: Number(m.storesId || base?.id || 0),
+      basePrice: Number(m.basePrice || 0),
+    }));
+
+    // 新格式：menu 在 category.menuVo
+    const newMenuList = rawCategories.flatMap((c: any) => {
+      const categoryId = Number(c.id);
+
+      return (c.menuVo || []).map((m: any) => ({
+        ...m,
+        categoryId: Number(m.categoryId || categoryId),
+        storesId: Number(m.storesId || base?.id || 0),
+        basePrice: Number(m.basePrice || 0),
+      }));
+    });
+
+    // 優先吃新格式，沒有才退回舊格式
+    const rawMenuVoList = newMenuList.length ? newMenuList : oldMenuList;
+
+    const menuVoList = this.dedupeMenuVersions(rawMenuVoList);
+
+    // 商品選項群組
     const productOptionGroupsVoList = res?.productOptionGroupsVoList || [];
 
-    // 最終組合成「這頁想用的 store」
     return {
       ...base,
       operatingHoursVoList,
@@ -910,5 +1051,9 @@ export class StoreInfoComponent implements OnInit {
     const gmap = 'https://www.google.com/maps/search/?api=1&query=';
     let mapUrl = gmap + encodeURIComponent(address);
     return mapUrl;
+  }
+
+  ngOnDestroy(): void {
+    this.enableScroll();
   }
 }

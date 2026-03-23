@@ -9,8 +9,8 @@ export class StoreService {
 
   constructor(private http: HttpService) { }
 
-  deleteEventPhysically(id: number, group: any){
-    return this.http.postApi(`http://localhost:8080/gogobuy/event/deleteEventPhysically?id=${id}`, group)
+  deleteEventPhysically(id: number, group: any) {
+    return this.http.postApi(`${this.http.BASE_URL}/gogobuy/event/deleteEventPhysically?id=${id}`, group)
       .subscribe((res: any) => {
         console.log("res", res);
       })

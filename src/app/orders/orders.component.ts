@@ -10,6 +10,8 @@ import { CartService } from '../@service/cart.service';
 import { catchError, finalize, forkJoin, map, of } from 'rxjs';
 import Swal from 'sweetalert2';
 import { OrderTransferService } from '../@service/orderTransfer.service';
+import { MessageService, NotifiCategoryEnum, NotifiMesReq } from '../@service/message.service';
+import { AuthService } from '../@service/auth.service';
 
 interface CartItem {
   id: number;
@@ -151,21 +153,25 @@ export class OrdersComponent {
   isLoading = true
   res?: CartRes;
   cartData = signal<CartGroup[]>([]);
+  userId: string = '';
+
   constructor(
     public router: Router,
     private cart: CartService,
     private transfer: OrderTransferService,
+    private messageService: MessageService,
+    public auth: AuthService,
   ) {
   }
 
   ngOnInit(): void {
     const user = JSON.parse(localStorage.getItem('user_info') || '{}');
-    const userId: string = user.id;
+    this.userId = user.id;
 
-    if (!userId) { this.isLoading = false; return; }
+    if (!this.userId) { this.isLoading = false; return; }
 
     this.loadCartData();
-    this.fetchHistoryOrders(userId);
+    this.fetchHistoryOrders(this.userId);
   }
 
   loadCartData() {
@@ -192,9 +198,13 @@ export class OrdersComponent {
               catchError(() => of({ ...g, isHost: false, eventStatus: 'UNKNOWN' }))
             )
           );
-
           forkJoin(jobs).subscribe(finalList => {
-            this.cartData.set(finalList);
+            const now = new Date().getTime();
+            const filtered = finalList.filter(g => {
+              const eventEndTime = g.endTime ? new Date(g.endTime).getTime() : now + 1;
+              return eventEndTime > now; // 只留下尚未過期的活動
+            });
+            this.cartData.set(filtered);
           });
         },
         error: (err: any) => console.error('getCart failed:', err)
@@ -211,7 +221,7 @@ export class OrdersComponent {
               code: item.orderCode,
               storeName: item.storeName || '未知店家',
               createdAt: new Date(item.createdAt),
-              statusLabel: item.statusLabel,
+              statusLabel: (item.paymentStatus === 'CONFIRMED' || item.paymentStatus === 'PAID') && item.pickupStatus === 'PICKED_UP' ? '已完成' : '進行中',
               personFee: item.personFee,
               total: item.totalAmount + item.personFee,
               receiverName: item.receiverName,
@@ -245,34 +255,83 @@ export class OrdersComponent {
   );
 
   removeCart(eventsId: number) {
+    const cartItem = this.cartData().find(c => c.eventsId === eventsId);
+    const eventName = cartItem?.eventName || '團購活動';
+
     Swal.fire({
-      title: "確定刪除訂單?",
-      text: "刪除後無法復原!",
+      title: "確定刪除整個活動?",
+      text: "這將會刪除所有人的訂單，且無法復原！",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
       cancelButtonColor: "#d33",
-      confirmButtonText: "是的，刪除!",
+      confirmButtonText: "是的，全部刪除!",
       cancelButtonText: "取消"
     }).then((result) => {
       if (result.isConfirmed) {
-        {
-          this.cart.deleteEventPhysically(eventsId).subscribe({
-            next: (res: any) => {
-              if (res.code == 200) {
-                Swal.fire({
-                  title: "刪除!",
-                  text: "整個活動已刪除完成.",
-                  icon: "success"
-                });
-                this.cartData.update(list => list.filter(item => item.eventsId !== eventsId));
-              } else {
-                console.error('delete failed:', res.message);
-              }
-            },
-            error: (err: any) => console.error('delete failed:', err)
-          });
-        }
+        Swal.fire({ title: "移除中...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        // 1. 先抓取成員列表
+        this.cart.getPersonalOrdersByEventId(eventsId).subscribe({
+          next: (res: any) => {
+            const members = res.personalOrder || [];
+            const membersToNotify = members.filter((m: any) => m.userId !== this.userId);
+
+            // 定義執行刪除的共用邏輯
+            const doDelete = () => {
+              this.cart.deleteEventPhysically(eventsId).subscribe({
+                next: (delRes: any) => {
+                  if (delRes.code == 200) {
+                    Swal.fire({ title: "刪除!", text: "整個活動已刪除完成並已通知成員.", icon: "success" });
+                    this.cartData.update(list => list.filter(item => item.eventsId !== eventsId));
+                  } else {
+                    Swal.fire("錯誤", delRes.message || "刪除失敗", "error");
+                  }
+                },
+                error: (err: any) => Swal.fire("系統錯誤", "無法刪除活動", "error")
+              });
+            };
+
+            // 2. 如果有成員，先發送通知
+            if (membersToNotify.length > 0) {
+              const req: NotifiMesReq = {
+                category: NotifiCategoryEnum.SYSTEM,
+                title: '活動已取消',
+                content: `很抱歉，團長「${this.auth.user?.nickname || '團長'}」已取消了「${eventName}」團購活動。`,
+                eventId: eventsId,
+                userId: this.userId,
+                targetUrl: '/user/orders',
+                expiredAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                userNotificationVoList: membersToNotify.map((m: any) => ({
+                  userId: m.userId,
+                  email: m.userEmail
+                }))
+              };
+              // 確保通知 API 有回應後再刪除，避免 eventId 遺失導致後端無法廣遞
+              this.messageService.create(req).subscribe({
+                next: () => doDelete(),
+                error: () => doDelete() // 就算通知失敗也還是要執行刪除
+              });
+            } else {
+              doDelete();
+            }
+          },
+          error: (err: any) => {
+            console.log('取得成員列表失敗或無成員:', err);
+            // 發生錯誤或無成員時，直接執行刪除
+            this.cart.deleteEventPhysically(eventsId).subscribe({
+              next: (delRes: any) => {
+                if (delRes.code == 200) {
+                  Swal.fire({ title: "刪除!", text: "活動已刪除完成.", icon: "success" });
+                  this.cartData.update(list => list.filter(item => item.eventsId !== eventsId));
+                } else {
+                  Swal.fire("錯誤", delRes.message || "刪除失敗", "error");
+                }
+              },
+              error: (err: any) => Swal.fire("系統錯誤", "無法刪除活動", "error")
+            });
+          }
+        });
       }
     });
   }
@@ -410,75 +469,107 @@ export class OrdersComponent {
 
   togglePaymentStatus(member: any, eventsId: number) {
     const isPaid = member.paymentStatus === 'CONFIRMED' || member.paymentStatus === 'PAID';
-    const nextStatus = isPaid ? 'UNPAID' : 'CONFIRMED';
 
-    const payload = {
-      eventsId: eventsId,
-      userId: member.userId,
-      paymentStatus: nextStatus,
-      totalSum: member.totalSum,
-      totalWeight: member.totalWeight,
-      personFee: member.personFee
-    };
+    // 如果已經是已支付狀態，則不允許變更
+    if (isPaid) return;
 
-    this.cart.updatePersonalOrder(payload).subscribe({
-      next: (res: any) => {
-        if (res.code === 200) {
-          member.paymentStatus = nextStatus;
-          Swal.fire({
-            toast: true,
-            position: 'top',
-            icon: 'success',
-            title: '付款狀態已更新',
-            showConfirmButton: false,
-            timer: 1500
-          });
-          // 同步更新歷史訂單 (如果有的話)
-          this.fetchHistoryOrders(member.userId);
-          this.loadCartData();
-        }
-      },
-      error: (err: any) => {
-        console.error(err);
-        Swal.fire('更新失敗', '', 'error');
+    Swal.fire({
+      title: '確認收款?',
+      text: `確認已收到「${member.userNickname || '成員'}」的款項嗎？此操作不可撤回。`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '確定',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#94a3b8'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const nextStatus = 'CONFIRMED';
+        const payload = {
+          eventsId: eventsId,
+          userId: member.userId,
+          paymentStatus: nextStatus,
+          totalSum: member.totalSum,
+          totalWeight: member.totalWeight,
+          personFee: member.personFee
+        };
+
+        this.cart.updatePersonalOrder(payload).subscribe({
+          next: (res: any) => {
+            if (res.code === 200) {
+              member.paymentStatus = nextStatus;
+              Swal.fire({
+                toast: true,
+                position: 'top',
+                icon: 'success',
+                title: '付款狀態已更新',
+                showConfirmButton: false,
+                timer: 1500
+              });
+              // 同步更新歷史訂單 (始終刷新目前使用者的歷史)
+              this.fetchHistoryOrders(this.userId);
+              this.loadCartData();
+            }
+          },
+          error: (err: any) => {
+            console.error(err);
+            Swal.fire('更新失敗', '', 'error');
+          }
+        });
       }
     });
   }
 
   togglePickupStatus(member: any, eventsId: number) {
     const isPickedUp = member.pickupStatus === 'PICKED_UP';
-    const nextStatus = isPickedUp ? 'NOT_PICKED_UP' : 'PICKED_UP';
 
-    const payload = {
-      eventsId: eventsId,
-      userId: member.userId,
-      pickupStatus: nextStatus, // 會同步更新到 orders 表
-      paymentStatus: member.paymentStatus,
-      totalSum: member.totalSum,
-      totalWeight: member.totalWeight,
-      personFee: member.personFee
-    };
+    // 如果已經是已領取狀態，則不允許變更
+    if (isPickedUp) return;
 
-    this.cart.updatePersonalOrder(payload).subscribe({
-      next: (res: any) => {
-        if (res.code === 200) {
-          member.pickupStatus = nextStatus;
-          Swal.fire({
-            toast: true,
-            position: 'top',
-            icon: 'success',
-            title: '取餐狀態已更新',
-            showConfirmButton: false,
-            timer: 1500
-          });
-          // 同步更新資訊
-          this.fetchHistoryOrders(member.userId);
-          this.loadCartData();
-        }
-      },
-      error: (err: any) => {
-        console.error(err);
-        Swal.fire('更新失敗', '', 'error');
+    Swal.fire({
+      title: '確認取餐?',
+      text: `確認「${member.userNickname || '成員'}」已領取餐點嗎？此操作不可撤回。`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '確定',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#1e293b',
+      cancelButtonColor: '#94a3b8'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const nextStatus = 'PICKED_UP';
+        const payload = {
+          eventsId: eventsId,
+          userId: member.userId,
+          pickupStatus: nextStatus,
+          paymentStatus: member.paymentStatus,
+          totalSum: member.totalSum,
+          totalWeight: member.totalWeight,
+          personFee: member.personFee
+        };
+
+        this.cart.updatePersonalOrder(payload).subscribe({
+          next: (res: any) => {
+            if (res.code === 200) {
+              member.pickupStatus = nextStatus;
+              Swal.fire({
+                toast: true,
+                position: 'top',
+                icon: 'success',
+                title: '取餐狀態已更新',
+                showConfirmButton: false,
+                timer: 1500
+              });
+              // 同步更新資訊 (始終刷新目前使用者的歷史)
+              this.fetchHistoryOrders(this.userId);
+              this.loadCartData();
+            }
+          },
+          error: (err: any) => {
+            console.error(err);
+            Swal.fire('更新失敗', '', 'error');
+          }
+        });
       }
     });
   }
@@ -567,6 +658,75 @@ export class OrdersComponent {
     });
   }
 
+  notifyMembers(item: CartGroup) {
+    Swal.fire({
+      title: '發送取貨通知?',
+      text: `將會發送網頁通知與 Email 給「${item.eventName}」的所有跟團成員（不含自己）。`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '確定發送',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#f59e0b'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // 取得成員列表 (確保拿到最新名單)
+        this.cart.getPersonalOrdersByEventId(item.eventsId).subscribe({
+          next: (res: any) => {
+            if (res.code === 200) {
+              const list = res.personalOrder || [];
+              // 排除自己 (host)
+              const membersToNotify = list.filter((m: any) => m.userId !== this.userId);
+
+              if (membersToNotify.length === 0) {
+                Swal.fire('目前沒有其他成員下單', '', 'info');
+                return;
+              }
+
+              // 這裡假設後端支持 userNotificationVoList 或是根據 eventId 寄送
+              // 根據需求描述，我們需要建立一筆 GROUP_BUY 類別的通知
+              const req: NotifiMesReq = {
+                category: NotifiCategoryEnum.GROUP_BUY,
+                title: '取貨通知',
+                content: `您參加的團購「${item.eventName}」商品已送達，請儘速找團長取貨！`,
+                eventId: item.eventsId,
+                userId: this.userId, // 發送者 (團長)
+                targetUrl: '/user/orders', // 點擊通知導向哪裡
+                expiredAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 天後過期
+                userNotificationVoList: membersToNotify.map((m: any) => ({
+                  userId: m.userId,
+                  email: m.userEmail
+                }))
+              };
+
+              this.messageService.create(req).subscribe({
+                next: (response: any) => {
+                  if (response.code === 200) {
+                    Swal.fire({
+                      icon: 'success',
+                      title: '通知已發送',
+                      text: `已通知 ${membersToNotify.length} 位成員`,
+                      toast: true,
+                      position: 'top',
+                      showConfirmButton: false,
+                      timer: 2000
+                    });
+                  } else {
+                    Swal.fire('發送失敗', response.message, 'error');
+                  }
+                },
+                error: (err: any) => {
+                  console.error('Notification failed:', err);
+                  Swal.fire('發送失敗', '系統連線錯誤', 'error');
+                }
+              });
+            }
+          },
+          error: (err: any) => console.error('Load members failed:', err)
+        });
+      }
+    });
+  }
+
   edit(item: CartGroup) {
     this.router.navigate(['/groupbuy-event/group-event'], {
       queryParams: {
@@ -576,4 +736,212 @@ export class OrdersComponent {
     console.log(this.router.url)
   }
 
+  deleteMemberOrder(member: any, eventsId: number, eventName: string) {
+    Swal.fire({
+      title: '確定要刪除該成員的訂單嗎？',
+      text: `將會刪除「${member.userNickname || '匿名成員'}」在「${eventName}」中的所有品項，並於站內發送通知。`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '確定刪除',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#94a3b8'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.cart.deleteOrderByUserIdAndEventsId(member.userId, eventsId, this.userId).subscribe({
+          next: (res: any) => {
+            if (res.code === 200) {
+              // 發送刪除通知給該成員
+              const req: NotifiMesReq = {
+                category: NotifiCategoryEnum.GROUP_BUY,
+                title: '訂單被團長移除',
+                content: `很抱歉，團長「${this.auth.user?.nickname || '團長'}」將您在「${eventName}」中的訂單移除了，如有疑問請連繫團長。`,
+                eventId: eventsId,
+                userId: this.userId,
+                targetUrl: '/user/orders',
+                expiredAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                userNotificationVoList: [{
+                  userId: member.userId,
+                  email: member.userEmail
+                }]
+              };
+              this.messageService.create(req).subscribe();
+
+              Swal.fire({
+                icon: 'success',
+                title: '已刪除',
+                text: '該成員的訂單已成功移除',
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 2000
+              });
+              this.loadManageData(eventsId);
+            } else {
+              Swal.fire('刪除失敗', res.message, 'error');
+            }
+          },
+          error: (err: any) => {
+            console.error('Delete member order failed:', err);
+            Swal.fire('刪除失敗', '系統連線錯誤', 'error');
+          }
+        });
+      }
+    });
+  }
+
+  editMemberOrder(member: any, eventsId: number) {
+    // 導向點餐頁面，但帶入 target_user_id 讓 FollowGroupComponent 知道是修改別人的
+    this.router.navigate(['/groupbuy-event/group-follow', eventsId], {
+      queryParams: {
+        target_user_id: member.userId
+      }
+    });
+  }
+
+  onComplaint(member: any, eventsId: number) {
+    Swal.fire({
+      title: '檢舉成員',
+      html: `
+        <div class="text-left px-2">
+          <div class="mb-4 p-3 bg-red-50 rounded-lg text-red-600 text-sm border border-red-100 font-bold">
+            您正在檢舉成員：<strong>${member.userNickname || '匿名成員'}</strong>
+          </div>
+          <label class="block text-sm font-black text-slate-700 mb-2 underline overline decoration-red-500">檢舉理由 <span class="text-red-500">*</span></label>
+          <textarea id="swal-complaint-reason" rows="4"
+            class="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-2xl focus:border-red-500 focus:ring-0 outline-none transition-all resize-none font-bold text-slate-600"
+            placeholder="請詳細說明檢舉原因..."></textarea>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '提交檢舉',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#94a3b8',
+      customClass: {
+        popup: 'rounded-3xl',
+        confirmButton: 'rounded-xl px-6 py-3 font-black',
+        cancelButton: 'rounded-xl px-6 py-3 font-black'
+      },
+      preConfirm: () => {
+        const reason = (document.getElementById('swal-complaint-reason') as HTMLTextAreaElement).value;
+        if (!reason) {
+          Swal.showValidationMessage('⚠️ 請填寫檢舉理由');
+          return false;
+        }
+        return reason;
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const payload = {
+          complaintUuid: this.userId,
+          respondentUuid: member.userId,
+          reason: result.value,
+          eventId: eventsId
+        };
+
+        this.auth.addComplaint(payload).subscribe({
+          next: () => {
+            Swal.fire({
+              icon: 'success',
+              title: '提交成功',
+              text: '檢舉已送交系統管理員，我們將盡速處理，維護良好的團購環境！',
+              confirmButtonText: '太好了',
+              confirmButtonColor: '#10b981',
+              customClass: {
+                popup: 'rounded-3xl',
+                confirmButton: 'rounded-xl px-8 py-3 font-black'
+              }
+            });
+          },
+          error: (err) => Swal.fire('提交失敗', err?.message || '系統連線錯誤', 'error')
+        });
+      }
+    });
+  }
+
+  onBlacklist(member: any, eventsId: number) {
+    Swal.fire({
+      title: '🚫 確定加入黑名單？',
+      html: `
+      <div class="text-left leading-relaxed space-y-2">
+        <p>
+          您即將把 <b class="text-rose-600">「${member.userNickname || '匿名成員'}」</b> 加入黑名單。
+        </p>
+
+        <div class="bg-rose-50 border border-rose-200 rounded-xl p-3 text-sm">
+          <p class="font-bold text-rose-600 mb-1">⚠️ 重要影響</p>
+          <ul class="list-disc pl-5 space-y-1 text-gray-700">
+            <li>該成員將 <b>無法看到</b> 您未來開立的任何團購活動</li>
+            <li>該成員將 <b>無法參與</b> 您建立的所有團購</li>
+            <li>此操作可能影響未來互動</li>
+          </ul>
+        </div>
+
+        <div class="bg-gray-50 border rounded-xl p-3 text-sm">
+          <p class="font-bold text-gray-700">📌 注意</p>
+          <p class="text-gray-600">
+            加入黑名單後將 <b class="text-red-600">無法立即恢復</b>，
+            若要解除需透過後台或額外設定。
+          </p>
+        </div>
+
+        <p class="text-sm text-gray-500 mt-2">
+          請確認是否要繼續此操作。
+        </p>
+      </div>
+    `,
+      icon: 'warning',
+      showCancelButton: true,
+      focusCancel: true,
+      confirmButtonText: '確定加入黑名單',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#94a3b8',
+      customClass: {
+        popup: 'rounded-3xl',
+        confirmButton: 'rounded-xl px-6 py-3 font-black',
+        cancelButton: 'rounded-xl px-6 py-3 font-black'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+
+        const payload = {
+          userId: this.userId,
+          blockedUserId: member.userId
+        };
+
+        this.cart.addBlacklist(payload).subscribe({
+          next: (res: any) => {
+            if (res.code === 200) {
+
+              Swal.fire({
+                icon: 'success',
+                title: '🚫 已加入黑名單',
+                html: `
+                <b class="text-rose-600">「${member.userNickname || '匿名成員'}」</b>
+                已無法參與或查看您未來的團購活動
+              `,
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 2000
+              });
+
+            } else {
+              Swal.fire('加入失敗', res.message || '發生未知錯誤', 'error');
+            }
+          },
+          error: (err: any) => {
+            console.error('Blacklist failed:', err);
+            Swal.fire('加入失敗', '系統連線錯誤', 'error');
+          }
+        });
+
+      }
+    });
+  }
+
 }
+

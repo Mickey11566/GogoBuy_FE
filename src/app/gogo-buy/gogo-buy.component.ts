@@ -1,4 +1,5 @@
 import { Component, HostListener, ViewChild, computed, signal, OnInit, effect, } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { CarouselModule } from 'primeng/carousel';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
@@ -20,6 +21,9 @@ import { AuthService } from '../@service/auth.service';
 import { SelectModule } from 'primeng/select';
 import { FeeDescriptionVoList, StoreService } from '../@service/store.service';
 import { PopularComponent } from '../popular/popular.component';
+import { MessageService } from 'primeng/api';
+import Swal from 'sweetalert2';
+import { ToastModule } from "primeng/toast";
 
 export type Stores = {
   id: number;
@@ -120,8 +124,11 @@ interface StatusOption {
     TooltipModule,
     PanelModule,
     SelectModule,
-    PopularComponent
+    PopularComponent,
+    CommonModule,
+    ToastModule
   ],
+  providers: [MessageService],
   templateUrl: './gogo-buy.component.html',
   styleUrl: './gogo-buy.component.scss'
 })
@@ -132,11 +139,18 @@ export class GogoBuyComponent implements OnInit {
     private sanitizer: DomSanitizer,
     public auths: AuthService,
     private storeService: StoreService,
+    private messageService: MessageService,
+    private https: HttpService
   ) {
     effect(() => {
       const stores = this.auths.store();
       if (stores && stores.length > 0) {
         this.fetchOperatingStores(stores);
+      }
+      const u = this.auths.user;
+      if (u) {
+        this.userId = u.id;
+        this.favoriteIds = u.favoriteStore || [];
       }
     });
   }
@@ -148,33 +162,46 @@ export class GogoBuyComponent implements OnInit {
     { label: '營業中', value: 'OPEN' },
     { label: '休息中', value: 'CLOSED' }
   ];
-  visibleStores = computed(() => {
-    const allStores = this.auths.store();
-    const operating = this.operatingStores();
-    const status = this.statusFilter();
+visibleStores = computed(() => {
+  const allStores = this.auths.store() as Stores[];
+  const operating = this.operatingStores(); // 這是 API 回傳的「營業中」清單
+  const status = this.statusFilter();
 
-    // 建立一個包含所有營業中 ID 的 Set
-    const operatingIds = new Set(operating.map(s => s.id));
+  // 將 API 回傳的資料轉為 Map，方便查找該店的營業時間
+  const operatingMap = new Map(operating.map(s => [s.id, s]));
 
-    // 先處理全部店家，並標註狀態
-    const processedStores = allStores.map(store => ({
+  const processedStores = allStores.map(store => {
+    // 1. 從 API 回傳資料中找到該店的營業時間資訊
+    const opInfo = operatingMap.get(store.id);
+
+    // 執行二次校驗：
+    // 如果 API 沒回傳該店 -> 休息
+    // 如果 API 有回傳，但前端 checkIfStoreOpen 判定時間未到 -> 休息
+    // 如果後端 force_closed 為 true -> 休息
+    const isActuallyOpen = opInfo
+      ? this.checkIfStoreOpen(opInfo.open_time, opInfo.close_time)
+      : false;
+
+    const isClosed = store.force_closed || !isActuallyOpen;
+
+    return {
       ...store,
-      isClosed: !operatingIds.has(store.id)
-    }));
-
-    // 根據選單狀態進行過濾
-    let filtered = processedStores;
-    if (status === 'OPEN') {
-      filtered = processedStores.filter(s => !s.isClosed);
-    } else if (status === 'CLOSED') {
-      filtered = processedStores.filter(s => s.isClosed);
-    }
-
-    const sorted = [...filtered].sort((a, b) => Number(a.isClosed) - Number(b.isClosed));
-
-    // 回傳前 5 筆
-    return sorted.slice(0, this.storeInitial);
+      isClosed: isClosed
+    };
   });
+
+  // 根據選單狀態過濾
+  let filtered = processedStores;
+  if (status === 'OPEN') {
+    filtered = processedStores.filter(s => !s.isClosed);
+  } else if (status === 'CLOSED') {
+    filtered = processedStores.filter(s => s.isClosed);
+  }
+
+  // 排序並取前 5 筆
+  const sorted = [...filtered].sort((a, b) => Number(a.isClosed) - Number(b.isClosed));
+  return sorted.slice(0, this.storeInitial);
+});
   storeCountLabel = computed(() => {
     const status = this.statusFilter();
     if (status == 'OPEN') return `${this.operatingStores().length} 間營業中`;
@@ -202,10 +229,10 @@ export class GogoBuyComponent implements OnInit {
   activeTab: any = "allstores";  // tab 預設值
   @ViewChild(Tooltip) tooltip!: Tooltip;
   storeList: Store[] = [];
-  fastStoreList: Store[] = [];
-  slowStoreList: Store[] = [];
-  openStoreList: Store[] = [];
-  closeStoreList: Store[] = [];
+  fastStoreList: any = [];
+  slowStoreList: any = [];
+  // openStoreList: Store[] = [];
+  // closeStoreList: Store[] = [];
   private idleTimer: any;
   visibleTooltip: boolean = true;
   storeSearch!: string;
@@ -214,6 +241,14 @@ export class GogoBuyComponent implements OnInit {
 
 
   ngOnInit(): void {
+    this.userId = String(localStorage.getItem('user_id'));
+    this.user = localStorage.getItem('user_info');
+    this.updateLocalFavoriteList();
+    this.auths.user$.subscribe((user) => {
+      if (user) {
+        this.favoriteIds = user.favoriteStore || [];
+      }
+    });
     // 全部開團
     this.auths.loadAllEventsOnce();
     // this.auths.performEventSearch('');
@@ -223,21 +258,26 @@ export class GogoBuyComponent implements OnInit {
       this.auths.performSearch('');
     }
 
-    this.http.getApi('http://localhost:8080/gogobuy/store/all').subscribe((res: any) => {
+    // `${this.http.BASE_URL}/gogobuy/event/getGroupbuyEventByStoresId?stores_id=${storeId}`,
+    // ---------------------------------開新團dialog-------------------------------------------
+    this.http.getApi(`${this.http.BASE_URL}/gogobuy/store/all`).subscribe((res: any) => {
       const rawData = res.storeList || [];
       this.storeList = rawData.map((store: any) => {
         let parsedFees: FeeDescriptionVoList[] = [];
         // 檢查是否有值且為字串，才進行解析
-        if (store.feeDescription && typeof store.feeDescription == 'string') {
-          try {
-            parsedFees = JSON.parse(store.feeDescription);
-          } catch (e) {
-            console.error('解析運費失敗:', e, store.feeDescription);
-            parsedFees = []; // 解析失敗給空陣列
-          }
-        } else if (Array.isArray(store.feeDescription)) {
-          parsedFees = store.feeDescription; // 如果已經是物件就直接賦值
-        }
+if (store.feeDescription && store.feeDescription !== 'null') {
+  if (typeof store.feeDescription === 'string') {
+    try {
+      const parsed = JSON.parse(store.feeDescription);
+      parsedFees = Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.error('解析運費失敗:', e, store.feeDescription);
+      parsedFees = [];
+    }
+  } else if (Array.isArray(store.feeDescription)) {
+    parsedFees = store.feeDescription;
+  }
+}
 
         return {
           ...store,
@@ -245,20 +285,88 @@ export class GogoBuyComponent implements OnInit {
         };
       });
       this.storeList = this.storeList.filter(store => !store.deleted && store.publish);  // 未刪除且公開
-      this.allStoresBackup = this.storeList;
-      this.fastStoreList = this.storeList.filter(store => !store.force_closed && store.category == "fast");
-      console.log(this.fastStoreList);
-      this.slowStoreList = this.storeList.filter(store => store.category == "slow");  // 只有團購可以顯示未營業，外送不可
-      this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
-      this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
+      this.fetchOperatingStoresForDialog(this.storeList, 'all');
+      // this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
+      // this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
     });
+
   }
+
+  fetchOperatingStoresForDialog(currentStores: any[], listType: 'fast' | 'slow' | 'all') {
+    const allStoreIds = currentStores.map(s => s.id);
+    const payload = { filteredStoreIds: allStoreIds };
+
+    this.http.postApi(`${this.http.BASE_URL}/gogobuy/store/getOperatingStores`, payload)
+      .subscribe({
+        next: (res: any) => {
+          if (res.code === 200 && res.storeOperatingList) {
+            const operatingMap = new Map(res.storeOperatingList.map((s: any) => [s.id, s]));
+
+            // 1. 產生合併了營業時間的完整資料
+            const mergedData = currentStores.map(originalStore => {
+              const operatingInfo = operatingMap.get(originalStore.id);
+              // 建立基礎合併物件
+              const merged = operatingInfo ? { ...originalStore, ...operatingInfo } : originalStore;
+              // 判斷營業狀態：如果 force_closed 為 true，直接判定休息
+              // 否則，比對當前時間與 open_time/close_time
+              const isOpen = merged.force_closed ? false : this.checkIfStoreOpen(merged.open_time, merged.close_time);
+              return {
+                ...merged,
+                isClosed: !isOpen // 建立 isClosed 供後續的過濾邏輯使用
+              };
+            });
+
+            // 2. 更新 Signal 供 UI 顯示
+            this.operatingStores.update(prev => {
+              const otherTypes = prev.filter(p => {
+                if (listType === 'all') return false; // 如果是 all，就清空原本所有的
+                return p.category !== listType;
+              });
+              return [...otherTypes, ...mergedData];
+            });
+
+            // 在這備份，backup 才會包含營業時間
+            if (listType === 'all') {
+              // 使用展開運算子 [...] 進行淺拷貝，避免與原陣列產生參照關聯
+              this.allStoresBackup = [...mergedData.sort((a, b) => Number(a.isClosed) - Number(b.isClosed))];
+            }
+this.fastStoreList = this.allStoresBackup.filter(store => store.category == "fast");
+this.slowStoreList = this.allStoresBackup.filter(store => store.category == "slow");
+          }
+        },
+        error: (err) => console.error(`抓取 ${listType} 營業中店家失敗:`, err)
+      });
+  }
+  private checkIfStoreOpen(openTime: string, closeTime: string): boolean {
+    if (!openTime || !closeTime) return false;
+
+    const now = new Date();
+    const currentTime = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
+    // 將 "10:30:00" 轉換為秒數
+    const getSeconds = (timeStr: string) => {
+      const [h, m, s] = timeStr.split(':').map(Number);
+      return h * 3600 + m * 60 + s;
+    };
+
+    const openSeconds = getSeconds(openTime);
+    const closeSeconds = getSeconds(closeTime);
+
+    // 處理跨夜營業的情況 (例如 22:00 ~ 02:00)
+    if (openSeconds < closeSeconds) {
+      return currentTime >= openSeconds && currentTime <= closeSeconds;
+    } else {
+      // 跨夜情況：當前時間大於開門時間 OR 小於關門時間
+      return currentTime >= openSeconds || currentTime <= closeSeconds;
+    }
+  }
+  // ---------------------------------開新團dialog-------------------------------------------
 
   fetchOperatingStores(currentStores: any[]) {
     const allStoreIds = currentStores.map(s => s.id);
     const payload = { filteredStoreIds: allStoreIds };
 
-    this.http.postApi('http://localhost:8080/gogobuy/store/getOperatingStores', payload)
+    this.http.postApi(`${this.http.BASE_URL}/gogobuy/store/getOperatingStores`, payload)
       .subscribe({
         next: (res: any) => {
           if (res.code === 200 && res.storeOperatingList) {
@@ -420,6 +528,7 @@ export class GogoBuyComponent implements OnInit {
   ];
 
 
+  // ---------------------------------開新團dialog-------------------------------------------
   visible: boolean = false;
   showDialog() {
     this.visible = true;
@@ -452,27 +561,26 @@ export class GogoBuyComponent implements OnInit {
     // 提取所有的 category 並透過 Set 過濾重複，再轉回陣列
     return [...new Set(this.storeList.map(item => item.type))];
   }
-
   get filteredFastStoreList() {
-    return this.fastStoreList.filter(store =>
+    return this.fastStoreList.filter((store: any) =>
       this.activeTab == 'allstores' || store.type == this.activeTab
     );
   }
   get filteredSlowStoreList() {
-    return this.slowStoreList.filter(store =>
+    return this.slowStoreList.filter((store: any) =>
       this.activeTab == 'allstores' || store.type == this.activeTab
     );
   }
-  get filteredOpenStoreList() {
-    return this.openStoreList.filter(store =>
-      this.activeTab == 'allstores' || store.type == this.activeTab
-    );
-  }
-  get filteredCloseStoreList() {
-    return this.closeStoreList.filter(store =>
-      this.activeTab == 'allstores' || store.type == this.activeTab
-    );
-  }
+  // get filteredOpenStoreList() {
+  //   return this.openStoreList.filter(store =>
+  //     this.activeTab == 'allstores' || store.type == this.activeTab
+  //   );
+  // }
+  // get filteredCloseStoreList() {
+  //   return this.closeStoreList.filter(store =>
+  //     this.activeTab == 'allstores' || store.type == this.activeTab
+  //   );
+  // }
 
 
   // 即時搜尋
@@ -485,8 +593,8 @@ export class GogoBuyComponent implements OnInit {
       this.storeList = [...this.allStoresBackup];
       this.fastStoreList = this.storeList.filter(store => !store.force_closed && store.category == "fast");
       this.slowStoreList = this.storeList.filter(store => store.category == "slow");  // 只有團購可以顯示未營業，外送不可
-      this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
-      this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
+      // this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
+      // this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
       this.activeTab = 'allstores';
     }
     if (searchKey && searchKey.length > 0) {  // 有搜尋資料，tab回到"全部店家"，下拉選單回不選狀態
@@ -500,8 +608,8 @@ export class GogoBuyComponent implements OnInit {
     });
     this.fastStoreList = this.storeList.filter(store => !store.force_closed && store.category == "fast");
     this.slowStoreList = this.storeList.filter(store => store.category == "slow");  // 只有團購可以顯示未營業，外送不可
-    this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
-    this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
+    // this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
+    // this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
     this.fast = [...this.fastStoreList];
     this.slow = [...this.slowStoreList];
   }
@@ -554,22 +662,22 @@ export class GogoBuyComponent implements OnInit {
         this.storeList = [...this.fast];  // tab篩選用
         this.uniqueTabs;
         this.slowStoreList = [];
-        this.openStoreList = [];
-        this.closeStoreList = [];
+        // this.openStoreList = [];
+        // this.closeStoreList = [];
       } else if (category == "slow") {
         this.choice = "團購";
         this.slowStoreList = [...this.slow];
         this.storeList = [...this.slow];  // tab篩選用
         this.uniqueTabs;
-        this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
-        this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
+        // this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
+        // this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
         this.fastStoreList = [];
       } else if (category == "all") {
         this.choice = "不限";
         this.fastStoreList = [...this.fast];  // 復原
         this.slowStoreList = [...this.slow];  // 復原
-        this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
-        this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
+        // this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
+        // this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
         this.storeList = [...this.fastStoreList, ...this.slowStoreList];  // tab篩選用
         this.uniqueTabs;
       }
@@ -580,24 +688,24 @@ export class GogoBuyComponent implements OnInit {
         this.uniqueTabs;
         this.fastStoreList = this.allStoresBackup.filter(store => !store.force_closed && store.category == "fast");
         this.slowStoreList = [];
-        this.openStoreList = [];
-        this.closeStoreList = [];
+        // this.openStoreList = [];
+        // this.closeStoreList = [];
       } else if (category == "slow") {
         this.choice = "團購";
         this.storeList = this.allStoresBackup.filter(store => store.category == "slow");  // tab篩選用
         this.uniqueTabs;
         this.fastStoreList = [];
-        this.slowStoreList = this.allStoresBackup.filter(store => store.category == "slow");  // 只有團購可以顯示未營業，外送不可
-        this.openStoreList = this.slowStoreList.filter(store => store.force_closed);
-        this.closeStoreList = this.slowStoreList.filter(store => !store.force_closed);
+        this.slowStoreList = this.allStoresBackup.filter(store => !store.force_closed && store.category == "slow");
+        // this.openStoreList = this.slowStoreList.filter(store => store.force_closed);
+        // this.closeStoreList = this.slowStoreList.filter(store => !store.force_closed);
       } else if (category == "all") {
         this.choice = "不限";
         this.storeList = this.allStoresBackup;  // tab篩選用
         this.uniqueTabs;
         this.fastStoreList = this.allStoresBackup.filter(store => !store.force_closed && store.category == "fast");
-        this.slowStoreList = this.allStoresBackup.filter(store => store.category == "slow");  // 只有團購可以顯示未營業，外送不可
-        this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
-        this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
+        this.slowStoreList = this.allStoresBackup.filter(store => !store.force_closed && store.category == "slow");
+        // this.openStoreList = this.slowStoreList.filter(store => !store.force_closed);
+        // this.closeStoreList = this.slowStoreList.filter(store => store.force_closed);
       }
     }
 
@@ -606,6 +714,8 @@ export class GogoBuyComponent implements OnInit {
   close() {
     this.open = false;
   }
+  // ---------------------------------開新團dialog-------------------------------------------
+
   @HostListener('document:click')
   onDocumentClick() {
     this.open = false;
@@ -722,5 +832,80 @@ export class GogoBuyComponent implements OnInit {
 
     return `https://picsum.photos/800/600?random=${store?.id ?? Math.random()}`;
   }
+
+  //收藏功能(搬運自STORE-INFO)
+  userId = ''; // 沒登入就 ""
+  user: any | null = null; // 存用戶資料
+
+  // 放收藏店家陣列
+  favoriteIds: number[] = [];
+
+  // 更新同步收藏店家陣列
+  private updateLocalFavoriteList() {
+    if (this.user) {
+      this.favoriteIds = this.user.favoriteStore || [];
+    }
+  }
+
+  // 收藏的店家
+  isFavorite(storeId: number) {
+    return this.favoriteIds.includes(storeId);
+  }
+
+  // 收藏店家
+  toggleFavorite(storeId: number) {
+    // --- 樂觀更新 (Optimistic UI) ---
+    // 不等 API 回傳，先直接在畫面上改掉顏色
+    if (this.isFavorite(storeId)) {
+      this.favoriteIds = this.favoriteIds.filter((id) => id !== storeId);
+    } else {
+      this.favoriteIds = [...this.favoriteIds, storeId];
+    }
+    const urlWithParams = `${this.http.BASE_URL}/gogobuy/updateFavoriteStore?id=${this.userId}&storesList=${storeId}`;
+    this.http.postApi(urlWithParams, {}).subscribe({
+      next: (res: any) => {
+        if (res?.code === 200) {
+          this.toastSuccess('成功', '收藏狀態已更新');
+          this.auths.refreshUser(); // 後端同步
+        } else {
+          // 如果後端失敗，再把畫面改回來（回滾）
+          this.updateLocalFavoriteList();
+          this.toastWarn('失敗', '同步失敗');
+        }
+      },
+      error: () => {
+        this.updateLocalFavoriteList(); // 網路失敗也回滾
+      },
+    });
+  }
+
+  // 點擊收藏店家
+  handleFavoriteClick(id: number) {
+    if (!this.userId) {
+      this.toastWarn('提醒', '請先登入才能收藏店家');
+      return;
+    }
+    this.toggleFavorite(id);
+  }
+
+  // 狀態更新提示
+  private toastSuccess(summary: string, detail: string): void {
+    this.messageService.add({ severity: 'success', summary, detail });
+  }
+  toastWarn(title: string, text: string): void {
+    Swal.fire({
+      icon: 'warning',
+      title,
+      text,
+      confirmButtonColor: '#7F1D1D',
+      didOpen: () => {
+        const c = document.querySelector(
+          '.swal2-container',
+        ) as HTMLElement | null;
+        if (c) c.style.zIndex = '20000';
+      },
+    });
+  }
+
 
 }

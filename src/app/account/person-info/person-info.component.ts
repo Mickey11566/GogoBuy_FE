@@ -87,7 +87,7 @@ export class PersonInfoComponent {
         allowOutsideClick: false
       });
 
-      this.http.postApi(`http://localhost:8080/gogobuy/user/suspend?id=${this.auth.user.id}`, {})
+      this.http.postApi(`${this.http.BASE_URL}/gogobuy/user/suspend?id=${this.auth.user.id}`, {})
         .subscribe({
           next: (res: any) => {
             if (res.code === 200) {
@@ -96,14 +96,14 @@ export class PersonInfoComponent {
                 title: '帳戶已停用',
                 text: '您的帳戶已成功停用。正在將您登出...',
                 showConfirmButton: false,
-                timer: 2000
+                timer: 5000
               });
 
               // 登出並清除資料
               setTimeout(() => {
                 this.auth.logout();
                 this.router.navigate(['/']);
-              }, 2000);
+              }, 5000);
             } else {
               Swal.fire({
                 icon: 'error',
